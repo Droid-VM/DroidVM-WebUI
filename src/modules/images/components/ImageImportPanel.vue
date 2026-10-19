@@ -1,0 +1,291 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useImageImport } from '../model/import'
+import { taskPercent, taskStateKeys } from '../../tasks'
+import AppButton from '../../../shared/ui/AppButton.vue'
+import AppNotice from '../../../shared/ui/AppNotice.vue'
+import AppProgress from '../../../shared/ui/AppProgress.vue'
+const model = useImageImport(),
+  { t } = useI18n()
+const entries = computed(() =>
+  [model.previewEntry.value, model.entry.value].filter((row) => row !== null),
+)
+onBeforeUnmount(model.leave)
+</script>
+<template>
+  <div class="image-import">
+    <h1>{{ t('imageImportTitle') }}</h1>
+    <p>{{ t('imageImportIntro') }}</p>
+    <AppNotice v-if="!model.supported.value" tone="warning" :title="t('imageImportUnavailable')" />
+    <template v-else>
+      <form @submit.prevent="model.readPreview">
+        <label
+          >{{ t('imageImportSource')
+          }}<input
+            v-model="model.source.value"
+            data-testid="image-import-source"
+            :disabled="model.pending.value || !!model.entry.value"
+            placeholder="/storage/emulated/0/DroidVM/linux.qcow2"
+            autocomplete="off"
+            spellcheck="false"
+            required
+        /></label>
+        <p>{{ t('imageImportSourceHint') }}</p>
+        <AppButton
+          type="submit"
+          data-testid="image-import-preview"
+          :disabled="!model.canPreview.value"
+          >{{ t('imageImportPreview') }}</AppButton
+        >
+      </form>
+      <section v-if="model.plan.value" aria-labelledby="image-import-plan">
+        <h2 id="image-import-plan">{{ t('imageImportPlanTitle') }}</h2>
+        <p>{{ t('imageImportPlanHint') }}</p>
+        <p>{{ model.plan.value.source }}</p>
+        <ol class="chain">
+          <li v-for="(member, index) in model.plan.value.members" :key="member.id">
+            <h3>{{ member.name }}</h3>
+            <p>
+              {{ t(index === 0 ? 'imageImportSelected' : 'imageImportParent') }} ·
+              {{ t(member.existing ? 'imageImportExisting' : 'imageImportNew') }}
+            </p>
+            <p>
+              <code>{{ member.path }}</code>
+            </p>
+            <p>
+              {{ member.format }} · {{ t('imageImportSize', { bytes: member.virtualSizeBytes }) }}
+            </p>
+            <p>{{ t('imageImportDiskId') }}: {{ member.id }}</p>
+            <p v-if="member.parentId">{{ t('resourceParent') }}: {{ member.parentId }}</p>
+          </li>
+        </ol>
+        <h3>{{ t('imageImportAttachments') }}</h3>
+        <p v-if="!model.plan.value.attachments.length">{{ t('imageImportNoAttachments') }}</p>
+        <article
+          v-for="attachment in model.plan.value.attachments"
+          :key="`${attachment.vmId}:${attachment.slot}`"
+          class="attachment"
+        >
+          <p>{{ t('imageImportAttachment', { vm: attachment.vmId, slot: attachment.slot }) }}</p>
+          <dl>
+            <dt>{{ t('imageImportBefore') }}</dt>
+            <dd>
+              {{ attachment.beforePath }} ·
+              {{ t(attachment.beforeReadOnly ? 'imageImportReadOnly' : 'imageImportWritable') }}
+            </dd>
+            <dt>{{ t('imageImportAfter') }}</dt>
+            <dd>
+              {{ attachment.afterPath }} ·
+              {{ t(attachment.afterReadOnly ? 'imageImportReadOnly' : 'imageImportWritable') }}
+            </dd>
+          </dl>
+        </article>
+        <template v-if="!model.entry.value">
+          <label class="check"
+            ><input
+              v-model="model.acknowledged.value"
+              data-testid="image-import-acknowledge"
+              type="checkbox"
+              :disabled="model.pending.value"
+            /><span>{{ t('imageImportConfirm') }}</span></label
+          >
+          <AppButton
+            tone="primary"
+            data-testid="image-import-submit"
+            :disabled="!model.canSubmit.value"
+            @click="model.submit"
+            >{{ t('imageImportSubmit') }}</AppButton
+          >
+        </template>
+      </section>
+      <section v-if="entries.length" aria-live="polite">
+        <h2>{{ t('imageImportStatus') }}</h2>
+        <article v-for="entry in entries" :key="entry.request.requestId">
+          <h3>{{ t('source' in entry.request ? 'imageImportPreview' : 'imageImportSubmit') }}</h3>
+          <p v-if="entry.state === 'posting'">{{ t('processing') }}</p>
+          <p v-if="entry.state === 'unknown'">{{ t('imageImportUnknown') }}</p>
+          <p v-if="entry.task">{{ t(taskStateKeys[entry.task.state]) }}</p>
+          <AppProgress
+            v-if="entry.task && entry.state === 'waiting'"
+            :label="t('imageImportStatus')"
+            :value="taskPercent(entry.task)"
+          />
+          <p v-if="entry.task?.errorCode">{{ entry.task.errorCode }}</p>
+          <AppNotice v-if="entry.problem" tone="error" :title="t(entry.problem.titleKey)"
+            ><p>{{ t(entry.problem.descriptionKey) }}</p></AppNotice
+          >
+        </article>
+        <div class="buttons">
+          <AppButton
+            data-testid="image-import-reconcile"
+            :disabled="model.checking.value || entries.some((row) => row.state === 'posting')"
+            @click="model.reconcile"
+            >{{ t('queryStatus') }}</AppButton
+          >
+          <RouterLink to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+        </div>
+      </section>
+      <section v-if="model.entry.value" data-testid="image-import-result" aria-live="polite">
+        <h2>{{ t('imageImportResult') }}</h2>
+        <template v-if="model.result.value">
+          <p>{{ t('imageImportAdded', { count: model.result.value.added }) }}</p>
+          <p v-if="model.result.value.registered">{{ t('imageImportRegistered') }}</p>
+          <p v-if="model.result.value.diskId">
+            {{ t('imageImportDiskId') }}: {{ model.result.value.diskId }}
+          </p>
+        </template>
+        <AppNotice
+          v-if="model.recoveryRequired.value"
+          tone="warning"
+          :title="t('imageImportRecovery')"
+          ><p>{{ t('imageImportRecoveryHint') }}</p></AppNotice
+        >
+        <template v-if="model.succeeded.value">
+          <p>{{ t('imageImportSuccess') }}</p>
+          <p>{{ t('imageImportCreateHint') }}</p>
+          <template v-if="model.optimizeAvailable.value">
+            <p>{{ t('imageImportOptimizeHint') }}</p>
+            <AppButton
+              data-testid="image-import-optimize"
+              :disabled="!model.canOptimize.value"
+              @click="model.optimize"
+              >{{ t('imageImportOptimize') }}</AppButton
+            >
+            <AppNotice
+              v-if="model.optimizeProblem.value"
+              tone="error"
+              :title="t(model.optimizeProblem.value.titleKey)"
+              ><p>{{ t(model.optimizeProblem.value.descriptionKey) }}</p></AppNotice
+            >
+          </template>
+          <div class="buttons">
+            <RouterLink
+              :to="{
+                path: '/resources/disk',
+                query: { disk: model.result.value?.diskId ?? undefined },
+              }"
+              >{{ t('diskViewResult') }}</RouterLink
+            >
+            <RouterLink to="/vms/new">{{ t('createVm') }}</RouterLink>
+            <RouterLink
+              :to="{
+                path: '/vms/new/linux',
+                query: { disk: model.result.value?.diskId ?? undefined },
+              }"
+              >{{ t('linuxVmTitle') }}</RouterLink
+            >
+          </div>
+        </template>
+        <template v-if="model.entry.value.state === 'done'">
+          <p>{{ t('imageImportRestartHint') }}</p>
+          <RouterLink to="/resources/disk">{{ t('navDisk') }}</RouterLink>
+          <label class="check"
+            ><input v-model="model.outcomeAcknowledged.value" type="checkbox" /><span>{{
+              t('imageImportOutcomeConfirm')
+            }}</span></label
+          >
+          <AppButton
+            data-testid="image-import-restart"
+            :disabled="!model.canRestart.value || model.reviewingOutcome.value"
+            @click="model.restart"
+            >{{ t('imageImportRestart') }}</AppButton
+          >
+          <AppNotice
+            v-if="model.restartProblem.value"
+            tone="error"
+            :title="t(model.restartProblem.value.titleKey)"
+            ><p>{{ t(model.restartProblem.value.descriptionKey) }}</p></AppNotice
+          >
+        </template>
+      </section>
+    </template>
+  </div>
+</template>
+<style scoped>
+.image-import,
+form,
+section,
+article,
+label {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+  overflow-wrap: anywhere;
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+h2,
+h3 {
+  font-size: var(--font-heading);
+}
+section,
+.chain li,
+.attachment {
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+input:not([type='checkbox']) {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+}
+.chain {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding-inline-start: 24px;
+  min-width: 0;
+}
+.chain li > * + * {
+  margin-top: var(--space-2);
+}
+.check {
+  display: flex;
+  align-items: start;
+  gap: var(--space-2);
+}
+.check input {
+  flex: none;
+  margin-top: 4px;
+}
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+  gap: var(--space-2);
+  margin: 0;
+}
+dd {
+  margin: 0;
+}
+a {
+  padding-block: 10px;
+}
+@media (max-width: 480px) {
+  .buttons > *,
+  form > .btn {
+    width: 100%;
+  }
+  dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>
