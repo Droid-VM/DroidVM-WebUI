@@ -18,11 +18,14 @@
     "architecture": "depcruise src --config .dependency-cruiser.cjs",
     "contract:generate": "node scripts/contracts.mjs",
     "contract:check": "node scripts/contracts.mjs --check",
+    "theme:generate": "node scripts/theme.mjs",
+    "theme:check": "node scripts/theme.mjs --check",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "check": "npm run format:check && npm run contract:check && npm run typecheck && npm run lint && npm run architecture && npm run test"
+    "check": "npm run format:check && npm run contract:check && npm run theme:check && npm run typecheck && npm run lint && npm run architecture && npm run test"
   },
   "dependencies": {
+    "@material/web": "2.5.0",
     "@noble/hashes": "2.4.0",
     "@novnc/novnc": "1.7.0",
     "@xterm/addon-fit": "0.11.0",
@@ -35,6 +38,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@material/material-color-utilities": "0.3.0",
     "@playwright/test": "1.64.1",
     "@types/node": "22.19.0",
     "@vitejs/plugin-vue": "6.0.10",

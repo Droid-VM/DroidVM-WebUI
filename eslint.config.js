@@ -11,6 +11,7 @@ export default ts.config(
       'src/generated/**',
       'playwright-report/**',
       'test-results/**',
+      'visual-results/**',
       '*.cjs',
     ],
   },
@@ -26,6 +27,8 @@ export default ts.config(
       'vue/multi-word-component-names': 'off',
       'vue/max-attributes-per-line': 'off',
       'vue/singleline-html-element-content-newline': 'off',
+      // Material web components take named slots through the native `slot` attribute.
+      'vue/no-deprecated-slot-attribute': ['error', { ignoreParents: ['/^md-/'] }],
     },
   },
   {
