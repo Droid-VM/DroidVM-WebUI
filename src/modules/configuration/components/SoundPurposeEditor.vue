@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fieldText, object } from '../model/document'
 import {
@@ -9,11 +9,12 @@ import {
   soundValue,
   type SoundAttribute,
 } from '../model/soundPurpose'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
 
 const props = defineProps<{ endpoint: unknown; disabled: boolean }>()
 const emit = defineEmits<{ change: [value: { attribute: SoundAttribute; value: string }] }>()
 const { t } = useI18n()
-const hintId = useId()
 const input = computed(
   () => object(props.endpoint) && fieldText(props.endpoint.mode).toLowerCase() === 'microphone',
 )
@@ -37,48 +38,31 @@ function change(attribute: SoundAttribute, event: Event) {
 
 <template>
   <div class="sound-purpose">
-    <label v-for="field in fields" :key="field.attribute">
-      <span>{{ t(soundTitles[field.attribute]) }}</span>
-      <select
-        :value="field.value"
-        :disabled="disabled"
-        :aria-label="t(soundTitles[field.attribute])"
-        :aria-describedby="field.unknown ? `${hintId}-${field.attribute}` : undefined"
-        @change="change(field.attribute, $event)"
-      >
-        <option value="">{{ t('soundPurposeDefault') }}</option>
-        <option v-if="field.unknown" :value="field.value" disabled>{{ field.value }}</option>
-        <option v-for="choice in field.choices" :key="choice.value" :value="choice.value">
-          {{ t(choice.label) }}
-        </option>
-      </select>
-      <small v-if="field.unknown" :id="`${hintId}-${field.attribute}`" class="muted">{{
-        t('soundPurposeUnknown')
-      }}</small>
-    </label>
+    <AppSelect
+      v-for="field in fields"
+      :key="field.attribute"
+      :label="t(soundTitles[field.attribute])"
+      :supporting-text="field.unknown ? t('soundPurposeUnknown') : ''"
+      :value="field.value"
+      :disabled="disabled"
+      @change="change(field.attribute, $event)"
+    >
+      <AppOption value="">{{ t('soundPurposeDefault') }}</AppOption>
+      <AppOption v-if="field.unknown" :value="field.value" disabled>{{ field.value }}</AppOption>
+      <AppOption v-for="choice in field.choices" :key="choice.value" :value="choice.value">
+        {{ t(choice.label) }}
+      </AppOption>
+    </AppSelect>
     <small class="muted">{{ t(input ? 'soundPurposeInputHint' : 'soundPurposeOutputHint') }}</small>
   </div>
 </template>
 
 <style scoped>
-.sound-purpose,
-label {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
 .sound-purpose {
-  margin-bottom: var(--space-3);
-}
-select {
-  width: 100%;
+  display: grid;
+  gap: var(--space-3);
   min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
+  margin-bottom: var(--space-3);
 }
 small {
   overflow-wrap: anywhere;

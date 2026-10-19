@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useImageTransfers } from '../model/transfers'
 import { taskStateKeys, taskPercent } from '../../tasks'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 import AppProgress from '../../../shared/ui/AppProgress.vue'
 import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
@@ -89,7 +92,7 @@ onBeforeUnmount(model.leave)
           {{ t('transferRestoreUnavailable') }}
         </p>
       </AppNotice>
-      <label v-if="upload.needsFiles.value && !model.entry.value">
+      <label v-if="upload.needsFiles.value && !model.entry.value" class="file">
         {{ t('transferReselect') }}
         <input
           type="file"
@@ -101,7 +104,7 @@ onBeforeUnmount(model.leave)
         />
         <small>{{ t('transferReselectHint') }}</small>
       </label>
-      <label v-if="!upload.uploadId.value && !model.entry.value"
+      <label v-if="!upload.uploadId.value && !model.entry.value" class="file"
         >{{ t('imageUploadFile')
         }}<input
           data-testid="image-upload-file"
@@ -187,32 +190,28 @@ onBeforeUnmount(model.leave)
         <h3>{{ t('imageUploadInstallTitle') }}</h3>
         <p>{{ t('imageUploadInstallHint') }}</p>
         <p>{{ t('imageUploadDirectoryHint') }}</p>
-        <label
-          >{{ t('diskHostFolder')
-          }}<input
-            v-model="model.draft.folder"
-            data-testid="image-upload-folder"
-            placeholder="/storage/emulated/0/DroidVM"
-            required
-            autocomplete="off"
-            :disabled="!model.editable.value"
-        /></label>
-        <label
-          >{{ t('diskFileName')
-          }}<input
-            v-model="model.draft.name"
-            data-testid="image-upload-name"
-            required
-            autocomplete="off"
-            :disabled="!model.editable.value"
-        /></label>
-        <label class="check"
-          ><input
-            v-model="model.acknowledged.value"
-            data-testid="image-upload-acknowledge"
-            type="checkbox"
-            :disabled="!model.editable.value"
-          /><span>{{ t('imageUploadConfirm') }}</span></label
+        <AppTextField
+          v-model="model.draft.folder"
+          :label="t('diskHostFolder')"
+          data-testid="image-upload-folder"
+          placeholder="/storage/emulated/0/DroidVM"
+          required
+          autocomplete="off"
+          :disabled="!model.editable.value"
+        />
+        <AppTextField
+          v-model="model.draft.name"
+          :label="t('diskFileName')"
+          data-testid="image-upload-name"
+          required
+          autocomplete="off"
+          :disabled="!model.editable.value"
+        />
+        <AppCheckbox
+          v-model="model.acknowledged.value"
+          data-testid="image-upload-acknowledge"
+          :disabled="!model.editable.value"
+          >{{ t('imageUploadConfirm') }}</AppCheckbox
         >
         <AppButton
           type="submit"
@@ -279,7 +278,7 @@ onBeforeUnmount(model.leave)
             @click="handoff"
             >{{ t('imageUploadImport') }}</AppButton
           >
-          <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+          <AppLinkButton tone="tonal" to="/tasks">{{ t('diskTaskLink') }}</AppLinkButton>
         </div>
       </section>
       <div
@@ -292,11 +291,9 @@ onBeforeUnmount(model.leave)
         class="confirmation"
       >
         <p>{{ t('imageUploadResetHint') }}</p>
-        <label class="check"
-          ><input v-model="model.outcomeAcknowledged.value" type="checkbox" /><span>{{
-            t('imageUploadOutcomeConfirm')
-          }}</span></label
-        >
+        <AppCheckbox v-model="model.outcomeAcknowledged.value">{{
+          t('imageUploadOutcomeConfirm')
+        }}</AppCheckbox>
         <AppButton
           data-testid="image-upload-reset"
           :disabled="!model.canReset.value"
@@ -317,7 +314,7 @@ onBeforeUnmount(model.leave)
 .image-transfers,
 section,
 form,
-label,
+.file,
 .confirmation {
   display: grid;
   gap: var(--space-3);
@@ -326,10 +323,10 @@ label,
 }
 .image-transfers,
 .confirmation {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
   padding: var(--space-4);
-  background: var(--surface);
+  background: var(--app-color-card);
 }
 h2,
 h3,
@@ -338,27 +335,18 @@ p {
 }
 h2,
 h3 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
-input:not([type='checkbox']) {
+input[type='file'] {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
   padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   font: inherit;
-  color: var(--ink);
-  background: var(--surface);
-}
-.check {
-  display: flex;
-  align-items: start;
-  gap: var(--space-2);
-}
-.check input {
-  flex: none;
-  margin-top: 4px;
+  color: var(--md-sys-color-on-surface);
+  background: var(--app-color-card);
 }
 .buttons {
   display: flex;
@@ -370,7 +358,7 @@ ul {
   margin: 0;
   padding-inline-start: 20px;
 }
-@media (max-width: 480px) {
+@media (width < 480px) {
   .image-transfers,
   .confirmation {
     padding: var(--space-3);

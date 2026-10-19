@@ -5,6 +5,9 @@ import type { UsbRule, UsbRuleTarget } from '../api/gateway'
 import { deviceSubject, ruleIssues, ruleLayers, type RuleLayer } from '../model/document'
 import type { UsbDevice } from '../../resources'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 
 const props = defineProps<{
   layer: RuleLayer
@@ -61,6 +64,7 @@ function pick(event: Event) {
       ...(definition.value.port ? { port: subject.port } : {}),
     })
   }
+  // A pick fills the fields once; the menu returns to its placeholder.
   ;(event.target as HTMLSelectElement).value = ''
 }
 </script>
@@ -89,91 +93,87 @@ function pick(event: Event) {
     </header>
     <fieldset :disabled="disabled">
       <legend class="sr-only">{{ t('usbRulesNumber', { number: index + 1 }) }}</legend>
-      <label v-if="definition.id || definition.port">
-        {{ t('usbRulesPickDevice') }}
-        <select value="" @change="pick">
-          <option value="">{{ t('usbRulesCustom') }}</option>
-          <option v-for="device in devices" :key="device.id" :value="device.id">
-            {{ device.product || `${device.vendorId}:${device.productId}` }} · {{ device.sysfs
-            }}{{ device.serial ? ` · ${device.serial}` : '' }}
-          </option>
-        </select>
-      </label>
-      <label v-if="definition.id">
-        {{ t('usbRulesId') }}
-        <input
-          :id="fieldId('id')"
-          :aria-label="t('usbRulesId')"
-          :value="rule.id"
-          spellcheck="false"
-          autocomplete="off"
-          :aria-invalid="issues.some((issue) => issue.field === 'id')"
-          :aria-describedby="`${fieldId('id')}-hint`"
-          @input="update('id', value($event))"
-        />
-        <small :id="`${fieldId('id')}-hint`">{{ t('usbRulesIdHint') }}</small>
-      </label>
-      <label v-if="definition.port">
-        {{ t('usbRulesPortPath') }}
-        <input
-          :id="fieldId('port')"
-          :value="rule.port"
-          spellcheck="false"
-          autocomplete="off"
-          :aria-invalid="issues.some((issue) => issue.field === 'port')"
-          @input="update('port', value($event))"
-        />
-      </label>
-      <label>
-        {{ t('usbTarget') }}
-        <select :id="fieldId('target')" :value="rule.target" @change="target(value($event))">
-          <option v-if="layer !== 'any' || rule.target === 'host'" value="host">
-            {{ t('usbTargetHost') }}
-          </option>
-          <option value="vm">{{ t('usbRulesTargetVm') }}</option>
-          <option value="sink">{{ t('usbRulesTargetSink') }}</option>
-        </select>
-      </label>
+      <AppSelect
+        v-if="definition.id || definition.port"
+        :label="t('usbRulesPickDevice')"
+        value=""
+        @change="pick"
+      >
+        <AppOption value="">{{ t('usbRulesCustom') }}</AppOption>
+        <AppOption v-for="device in devices" :key="device.id" :value="device.id">
+          {{ device.product || `${device.vendorId}:${device.productId}` }} · {{ device.sysfs
+          }}{{ device.serial ? ` · ${device.serial}` : '' }}
+        </AppOption>
+      </AppSelect>
+      <AppTextField
+        v-if="definition.id"
+        :id="fieldId('id')"
+        :label="t('usbRulesId')"
+        :supporting-text="t('usbRulesIdHint')"
+        :value="rule.id"
+        spellcheck="false"
+        autocomplete="off"
+        :aria-invalid="issues.some((issue) => issue.field === 'id')"
+        @input="update('id', value($event))"
+      />
+      <AppTextField
+        v-if="definition.port"
+        :id="fieldId('port')"
+        :label="t('usbRulesPortPath')"
+        :value="rule.port"
+        spellcheck="false"
+        autocomplete="off"
+        :aria-invalid="issues.some((issue) => issue.field === 'port')"
+        @input="update('port', value($event))"
+      />
+      <AppSelect
+        :id="fieldId('target')"
+        :label="t('usbTarget')"
+        :value="rule.target"
+        @change="target(value($event))"
+      >
+        <AppOption v-if="layer !== 'any' || rule.target === 'host'" value="host">
+          {{ t('usbTargetHost') }}
+        </AppOption>
+        <AppOption value="vm">{{ t('usbRulesTargetVm') }}</AppOption>
+        <AppOption value="sink">{{ t('usbRulesTargetSink') }}</AppOption>
+      </AppSelect>
       <template v-if="rule.target === 'vm'">
-        <label>
-          {{ t('usbRulesVm') }}
-          <select
-            :id="fieldId('vm')"
-            :value="rule.vm || ''"
-            :aria-invalid="!rule.vm"
-            @change="vm(value($event))"
+        <AppSelect
+          :id="fieldId('vm')"
+          :label="t('usbRulesVm')"
+          :value="rule.vm || ''"
+          :aria-invalid="!rule.vm"
+          @change="vm(value($event))"
+        >
+          <AppOption value="" disabled>{{ t('usbRulesChooseVm') }}</AppOption>
+          <AppOption v-if="rule.vm && !currentVm" :value="rule.vm">
+            {{ t('usbRulesMissingVm', { id: rule.vm }) }}
+          </AppOption>
+          <AppOption
+            v-for="item in targets"
+            :key="item.vmId"
+            :value="item.vmId"
+            :disabled="!item.controllerId"
           >
-            <option value="" disabled>{{ t('usbRulesChooseVm') }}</option>
-            <option v-if="rule.vm && !currentVm" :value="rule.vm">
-              {{ t('usbRulesMissingVm', { id: rule.vm }) }}
-            </option>
-            <option
-              v-for="item in targets"
-              :key="item.vmId"
-              :value="item.vmId"
-              :disabled="!item.controllerId"
-            >
-              {{ item.vmName || item.vmId
-              }}{{ !item.controllerId ? ` · ${t('usbRulesNoController')}` : '' }}
-            </option>
-          </select>
-        </label>
-        <label>
-          {{ t('configControllerId') }}
-          <select
-            :id="fieldId('controller')"
-            :value="rule.controller ?? ''"
-            @change="update('controller', value($event))"
-          >
-            <option value="">{{ t('usbRulesDefaultController') }}</option>
-            <option v-if="currentVm?.controllerId" :value="currentVm.controllerId">
-              {{ currentVm.controllerId }}
-            </option>
-            <option v-if="oldController" :value="rule.controller">
-              {{ t('usbRulesOldController', { id: rule.controller }) }}
-            </option>
-          </select>
-        </label>
+            {{ item.vmName || item.vmId
+            }}{{ !item.controllerId ? ` · ${t('usbRulesNoController')}` : '' }}
+          </AppOption>
+        </AppSelect>
+        <AppSelect
+          :id="fieldId('controller')"
+          :label="t('configControllerId')"
+          :value="rule.controller ?? ''"
+          @change="update('controller', value($event))"
+        >
+          <AppOption value="">{{ t('usbRulesDefaultController') }}</AppOption>
+          <AppOption v-if="currentVm?.controllerId" :value="currentVm.controllerId">
+            {{ currentVm.controllerId }}
+          </AppOption>
+          <AppOption v-if="oldController" :value="rule.controller!">
+            {{ t('usbRulesOldController', { id: rule.controller }) }}
+          </AppOption>
+        </AppSelect>
         <p v-if="unavailableVm || oldController" class="reference-warning">
           {{ t('usbRulesReferenceHint') }}
         </p>
@@ -187,9 +187,9 @@ function pick(event: Event) {
 
 <style scoped>
 .rule-card {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--app-color-card);
   padding: var(--space-3);
   min-width: 0;
   overflow-wrap: anywhere;
@@ -206,7 +206,7 @@ header {
 }
 h3 {
   margin: 0;
-  font-size: var(--font-body);
+  font-size: var(--md-sys-typescale-body-medium-size);
 }
 fieldset {
   border: 0;
@@ -216,36 +216,16 @@ fieldset {
   gap: var(--space-3);
   min-width: 0;
 }
-label {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-input,
-select {
-  width: 100%;
-  min-width: 0;
-  min-height: 44px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-}
-small {
-  color: var(--muted);
-}
 .rule-errors {
-  color: var(--danger);
+  color: var(--md-sys-color-error);
   padding-left: var(--space-4);
   margin: 0;
 }
 .reference-warning {
-  color: var(--warn);
+  color: var(--app-color-warning);
   margin: 0;
 }
-@media (min-width: 760px) {
+@media (width >= 840px) {
   fieldset {
     grid-template-columns: 1fr 1fr;
   }

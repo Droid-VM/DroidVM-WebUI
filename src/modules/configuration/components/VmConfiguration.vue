@@ -61,6 +61,10 @@ import {
 } from '../model/attachments'
 import { cloneConfiguration, fieldText, getPath, object, setPath } from '../model/document'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
@@ -103,6 +107,9 @@ const bootChanged = ref(false)
 const protectionChanged = ref(false)
 const graphicsChanged = ref(false)
 const deviceKind = ref<DeviceKind>('virtio_sound')
+// Material fields are form-associated, so they match :invalid like native controls.
+const invalidControls =
+  ':is(input, select, textarea, md-outlined-text-field, md-outlined-select, md-checkbox):invalid'
 const peripheralProblem = ref<MessageKey | null>(null)
 const basicAdvanced = ref<InstanceType<typeof BasicAdvanced>[]>([])
 const bootDisks = computed(() => (draft.value ? diskChoices(draft.value) : []))
@@ -327,7 +334,7 @@ async function beginReplacement(slot: AttachmentSlot) {
   await nextTick()
   form.value
     ?.querySelector<HTMLSelectElement>(
-      `fieldset[data-category="${category.value}"] .resource-picker select`,
+      `fieldset[data-category="${category.value}"] .resource-picker :is(select, md-outlined-select)`,
     )
     ?.focus()
 }
@@ -455,7 +462,7 @@ async function requestSave() {
       const path = field.path.join('.')
       if (!Object.hasOwn(pendingInputs.value, path)) continue
       const input = Array.from(
-        form.value.querySelectorAll<HTMLInputElement>('input[data-config-path]'),
+        form.value.querySelectorAll<HTMLInputElement>('[data-config-path]'),
       ).find((element) => element.dataset.configPath === path)
       if (input && !input.disabled) commitField(field, input)
     }
@@ -464,7 +471,7 @@ async function requestSave() {
   if (disabled.value || rawOpen.value || !form.value) return
   const firstInvalid = form.value.querySelector<
     HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-  >('input:invalid, select:invalid, textarea:invalid')
+  >(invalidControls)
   if (firstInvalid) {
     category.value = firstInvalid.closest<HTMLElement>('[data-category]')!.dataset.category!
     await nextTick()
@@ -702,24 +709,23 @@ async function confirmed() {
               >{{ t('audioRefreshDevices') }}</AppButton
             >
           </div>
-          <label>
-            <span>{{ t('configAddDevice') }}</span>
-            <select
+          <div class="config-field">
+            <AppSelect
               v-model="deviceKind"
+              :label="t('configAddDevice')"
               :disabled="disabled || rawOpen"
-              :aria-label="t('configAddDevice')"
             >
-              <option value="virtio_sound">{{ t('configDeviceSound') }}</option>
-              <option value="xhci_usb">{{ t('configDeviceXhci') }}</option>
-              <option value="sbsa">{{ t('configDeviceSbsa') }}</option>
-              <option value="virtio_console">{{ t('configDeviceVirtioConsole') }}</option>
-            </select>
+              <AppOption value="virtio_sound">{{ t('configDeviceSound') }}</AppOption>
+              <AppOption value="xhci_usb">{{ t('configDeviceXhci') }}</AppOption>
+              <AppOption value="sbsa">{{ t('configDeviceSbsa') }}</AppOption>
+              <AppOption value="virtio_console">{{ t('configDeviceVirtioConsole') }}</AppOption>
+            </AppSelect>
             <AppButton
               :disabled="disabled || rawOpen || !canAddDevice(draft, deviceKind)"
               @click="mutateDevice({ type: 'add', kind: deviceKind })"
               >{{ t('configAddDevice') }}</AppButton
             >
-          </label>
+          </div>
           <AppButton
             v-if="hasMissingSerials(draft)"
             :disabled="disabled || rawOpen"
@@ -883,7 +889,7 @@ async function confirmed() {
             {{ t('configNoEntries') }}
           </p>
           <div class="config-fields">
-            <label
+            <div
               v-for="field in section.fields"
               v-show="
                 (field.path[2] === 'enabled' || !screenInactive(field, draft)) &&
@@ -894,43 +900,42 @@ async function confirmed() {
                   !networkInactive(field, draft, catalog.networks.items.value))
               "
               :key="field.path.join('.')"
-              :class="{ toggle: field.type === 'boolean' }"
+              class="config-field"
             >
-              <span>{{ t(field.label) }}</span>
-              <input
+              <AppCheckbox
                 v-if="field.type === 'boolean'"
-                type="checkbox"
                 :data-config-path="field.path.join('.')"
-                :aria-label="t(field.label)"
                 :disabled="inactive(field)"
                 :checked="read(field) === true"
                 :indeterminate="typeof read(field) !== 'boolean'"
                 :title="typeof read(field) !== 'boolean' ? t('configNativeDefault') : undefined"
                 @change="change(field, $event)"
-              />
-              <select
+                >{{ t(field.label) }}</AppCheckbox
+              >
+              <AppSelect
                 v-else-if="field.type === 'boot-disk'"
+                :label="t(field.label)"
                 :value="selectedBootDisk === null ? '' : String(selectedBootDisk)"
                 :required="!!imageBoot"
                 @change="selectBoot"
               >
-                <option value="" disabled>{{ t('configNoBootDisk') }}</option>
-                <option v-for="disk in bootDisks" :key="disk.index" :value="String(disk.index)">
+                <AppOption value="" disabled>{{ t('configNoBootDisk') }}</AppOption>
+                <AppOption v-for="disk in bootDisks" :key="disk.index" :value="String(disk.index)">
                   {{ disk.index + 1 }} · {{ disk.path }}
-                </option>
-              </select>
-              <select
+                </AppOption>
+              </AppSelect>
+              <AppSelect
                 v-else-if="field.type === 'select'"
+                :label="t(field.label)"
                 :data-config-path="field.path.join('.')"
-                :aria-label="t(field.label)"
                 :disabled="inactive(field)"
                 :value="basicSelection(field, read(field))"
                 @change="change(field, $event)"
               >
-                <option v-if="!field.options?.includes('')" value="" disabled>
+                <AppOption v-if="!field.options?.includes('')" value="" disabled>
                   {{ t('configNativeDefault') }}
-                </option>
-                <option
+                </AppOption>
+                <AppOption
                   v-if="
                     fieldText(read(field)) &&
                     !basicOptions(field, draft).includes(basicSelection(field, read(field)))
@@ -938,20 +943,20 @@ async function confirmed() {
                   :value="basicSelection(field, read(field))"
                 >
                   {{ fieldText(read(field)) }}
-                </option>
-                <option
+                </AppOption>
+                <AppOption
                   v-for="option in basicOptions(field, draft)"
                   :key="option"
                   :value="option"
                   :disabled="field.disabledOptions?.includes(option)"
                 >
                   {{ field.optionLabels?.[option] ? t(field.optionLabels[option]!) : option }}
-                </option>
-              </select>
-              <input
+                </AppOption>
+              </AppSelect>
+              <AppTextField
                 v-else
+                :label="t(field.label)"
                 :data-config-path="field.path.join('.')"
-                :aria-label="t(field.label)"
                 :type="field.type"
                 :value="inputText(field)"
                 :min="field.min"
@@ -976,7 +981,7 @@ async function confirmed() {
               <small v-if="basicInactive(field, draft)" class="muted">{{
                 t('configSwiotlbInactive')
               }}</small>
-            </label>
+            </div>
           </div>
           <CpuCorePicker
             v-if="section.key === 'gpu-worker' && !inactive(gpuCpuField)"
@@ -1062,9 +1067,9 @@ fieldset {
   min-width: 0;
   padding: var(--space-4);
   margin: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--app-color-card);
 }
 legend {
   padding: 0 var(--space-2);
@@ -1083,7 +1088,7 @@ legend {
 }
 .config-section h3 {
   margin: 0 0 var(--space-3);
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
   overflow-wrap: anywhere;
 }
 .config-unsupported {
@@ -1092,26 +1097,21 @@ legend {
   max-height: 16rem;
   overflow: auto;
 }
-label {
+.config-field,
+.raw-label {
   display: grid;
   gap: var(--space-2);
+  align-content: start;
   min-width: 0;
 }
-.toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-input:not([type='checkbox']),
-select,
 textarea {
   width: 100%;
   min-width: 0;
   padding: 10px 12px;
-  background: var(--surface);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  background: var(--app-color-card);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   font: inherit;
 }
 textarea {
@@ -1121,7 +1121,48 @@ textarea {
 .raw-label {
   margin-bottom: var(--space-3);
 }
-@media (max-width: 600px) {
+/* Wide screens: the categories become a sticky section list beside the form. */
+@media (width >= 840px) {
+  .configuration {
+    grid-template-columns: 220px minmax(0, 1fr);
+    column-gap: var(--space-6);
+  }
+  .configuration > * {
+    grid-column: 1 / -1;
+  }
+  .configuration > .config-categories {
+    grid-column: 1;
+    position: sticky;
+    top: var(--space-4);
+    align-self: start;
+    flex-direction: column;
+    gap: 0;
+    overflow: visible;
+    padding: 0;
+  }
+  .configuration > form {
+    grid-column: 2;
+  }
+  .config-categories :deep(button) {
+    white-space: normal;
+  }
+  .config-categories :deep(.chip) {
+    width: 100%;
+    height: auto;
+    min-height: 56px;
+    padding: var(--space-2) var(--space-4);
+    border: 0;
+    border-radius: var(--md-sys-shape-corner-full);
+    text-align: start;
+  }
+  .config-categories :deep(.active .chip) {
+    padding-inline-start: var(--space-4);
+  }
+  .config-categories :deep(.chip .icon) {
+    display: none;
+  }
+}
+@media (width < 600px) {
   .config-fields {
     grid-template-columns: 1fr;
   }

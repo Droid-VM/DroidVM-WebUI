@@ -3,6 +3,8 @@ import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSession } from '../model/session'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 import AppIcon from '../../../shared/ui/AppIcon.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 import LanguageSelect from '../../../shared/ui/LanguageSelect.vue'
@@ -90,25 +92,22 @@ onUnmounted(() => {
           </p>
           <form v-if="session?.status.value === 'anonymous'" @submit.prevent="login">
             <p class="muted">{{ t('sessionLoginHint') }}</p>
-            <label for="pairing-token">{{ t('sessionPairingLabel') }}</label>
-            <input
+            <AppTextField
               id="pairing-token"
               v-model="pairing"
+              :label="t('sessionPairingLabel')"
+              :supporting-text="t('sessionPairingFormat')"
               type="password"
               autocomplete="off"
               autocapitalize="none"
-              :spellcheck="false"
               required
               minlength="64"
               maxlength="64"
               pattern="[0-9a-f]{64}"
-              :title="t('sessionPairingFormat')"
-              aria-describedby="pairing-hint"
             />
-            <small id="pairing-hint" class="muted">{{ t('sessionPairingFormat') }}</small>
-            <label v-if="session.options.value.rememberSupported" class="remember-browser">
-              <input v-model="remember" type="checkbox" />{{ t('sessionRemember') }}
-            </label>
+            <AppCheckbox v-if="session.options.value.rememberSupported" v-model="remember">{{
+              t('sessionRemember')
+            }}</AppCheckbox>
             <small v-if="session.options.value.rememberSupported" class="muted">{{
               t('sessionRememberHint')
             }}</small>
@@ -141,21 +140,21 @@ onUnmounted(() => {
   width: 100%;
   max-width: 460px;
   padding: var(--space-6);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-dialog);
-  background: var(--surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--app-color-card);
   overflow-wrap: anywhere;
 }
 .login-brand {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  color: var(--accent);
-  font-size: var(--font-heading);
+  color: var(--md-sys-color-primary);
+  font-size: var(--md-sys-typescale-title-medium-size);
   font-weight: 700;
 }
 h1 {
-  font-size: var(--font-mobile-title);
+  font-size: var(--md-sys-typescale-title-large-size);
   margin: var(--space-6) 0 var(--space-4);
 }
 form {
@@ -167,30 +166,9 @@ form p {
   margin: 0 0 var(--space-2);
   line-height: 1.6;
 }
-input[type='password'] {
-  width: 100%;
-  min-width: 0;
-  min-height: 48px;
-  padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--soft);
-  color: var(--ink);
-  font-size: 1rem;
-}
-.remember-browser {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 44px;
-}
-.remember-browser input {
-  width: 20px;
-  height: 20px;
-}
 .login-preferences {
   margin-top: var(--space-5);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
 }
 .login-preferences :deep(.menu-row) {
   display: grid;
@@ -201,7 +179,7 @@ input[type='password'] {
   width: 100%;
   max-width: 100%;
 }
-@media (max-width: 360px) {
+@media (width < 380px) {
   .login-card {
     padding: var(--space-4);
   }

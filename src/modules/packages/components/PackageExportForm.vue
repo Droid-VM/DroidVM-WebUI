@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -6,6 +7,10 @@ import { usePackageExport } from '../model/export'
 import { usePackageTransfers } from '../model/transfers'
 import { taskPercent, taskStateKeys } from '../../tasks'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 import AppProgress from '../../../shared/ui/AppProgress.vue'
 import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
@@ -26,6 +31,11 @@ const staleDisks = computed(() =>
     (index) => !model.plan.value?.disks.some((disk) => disk.index === index),
   ),
 )
+function toggleDisk(index: number, checked: boolean) {
+  const disks = model.draft.disks.filter((item) => item !== index)
+  // Keep the order a native checkbox group would produce: appended on check.
+  model.draft.disks = checked ? [...disks, index] : disks
+}
 function select(event: Event) {
   const id = (event.target as HTMLSelectElement).value
   if (id) emit('select', id)
@@ -43,23 +53,21 @@ function select(event: Event) {
       :title="t('packageExportUnavailable')"
     />
     <template v-else>
-      <label
-        >{{ t('packageExportVm')
-        }}<select
-          :value="model.target.value ?? ''"
-          :disabled="model.pending.value || model.loading.value"
-          @change="select"
-        >
-          <option value="" disabled>{{ t('selectVmHint') }}</option>
-          <option
-            v-if="model.target.value && !vms.some((vm) => vm.id === model.target.value)"
-            :value="model.target.value"
-          >
-            {{ model.target.value }}
-          </option>
-          <option v-for="vm in vms" :key="vm.id" :value="vm.id">{{ vm.name || vm.id }}</option>
-        </select></label
+      <AppSelect
+        :label="t('packageExportVm')"
+        :value="model.target.value ?? ''"
+        :disabled="model.pending.value || model.loading.value"
+        @change="select"
       >
+        <AppOption value="" disabled>{{ t('selectVmHint') }}</AppOption>
+        <AppOption
+          v-if="model.target.value && !vms.some((vm) => vm.id === model.target.value)"
+          :value="model.target.value"
+        >
+          {{ model.target.value }}
+        </AppOption>
+        <AppOption v-for="vm in vms" :key="vm.id" :value="vm.id">{{ vm.name || vm.id }}</AppOption>
+      </AppSelect>
       <div class="buttons">
         <AppButton @click="emit('refreshVms')">{{ t('refreshList') }}</AppButton
         ><AppButton
@@ -76,45 +84,44 @@ function select(event: Event) {
       <p v-if="model.pending.value">{{ t('packageExportPending') }}</p>
       <form v-if="model.plan.value && !model.review.value" @submit.prevent="model.reviewDraft">
         <strong>{{ model.plan.value.vmName || model.plan.value.vmId }}</strong>
-        <label
-          >{{ t('packageExportDestination')
-          }}<input
-            v-model="model.draft.destination"
-            required
-            autocomplete="off"
-            placeholder="/storage/emulated/0/DroidVM/export.vmpkg"
-        /></label>
-        <p>{{ t('packageExportPathHint') }}</p>
-        <label
-          >{{ t('packageExportCompression')
-          }}<select v-model="model.draft.compression">
-            <option
-              v-for="compression in model.plan.value.compressions"
-              :key="compression"
-              :value="compression"
-            >
-              {{ compression === 'NONE' ? t('packageExportCompressionNone') : compression }}
-            </option>
-          </select></label
-        >
-        <label
-          >{{ t('packageExportVolume')
-          }}<input
-            v-model="model.draft.volumeBytes"
-            inputmode="numeric"
-            autocomplete="off"
-            required
-        /></label>
-        <p>{{ t('packageExportVolumeHint') }}</p>
+        <AppTextField
+          v-model="model.draft.destination"
+          :label="t('packageExportDestination')"
+          :supporting-text="t('packageExportPathHint')"
+          required
+          autocomplete="off"
+          placeholder="/storage/emulated/0/DroidVM/export.vmpkg"
+        />
+        <AppSelect v-model="model.draft.compression" :label="t('packageExportCompression')">
+          <AppOption
+            v-for="compression in model.plan.value.compressions"
+            :key="compression"
+            :value="compression"
+          >
+            {{ compression === 'NONE' ? t('packageExportCompressionNone') : compression }}
+          </AppOption>
+        </AppSelect>
+        <AppTextField
+          v-model="model.draft.volumeBytes"
+          :label="t('packageExportVolume')"
+          :supporting-text="t('packageExportVolumeHint')"
+          inputmode="numeric"
+          autocomplete="off"
+          required
+        />
         <fieldset>
           <legend>{{ t('packageExportDisks') }}</legend>
           <p>{{ t('packageExportDisksHint') }}</p>
-          <label v-for="disk in model.plan.value.disks" :key="disk.index" class="check"
-            ><input v-model="model.draft.disks" type="checkbox" :value="disk.index" /><span
+          <AppCheckbox
+            v-for="disk in model.plan.value.disks"
+            :key="disk.index"
+            :checked="model.draft.disks.includes(disk.index)"
+            @update:model-value="toggleDisk(disk.index, $event)"
+            ><span
               >{{ t('diskSlot', { slot: disk.index + 1 }) }} ·
               {{ t(disk.readonly ? 'diskReadOnly' : 'diskReadWrite')
               }}<small>{{ disk.path }}</small></span
-            ></label
+            ></AppCheckbox
           >
           <p v-if="staleDisks.length">
             {{ t('packageExportStaleDisks', { indexes: staleDisks.join(', ') }) }}
@@ -156,11 +163,9 @@ function select(event: Event) {
         </dl>
         <p>{{ t('packageExportOverwriteWarning') }}</p>
         <p>{{ t('packageExportHostHint') }}</p>
-        <label class="check"
-          ><input v-model="model.acknowledged.value" type="checkbox" /><span>{{
-            t('packageExportOverwriteConfirm')
-          }}</span></label
-        >
+        <AppCheckbox v-model="model.acknowledged.value">{{
+          t('packageExportOverwriteConfirm')
+        }}</AppCheckbox>
         <div class="buttons">
           <AppButton @click="model.cancelReview">{{ t('diskBackToForm') }}</AppButton
           ><AppButton
@@ -216,11 +221,11 @@ function select(event: Event) {
             @click="prepareDownload"
             >{{ t('transferPrepareDownload') }}</AppButton
           >
-          <RouterLink
+          <AppLinkButton
             v-else-if="transfers.downloadId.value"
-            class="btn tonal"
+            tone="tonal"
             to="/packages/transfers"
-            >{{ t('transferExistingDownload') }}</RouterLink
+            >{{ t('transferExistingDownload') }}</AppLinkButton
           >
         </template>
         <p v-else-if="model.entry.value.state === 'done'">{{ t('packageExportRetryHint') }}</p>
@@ -234,7 +239,7 @@ function select(event: Event) {
           ><AppButton v-else :disabled="!model.allowed.value" @click="model.prepare()">{{
             t('packageExportReadPlan')
           }}</AppButton
-          ><RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+          ><AppLinkButton tone="tonal" to="/tasks">{{ t('diskTaskLink') }}</AppLinkButton>
         </div>
       </section>
     </template>
@@ -245,8 +250,7 @@ function select(event: Event) {
 form,
 .review,
 .export-status,
-fieldset,
-label {
+fieldset {
   display: grid;
   gap: var(--space-3);
   min-width: 0;
@@ -258,35 +262,14 @@ p {
   margin: 0;
 }
 h2 {
-  font-size: var(--font-heading);
-}
-input:not([type='checkbox']),
-select {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  color: var(--ink);
-  background: var(--surface);
-  font: inherit;
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 fieldset,
 .review,
 .export-status {
   padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-}
-.check {
-  display: flex;
-  align-items: start;
-  gap: var(--space-2);
-}
-.check input {
-  flex: none;
-  margin-top: 4px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
 }
 small {
   display: block;
@@ -308,7 +291,7 @@ dl {
 dd {
   margin: 0;
 }
-@media (max-width: 480px) {
+@media (width < 480px) {
   .buttons > *,
   form > .btn {
     width: 100%;

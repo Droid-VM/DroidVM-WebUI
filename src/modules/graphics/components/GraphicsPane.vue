@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { SingleVmGraphics } from '../model/graphics'
 import { createGraphicsViewer } from '../lib/viewer'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
+import AppSwitch from '../../../shared/ui/AppSwitch.vue'
 
 const props = defineProps<{
   model: SingleVmGraphics
@@ -247,7 +251,7 @@ onUnmounted(() => {
     @touchstart.capture="activate"
     @focusin.capture="activate"
   >
-    <div class="graphics-tools">
+    <div class="graphics-tools session-toolbar">
       <AppButton
         v-if="parallel"
         data-testid="graphic-focus-screen"
@@ -256,24 +260,23 @@ onUnmounted(() => {
       >
         {{ t(inputActive ? 'graphicActiveScreen' : 'graphicFocusScreen') }}
       </AppButton>
-      <label class="screen-picker"
-        >{{ t('graphicScreen') }}
-        <select
-          data-testid="graphic-screen"
-          :value="model.screen.value"
-          :disabled="model.busy.value"
-          @change="select"
+      <AppSelect
+        class="screen-picker"
+        data-testid="graphic-screen"
+        :label="t('graphicScreen')"
+        :value="model.screen.value"
+        :disabled="model.busy.value"
+        @change="select"
+      >
+        <AppOption
+          v-for="screen in model.metadata.value?.screens"
+          :key="screen.id"
+          :value="screen.id"
+          :disabled="screen.id === excludedScreen"
         >
-          <option
-            v-for="screen in model.metadata.value?.screens"
-            :key="screen.id"
-            :value="screen.id"
-            :disabled="screen.id === excludedScreen"
-          >
-            {{ screen.id }}{{ screen.available ? '' : ` — ${t('unavailable')}` }}
-          </option>
-        </select>
-      </label>
+          {{ screen.id }}{{ screen.available ? '' : ` — ${t('unavailable')}` }}
+        </AppOption>
+      </AppSelect>
       <AppButton
         v-if="model.connected.value || model.busy.value"
         data-testid="graphic-disconnect"
@@ -291,11 +294,7 @@ onUnmounted(() => {
       <AppButton :disabled="model.busy.value || model.connected.value" @click="model.reload">{{
         t('refreshList')
       }}</AppButton>
-      <label
-        ><input v-model="fit" type="checkbox" data-testid="graphic-scale" />{{
-          t('graphicFit')
-        }}</label
-      >
+      <AppSwitch v-model="fit" data-testid="graphic-scale">{{ t('graphicFit') }}</AppSwitch>
       <AppButton data-testid="graphic-fullscreen" @click="fullscreen">{{
         t('graphicFullscreen')
       }}</AppButton>
@@ -311,9 +310,9 @@ onUnmounted(() => {
       class="muted"
     >
       {{ t('graphicUnavailable') }}
-      <RouterLink class="btn tonal" :to="`/vms/${encodeURIComponent(vmId)}/edit`">{{
+      <AppLinkButton tone="tonal" :to="`/vms/${encodeURIComponent(vmId)}/edit`">{{
         t('graphicConfigure')
-      }}</RouterLink>
+      }}</AppLinkButton>
     </p>
     <p v-if="model.selected.value?.reason" class="muted">
       {{ t(`graphicReason_${model.selected.value.reason.replaceAll('-', '_')}`) }}
@@ -326,7 +325,7 @@ onUnmounted(() => {
       :aria-label="t('graphicCanvas')"
       @focusout="clearModifiers"
     />
-    <div class="graphics-keys" data-testid="graphic-keys">
+    <div class="graphics-keys session-toolbar" data-testid="graphic-keys">
       <AppButton
         data-testid="graphic-keyboard"
         :disabled="!inputAllowed"
@@ -385,7 +384,7 @@ onUnmounted(() => {
 .graphics:fullscreen {
   padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
     max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-  background: var(--surface);
+  background: var(--app-color-card);
   max-height: 100dvh !important;
 }
 .graphics-parallel {
@@ -409,22 +408,9 @@ onUnmounted(() => {
   align-items: center;
   flex-shrink: 0;
 }
-.graphics-tools label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.screen-picker {
-  min-width: 0;
-}
-.screen-picker select {
-  min-width: 64px;
-  max-width: 200px;
-  min-height: var(--touch-target);
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 10px;
+.graphics-tools .screen-picker {
+  width: 200px;
+  max-width: 100%;
 }
 .graphics-target {
   position: relative;
@@ -432,7 +418,7 @@ onUnmounted(() => {
   min-height: 140px;
   min-width: 0;
   overflow: auto;
-  background: #11151c;
+  background: var(--app-color-screen);
   border-radius: 12px;
   touch-action: none;
 }
@@ -442,7 +428,7 @@ onUnmounted(() => {
 .graphics-status,
 .graphics-hint {
   margin: 0;
-  font-size: var(--font-sm);
+  font-size: var(--md-sys-typescale-body-medium-size);
   flex-shrink: 0;
 }
 .graphics-input {
@@ -450,14 +436,14 @@ onUnmounted(() => {
   min-height: 44px;
   flex-shrink: 0;
   font-size: 16px;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  color: var(--md-sys-color-on-surface);
+  background: var(--app-color-card);
+  border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: 10px;
   padding: 10px;
   resize: none;
 }
-@media (max-width: 650px) {
+@media (width < 600px) {
   .graphics-keys {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -470,7 +456,7 @@ onUnmounted(() => {
     gap: 6px;
   }
   .graphics-hint {
-    font-size: var(--font-xs);
+    font-size: var(--md-sys-typescale-body-small-size);
   }
 }
 </style>

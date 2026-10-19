@@ -76,9 +76,6 @@ function leave() {
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-h1 {
-  font-size: var(--font-title);
-}
 .page-heading > .btn {
   margin-left: auto;
 }

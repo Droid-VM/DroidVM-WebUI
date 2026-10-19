@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePackageImport } from '../model/import'
@@ -6,6 +7,10 @@ import { usePackageTransfers } from '../model/transfers'
 import type { PackageImportNetworkChoice } from '../model/importForm'
 import { taskPercent, taskStateKeys } from '../../tasks'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 import AppProgress from '../../../shared/ui/AppProgress.vue'
 import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
@@ -83,9 +88,9 @@ function bytes(value: string) {
   <div class="import-form">
     <h1>{{ t('packageImportTitle') }}</h1>
     <p>{{ t('packageImportHostHint') }}</p>
-    <RouterLink v-if="transfers.supported.value" class="btn tonal" to="/packages/transfers">{{
+    <AppLinkButton v-if="transfers.supported.value" tone="tonal" to="/packages/transfers">{{
       t('transferUpload')
-    }}</RouterLink>
+    }}</AppLinkButton>
     <p>{{ t('packageExportLeaveHint') }}</p>
     <section v-if="model.previewRecoveryProblem.value">
       <h2>{{ t('packageImportPreviewTask') }}</h2>
@@ -111,16 +116,15 @@ function bytes(value: string) {
       :title="t('packageImportUnavailable')"
     />
     <template v-else>
-      <label
-        >{{ t('packageImportSource')
-        }}<input
-          v-model="model.draft.source"
-          data-testid="package-import-source"
-          autocomplete="off"
-          placeholder="/storage/emulated/0/DroidVM/export.vmpkg"
-          :disabled="!!model.entry.value && model.entry.value.state !== 'done'"
-      /></label>
-      <p>{{ t('packageImportSourceHint') }}</p>
+      <AppTextField
+        v-model="model.draft.source"
+        :label="t('packageImportSource')"
+        :supporting-text="t('packageImportSourceHint')"
+        data-testid="package-import-source"
+        autocomplete="off"
+        placeholder="/storage/emulated/0/DroidVM/export.vmpkg"
+        :disabled="!!model.entry.value && model.entry.value.state !== 'done'"
+      />
       <AppButton
         data-testid="package-import-preview"
         :disabled="!model.canPreview.value"
@@ -135,11 +139,9 @@ function bytes(value: string) {
       >
         <p>{{ t('packageImportRecoveryHint') }}</p>
         <template v-if="model.entry.value?.state === 'done' && !model.pending.value">
-          <label class="check"
-            ><input v-model="model.recoveryAcknowledged.value" type="checkbox" /><span>{{
-              t('packageImportRecoveryConfirm')
-            }}</span></label
-          >
+          <AppCheckbox v-model="model.recoveryAcknowledged.value">{{
+            t('packageImportRecoveryConfirm')
+          }}</AppCheckbox>
           <AppButton
             :disabled="!model.recoveryAcknowledged.value"
             @click="model.restartAfterReview"
@@ -196,48 +198,47 @@ function bytes(value: string) {
           </ul>
         </section>
         <form v-if="!model.review.value" @submit.prevent="model.reviewDraft">
-          <label
-            >{{ t('packageImportTarget')
-            }}<input
-              v-model="model.draft.targetDirectory"
-              autocomplete="off"
-              placeholder="/storage/emulated/0/DroidVM/imported-vm"
-              required
-          /></label>
-          <p>{{ t('packageImportTargetHint') }}</p>
+          <AppTextField
+            v-model="model.draft.targetDirectory"
+            :label="t('packageImportTarget')"
+            :supporting-text="t('packageImportTargetHint')"
+            autocomplete="off"
+            placeholder="/storage/emulated/0/DroidVM/imported-vm"
+            required
+          />
           <fieldset v-for="network in model.plan.value.networks" :key="network.ref">
             <legend>{{ network.name || network.ref }}</legend>
             <p>{{ network.bridgeType }} · {{ network.uplinkMode }}</p>
             <p v-if="!network.createAllowed">{{ t(conflictKeys[network.conflictKind]) }}</p>
-            <label
-              >{{ t('packageImportNetworkAction')
-              }}<select
-                :value="choice(network.ref)?.action ?? ''"
-                @change="action(network.ref, $event)"
+            <AppSelect
+              :label="t('packageImportNetworkAction')"
+              :value="choice(network.ref)?.action ?? ''"
+              @change="action(network.ref, $event)"
+            >
+              <AppOption disabled value="">{{ t('packageImportChooseNetwork') }}</AppOption>
+              <AppOption value="join" :disabled="!network.candidates.length">
+                {{ t('packageImportJoin') }}
+              </AppOption>
+              <AppOption value="create" :disabled="!network.createAllowed">
+                {{ t('packageImportCreate') }}
+              </AppOption>
+              <AppOption value="skip">{{ t('packageImportSkip') }}</AppOption>
+            </AppSelect>
+            <AppSelect
+              v-if="choice(network.ref)?.action === 'join'"
+              :label="t('packageImportJoinTarget')"
+              :value="joinedId(network.ref)"
+              @change="join(network.ref, $event)"
+            >
+              <AppOption disabled value="">{{ t('packageImportChooseNetwork') }}</AppOption>
+              <AppOption
+                v-for="candidate in network.candidates"
+                :key="candidate.id"
+                :value="candidate.id"
               >
-                <option disabled value="">{{ t('packageImportChooseNetwork') }}</option>
-                <option value="join" :disabled="!network.candidates.length">
-                  {{ t('packageImportJoin') }}
-                </option>
-                <option value="create" :disabled="!network.createAllowed">
-                  {{ t('packageImportCreate') }}
-                </option>
-                <option value="skip">{{ t('packageImportSkip') }}</option>
-              </select></label
-            >
-            <label v-if="choice(network.ref)?.action === 'join'"
-              >{{ t('packageImportJoinTarget')
-              }}<select :value="joinedId(network.ref)" @change="join(network.ref, $event)">
-                <option disabled value="">{{ t('packageImportChooseNetwork') }}</option>
-                <option
-                  v-for="candidate in network.candidates"
-                  :key="candidate.id"
-                  :value="candidate.id"
-                >
-                  {{ candidate.name || candidate.id }}
-                </option>
-              </select></label
-            >
+                {{ candidate.name || candidate.id }}
+              </AppOption>
+            </AppSelect>
           </fieldset>
           <p v-if="!model.plan.value.networks.length">{{ t('packageImportNoNetworks') }}</p>
           <p v-if="staleChoices">{{ t('packageImportStaleNetworks') }}</p>
@@ -271,11 +272,9 @@ function bytes(value: string) {
             </li>
           </ul>
           <p>{{ t('packageImportConfirmHint') }}</p>
-          <label class="check"
-            ><input v-model="model.acknowledged.value" type="checkbox" /><span>{{
-              t('packageImportConfirm')
-            }}</span></label
-          >
+          <AppCheckbox v-model="model.acknowledged.value">{{
+            t('packageImportConfirm')
+          }}</AppCheckbox>
           <div class="buttons">
             <AppButton @click="model.cancelReview">{{ t('diskBackToForm') }}</AppButton
             ><AppButton
@@ -356,17 +355,17 @@ function bytes(value: string) {
                 {{ t('packageImportRetained') }}: {{ result.retainedDirectory }}
               </p>
               <p v-if="result.recoveryRequired">{{ t('packageImportRecoveryHint') }}</p>
-              <RouterLink
+              <AppLinkButton
                 v-if="result.registered && !result.registrationUncertain && result.vmId"
-                class="btn tonal"
+                tone="tonal"
                 :to="`/vms/${encodeURIComponent(result.vmId)}`"
-                >{{ t('packageImportOpenVm') }}</RouterLink
+                >{{ t('packageImportOpenVm') }}</AppLinkButton
               >
-              <RouterLink
+              <AppLinkButton
                 v-else-if="result.registrationUncertain && result.vmId"
-                class="btn tonal"
+                tone="tonal"
                 :to="`/vms/${encodeURIComponent(result.vmId)}`"
-                >{{ t('packageImportInspectVm') }}</RouterLink
+                >{{ t('packageImportInspectVm') }}</AppLinkButton
               >
             </template>
             <p
@@ -377,7 +376,7 @@ function bytes(value: string) {
               {{ t('packageImportFailureHint') }}
             </p>
           </template>
-          <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+          <AppLinkButton tone="tonal" to="/tasks">{{ t('diskTaskLink') }}</AppLinkButton>
         </section>
       </template>
     </template>
@@ -387,7 +386,6 @@ function bytes(value: string) {
 .import-form,
 form,
 section,
-label,
 fieldset {
   display: grid;
   gap: var(--space-3);
@@ -402,36 +400,15 @@ p {
 }
 h2,
 h3 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 .summary,
 .review,
 .status,
 fieldset {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   padding: var(--space-3);
-}
-input:not([type='checkbox']),
-select {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-}
-.check {
-  display: flex;
-  align-items: start;
-  gap: var(--space-2);
-}
-.check input {
-  flex: none;
-  margin-top: 4px;
 }
 .buttons {
   display: flex;
@@ -460,7 +437,7 @@ ul {
   margin: 0;
   padding: 0;
 }
-@media (max-width: 480px) {
+@media (width < 480px) {
   .buttons > *,
   .import-form > .btn,
   form > .btn {

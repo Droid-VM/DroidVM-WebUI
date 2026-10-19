@@ -5,6 +5,7 @@ import { useUsbRulesEditor } from '../model/editor'
 import { deviceSubject, ruleLayers, type RuleLayer } from '../model/document'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import SearchField from '../../../shared/ui/SearchField.vue'
 
 const editor = useUsbRulesEditor(),
   { t, locale } = useI18n()
@@ -65,7 +66,11 @@ const label = (layer: RuleLayer) => t(ruleLayers.find((value) => value.key === l
     </AppNotice>
     <template v-if="editor.previewData.value">
       <p class="muted" role="status">{{ t('usbRulesPreviewSnapshot', { time: observedAt }) }}</p>
-      <label>{{ t('resourceSearch') }}<input v-model="query" type="search" /></label>
+      <SearchField
+        v-model="query"
+        :label="t('resourceSearch')"
+        :placeholder="t('resourceSearch')"
+      />
       <p v-if="!filtered.length" class="muted">
         {{ t(query.trim() ? 'usbNoMatches' : 'usbNoDevices') }}
       </p>
@@ -144,38 +149,22 @@ h2 {
   font-size: 1.125rem;
 }
 h3 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 article {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
   padding: var(--space-3);
   display: grid;
   gap: var(--space-2);
   min-width: 0;
-  background: var(--surface);
+  background: var(--app-color-card);
 }
 article .btn {
   justify-self: start;
 }
 .eligible {
-  color: var(--good);
-}
-label {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-input {
-  width: 100%;
-  min-width: 0;
-  min-height: 44px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
+  color: var(--app-color-success);
 }
 .pagination {
   display: flex;

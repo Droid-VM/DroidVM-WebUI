@@ -115,8 +115,8 @@ const blitMessage = computed<MessageKey>(() => {
 }
 details {
   padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
 }
 summary {
   cursor: pointer;

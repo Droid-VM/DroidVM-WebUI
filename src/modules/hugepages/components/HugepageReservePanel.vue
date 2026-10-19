@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n'
 import { useHugepages } from '../model/hugepages'
 import { useHugepageFormatting } from './format'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 const model = useHugepages()
 const { t } = useI18n(),
   { pageLabel } = useHugepageFormatting()
@@ -37,23 +38,21 @@ const stats = [
           model.status.value?.consumerPages == null
         "
       >
-        <label
-          >{{ t('hugepagesPoolInput')
-          }}<input
-            v-model="model.draft.pool"
-            inputmode="numeric"
-            autocomplete="off"
-            data-testid="hugepages-pool-target"
-        /></label>
-        <label
-          >{{ t('hugepagesCmaInput')
-          }}<input
-            v-model="model.draft.cma"
-            inputmode="numeric"
-            autocomplete="off"
-            data-testid="hugepages-cma-target"
-          /><small>{{ t('hugepagesCmaHint') }}</small></label
-        >
+        <AppTextField
+          v-model="model.draft.pool"
+          :label="t('hugepagesPoolInput')"
+          inputmode="numeric"
+          autocomplete="off"
+          data-testid="hugepages-pool-target"
+        />
+        <AppTextField
+          v-model="model.draft.cma"
+          :label="t('hugepagesCmaInput')"
+          :supporting-text="t('hugepagesCmaHint')"
+          inputmode="numeric"
+          autocomplete="off"
+          data-testid="hugepages-cma-target"
+        />
         <p v-if="model.draft.pool && !model.valid.value" role="alert">
           {{ t('hugepagesInvalidTarget') }}
         </p>

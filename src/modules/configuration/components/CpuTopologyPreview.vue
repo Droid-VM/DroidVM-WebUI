@@ -73,8 +73,8 @@ const groups = computed(() => {
 .cpu-preview {
   min-width: 0;
   padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
 }
 h4 {
   margin: 0;
@@ -91,10 +91,10 @@ th,
 td {
   text-align: start;
   padding: var(--space-2);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
   overflow-wrap: anywhere;
 }
 .cpu-warning {
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
 }
 </style>

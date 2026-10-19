@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { useI18n } from 'vue-i18n'
 import { useHostMonitoring } from '../model/overview'
 import { formatHostBytes } from '../lib/format'
@@ -43,7 +44,7 @@ const count = (value: number | null | undefined) => (value == null ? '—' : n(v
           <dd data-testid="host-daemon-pid">{{ host.data.value?.daemon.pid ?? '—' }}</dd>
         </div>
       </dl>
-      <RouterLink class="btn quiet" to="/settings/service">{{ t('webServiceTitle') }}</RouterLink>
+      <AppLinkButton to="/settings/service">{{ t('webServiceTitle') }}</AppLinkButton>
     </section>
     <section class="host-section" :aria-label="t('hostResources')">
       <h2>{{ t('hostResources') }}</h2>
@@ -54,7 +55,7 @@ const count = (value: number | null | undefined) => (value == null ? '—' : n(v
       <dl>
         <div>
           <dt>
-            <RouterLink class="btn quiet" to="/vms">{{ t('navVms') }}</RouterLink>
+            <AppLinkButton to="/vms">{{ t('navVms') }}</AppLinkButton>
           </dt>
           <dd data-testid="host-vm-count">
             {{
@@ -67,9 +68,7 @@ const count = (value: number | null | undefined) => (value == null ? '—' : n(v
         </div>
         <div>
           <dt>
-            <RouterLink class="btn quiet" to="/resources/network">{{
-              t('hostNetworkCount')
-            }}</RouterLink>
+            <AppLinkButton to="/resources/network">{{ t('hostNetworkCount') }}</AppLinkButton>
           </dt>
           <dd data-testid="host-network-count">
             {{
@@ -82,7 +81,7 @@ const count = (value: number | null | undefined) => (value == null ? '—' : n(v
         </div>
         <div>
           <dt>
-            <RouterLink class="btn quiet" to="/resources/disk">{{ t('hostDiskCount') }}</RouterLink>
+            <AppLinkButton to="/resources/disk">{{ t('hostDiskCount') }}</AppLinkButton>
           </dt>
           <dd data-testid="host-disk-count">{{ count(host.data.value?.inventory.diskCount) }}</dd>
         </div>
@@ -132,16 +131,16 @@ header {
   gap: var(--space-2);
 }
 h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 .host-section {
   padding: var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
   display: grid;
   gap: var(--space-3);
   min-width: 0;
-  background: var(--soft);
+  background: var(--app-color-raised);
 }
 dl {
   display: grid;
@@ -153,8 +152,8 @@ dl > div {
   min-width: 0;
 }
 dt {
-  font-size: var(--font-sm);
-  color: var(--muted);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  color: var(--md-sys-color-on-surface-variant);
   margin-bottom: 5px;
 }
 dd {
@@ -162,10 +161,10 @@ dd {
   overflow-wrap: anywhere;
 }
 p {
-  font-size: var(--font-sm);
+  font-size: var(--md-sys-typescale-body-medium-size);
   overflow-wrap: anywhere;
 }
-@media (max-width: 650px) {
+@media (width < 600px) {
   dl {
     grid-template-columns: 1fr;
   }

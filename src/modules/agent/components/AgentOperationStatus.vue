@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAgentOperations } from '../model/operations'
@@ -48,11 +49,11 @@ const label = (state: string) => t(stateKeys[state] ?? 'agentStateUncertain')
       <strong>{{ label(result.outcome) }}</strong>
       <template v-if="result.outcome === 'rescue_ready'">
         <p>{{ t('agentRescueHandoffHint') }}</p>
-        <RouterLink
+        <AppLinkButton
           v-if="result.rescueSessionId"
-          class="btn tonal"
+          tone="tonal"
           :to="`/agent/rescue/${result.rescueSessionId}`"
-          >{{ t('agentRescueOpen') }}</RouterLink
+          >{{ t('agentRescueOpen') }}</AppLinkButton
         >
       </template>
       <dl>
@@ -92,7 +93,7 @@ const label = (state: string) => t(stateKeys[state] ?? 'agentStateUncertain')
         @click="agent.reconcile"
         >{{ t('queryStatus') }}</AppButton
       >
-      <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+      <AppLinkButton tone="tonal" to="/tasks">{{ t('diskTaskLink') }}</AppLinkButton>
     </div>
   </section>
 </template>
@@ -101,13 +102,13 @@ const label = (state: string) => t(stateKeys[state] ?? 'agentStateUncertain')
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   min-width: 0;
   overflow-wrap: anywhere;
 }
 h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
   margin: 0;
 }
 p {

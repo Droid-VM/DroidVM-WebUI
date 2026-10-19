@@ -4,6 +4,9 @@ import { useI18n } from 'vue-i18n'
 import { useHugepages } from '../model/hugepages'
 import { useHugepageFormatting } from './format'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 const model = useHugepages()
 const { t } = useI18n(),
   { pageLabel, flag, leverLabel } = useHugepageFormatting()
@@ -80,38 +83,38 @@ const belowSavedPool = computed(
         model.status.value?.hasCma !== true
       "
     >
-      <label
-        >{{ t('hugepagesCmaTrialTarget')
-        }}<input
-          v-model="model.draft.cmaTrial"
-          inputmode="numeric"
-          autocomplete="off"
-          data-testid="hugepages-cma-trial-target"
-      /></label>
-      <label
-        >{{ t('hugepagesCmaLever')
-        }}<select v-model="model.draft.lever" data-testid="hugepages-cma-lever">
-          <option value="none">{{ t('hugepagesLeverNone') }}</option>
-          <option
-            value="flag"
-            :disabled="
-              model.status.value?.cma?.vendorAllowed !== true &&
-              model.status.value?.features?.restrict !== true
-            "
-          >
-            {{ t('hugepagesLeverFlag') }}
-          </option>
-          <option
-            value="hook"
-            :disabled="
-              model.status.value?.cma?.vendorAllowed !== true &&
-              model.status.value?.features?.gfpHook !== true
-            "
-          >
-            {{ t('hugepagesLeverHook') }}
-          </option>
-        </select></label
+      <AppTextField
+        v-model="model.draft.cmaTrial"
+        :label="t('hugepagesCmaTrialTarget')"
+        inputmode="numeric"
+        autocomplete="off"
+        data-testid="hugepages-cma-trial-target"
+      />
+      <AppSelect
+        v-model="model.draft.lever"
+        :label="t('hugepagesCmaLever')"
+        data-testid="hugepages-cma-lever"
       >
+        <AppOption value="none">{{ t('hugepagesLeverNone') }}</AppOption>
+        <AppOption
+          value="flag"
+          :disabled="
+            model.status.value?.cma?.vendorAllowed !== true &&
+            model.status.value?.features?.restrict !== true
+          "
+        >
+          {{ t('hugepagesLeverFlag') }}
+        </AppOption>
+        <AppOption
+          value="hook"
+          :disabled="
+            model.status.value?.cma?.vendorAllowed !== true &&
+            model.status.value?.features?.gfpHook !== true
+          "
+        >
+          {{ t('hugepagesLeverHook') }}
+        </AppOption>
+      </AppSelect>
       <p v-if="lever !== null" class="hint">{{ t('hugepagesCmaRisk') }}</p>
       <div class="buttons">
         <AppButton

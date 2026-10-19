@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -259,13 +260,13 @@ onBeforeUnmount(model.pauseUpload)
             data-testid="package-download-files"
           >
             <li v-for="file in model.download.value.files" :key="file.index">
-              <a
-                class="btn tonal"
+              <AppLinkButton
+                tone="tonal"
                 data-testid="package-download-file"
                 :href="packageDownloadHref(model.download.value.id, file.index)"
                 :download="file.name"
                 @click="handedOff = true"
-                >{{ file.name }}</a
+                >{{ file.name }}</AppLinkButton
               >
               · {{ bytes(file.sizeBytes) }} B
             </li>
@@ -312,9 +313,9 @@ onBeforeUnmount(model.pauseUpload)
             >{{ t('transferForget') }}</AppButton
           >
         </template>
-        <RouterLink class="btn tonal" to="/packages/export">{{
+        <AppLinkButton tone="tonal" to="/packages/export">{{
           t('packageExportTitle')
-        }}</RouterLink>
+        }}</AppLinkButton>
       </section>
       <div v-if="forget" class="confirmation" role="group" :aria-label="t('transferForget')">
         <p>{{ t(forget === 'download' ? 'transferDownloadForgetHint' : 'transferForgetHint') }}</p>
@@ -350,13 +351,13 @@ p {
   margin: 0;
 }
 h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 section,
 .confirmation {
   padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
 }
 input {
   width: 100%;
@@ -384,10 +385,10 @@ li + li {
   margin-bottom: var(--space-3);
 }
 .id {
-  color: var(--muted);
-  font-size: var(--font-sm);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
 }
-@media (max-width: 480px) {
+@media (width < 480px) {
   .buttons > * {
     width: 100%;
   }

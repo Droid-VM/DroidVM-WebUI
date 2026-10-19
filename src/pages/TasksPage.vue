@@ -132,9 +132,6 @@ async function cancelSelected() {
   justify-content: space-between;
   gap: var(--space-3);
 }
-.page-heading h1 {
-  font-size: var(--font-mobile-title);
-}
 .page-heading .btn {
   margin-left: auto;
 }
@@ -143,9 +140,9 @@ async function cancelSelected() {
   gap: var(--space-3);
 }
 .task-card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  background: var(--app-color-card);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
   padding: var(--space-4);
   min-width: 0;
   overflow-wrap: anywhere;
@@ -158,28 +155,28 @@ async function cancelSelected() {
   flex-wrap: wrap;
 }
 .task-heading h2 {
-  font-size: var(--font-body);
+  font-size: var(--md-sys-typescale-body-medium-size);
   margin: 0;
 }
 .task-heading strong {
-  font-size: var(--font-sm);
+  font-size: var(--md-sys-typescale-body-medium-size);
 }
 .task-resource,
 .task-counts,
 details {
-  color: var(--muted);
-  font-size: var(--font-sm);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
 }
 details {
   margin: var(--space-3) 0;
 }
 .failed {
-  color: var(--danger);
+  color: var(--md-sys-color-error);
 }
 .task-id {
   font-family: monospace;
 }
-@media (min-width: 1100px) {
+@media (width >= 1200px) {
   .task-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

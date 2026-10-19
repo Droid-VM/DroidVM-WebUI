@@ -9,6 +9,8 @@ import { compactCpuSet } from '../shared/lib/cpuSet'
 import AppButton from '../shared/ui/AppButton.vue'
 import AppNotice from '../shared/ui/AppNotice.vue'
 import AppDialog from '../shared/ui/AppDialog.vue'
+import AppOption from '../shared/ui/AppOption.vue'
+import AppSelect from '../shared/ui/AppSelect.vue'
 import OperationTrackingNotice from '../shared/ui/OperationTrackingNotice.vue'
 const model = useDiskDefaults(),
   { t } = useI18n()
@@ -76,20 +78,22 @@ onBeforeUnmount(model.deactivate)
           data-testid="disk-defaults-uncertain"
         />
         <section class="menu" :aria-label="t('settingsCategoryVm')">
-          <label class="menu-row"
-            ><span class="grow"
+          <div class="menu-row">
+            <span class="grow"
               ><strong>{{ t('diskDefaultsCompression') }}</strong
               ><small>{{ t('diskDefaultsCompressionHint') }}</small></span
-            ><select
+            ><AppSelect
               v-model="model.draft.optimizeCompression"
+              class="row-select"
+              :aria-label="t('diskDefaultsCompression')"
               data-testid="disk-defaults-compression"
               :disabled="!model.editable.value"
               @change="model.cancelReview"
             >
-              <option value="ask">{{ t('diskDefaultsAsk') }}</option>
-              <option value="none">{{ t('diskNoCompression') }}</option>
-            </select></label
-          >
+              <AppOption value="ask">{{ t('diskDefaultsAsk') }}</AppOption>
+              <AppOption value="none">{{ t('diskNoCompression') }}</AppOption>
+            </AppSelect>
+          </div>
           <div class="cpu-setting">
             <strong>{{ t('diskDefaultsCpus') }}</strong>
             <p>{{ t('diskDefaultsCpuHint') }}</p>
@@ -235,6 +239,7 @@ onBeforeUnmount(model.deactivate)
   display: grid;
   gap: var(--space-4);
   min-width: 0;
+  max-width: var(--app-content-width);
 }
 header h1 {
   margin-block: 0 var(--space-2);
@@ -258,7 +263,8 @@ p {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-select {
+.row-select {
+  width: 200px;
   max-width: 100%;
 }
 .cpu-setting {
@@ -271,8 +277,8 @@ select {
   gap: var(--space-2);
 }
 .receipt {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
   padding: var(--space-4);
 }
 li {

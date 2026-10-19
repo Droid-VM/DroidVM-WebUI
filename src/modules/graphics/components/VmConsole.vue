@@ -70,7 +70,7 @@ onBeforeUnmount(model.reset)
 
 <template>
   <section class="graphics-console" :class="{ 'console-parallel': model.secondary.value }">
-    <div class="console-tools">
+    <div class="console-tools session-toolbar">
       <AppButton
         v-if="
           !model.secondary.value &&
@@ -154,6 +154,7 @@ onBeforeUnmount(model.reset)
 }
 .graphics-panes {
   display: grid;
+  flex: 1;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   min-width: 0;
@@ -173,14 +174,14 @@ onBeforeUnmount(model.reset)
   flex: 0 0 auto;
   min-height: auto;
   padding: var(--space-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
 }
 .parallel .graphics-pane[data-input-active='true'] {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--md-sys-color-primary);
   outline-offset: -2px;
 }
-@media (min-width: 1100px) {
+@media (width >= 1200px) {
   .graphics-panes.parallel {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

@@ -3,6 +3,8 @@ import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useHostNetwork } from '../model/host'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
 
 const props = defineProps<{ modelValue: string; disabled?: boolean }>()
 const emit = defineEmits<{
@@ -36,6 +38,7 @@ const addresses = computed(
 function choose(event: Event) {
   const select = event.target as HTMLSelectElement
   const option = options.value.find((item) => item.value === select.value)
+  // A pick applies once; the menu returns to its placeholder.
   select.value = ''
   if (option && !props.disabled)
     emit('selected', { value: option.value, bridgeable: option.bridgeable })
@@ -45,19 +48,20 @@ onMounted(() => void host.ensure())
 <template>
   <div v-if="host.supported.value" class="uplink-suggestions" :aria-busy="host.loading.value">
     <div class="uplink-picker">
-      <select
+      <AppSelect
+        class="uplink-select"
         value=""
         :aria-label="t('networkUplinkSuggestions')"
         :disabled="disabled || host.loading.value || !options.length"
         @change="choose"
       >
-        <option value="">{{ t('networkUplinkSuggestions') }}</option>
-        <option v-for="option in options" :key="option.value" :value="option.value">
+        <AppOption value="">{{ t('networkUplinkSuggestions') }}</AppOption>
+        <AppOption v-for="option in options" :key="option.value" :value="option.value">
           {{ option.value
           }}{{ option.name && option.name !== option.value ? ` · ${option.name}` : ''
           }}{{ !option.name ? ` · ${t('networkUplinkUnresolved')}` : '' }}
-        </option>
-      </select>
+        </AppOption>
+      </AppSelect>
       <AppButton :disabled="host.loading.value" @click="host.refresh">{{
         t('refreshList')
       }}</AppButton>
@@ -88,8 +92,8 @@ onMounted(() => void host.ensure())
   display: grid;
   gap: var(--space-2);
   min-width: 0;
-  color: var(--muted);
-  font-size: var(--font-sm);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
   overflow-wrap: anywhere;
 }
 .uplink-picker {
@@ -97,16 +101,12 @@ onMounted(() => void host.ensure())
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-select {
+.uplink-picker .uplink-select {
   flex: 1 1 180px;
-  min-width: 0;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
+  width: auto;
+}
+.uplink-picker {
+  align-items: center;
 }
 p,
 ul {
@@ -116,6 +116,6 @@ ul {
   padding-left: var(--space-4);
 }
 .error {
-  color: var(--danger);
+  color: var(--md-sys-color-error);
 }
 </style>

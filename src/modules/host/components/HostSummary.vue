@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { useI18n } from 'vue-i18n'
 import { useHostMonitoring } from '../model/overview'
 import HostMetrics from './HostMetrics.vue'
@@ -21,7 +22,7 @@ const host = useHostMonitoring(() => props.active),
     </template>
     <HostObservationState />
     <HostMetrics v-if="variant === 'metrics'" />
-    <RouterLink class="btn tonal" to="/host">{{ t('hostViewDetails') }}</RouterLink>
+    <AppLinkButton tone="tonal" to="/host">{{ t('hostViewDetails') }}</AppLinkButton>
   </section>
 </template>
 <style scoped>
@@ -30,8 +31,8 @@ const host = useHostMonitoring(() => props.active),
   gap: var(--space-3);
   min-width: 0;
   padding: var(--space-4);
-  background: var(--soft);
-  border-radius: var(--radius-md);
+  background: var(--app-color-raised);
+  border-radius: var(--md-sys-shape-corner-large);
   overflow-wrap: anywhere;
 }
 h2,
@@ -39,6 +40,6 @@ p {
   margin: 0;
 }
 h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 </style>

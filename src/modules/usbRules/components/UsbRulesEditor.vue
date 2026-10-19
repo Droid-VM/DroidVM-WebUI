@@ -9,6 +9,8 @@ import UsbRuleCard from './UsbRuleCard.vue'
 import UsbRulesPreview from './UsbRulesPreview.vue'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import FilterGroup from '../../../shared/ui/FilterGroup.vue'
+import AppSwitch from '../../../shared/ui/AppSwitch.vue'
 import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
 
@@ -20,6 +22,16 @@ const layer = ref<RuleLayer>('exact'),
   confirmation = ref<'save' | 'reload' | 'enable' | null>(null)
 const pageSize = 20
 const current = computed(() => ruleLayers.find((item) => item.key === layer.value)!)
+const layerOptions = computed(() =>
+  ruleLayers.map((item) => ({
+    value: item.key,
+    // A layer with invalid rules is flagged so the problem is findable from the tabs.
+    label: editor.issues.value.some((issue) => issue.layer === item.key)
+      ? `${t(item.label)} · ${t('configInvalid')}`
+      : t(item.label),
+    count: editor.draft.value?.[item.key].length ?? 0,
+  })),
+)
 const rules = computed(() => editor.draft.value?.[layer.value] ?? [])
 const pages = computed(() => Math.max(1, Math.ceil(rules.value.length / pageSize)))
 const rows = computed(() => rules.value.slice(page.value * pageSize, (page.value + 1) * pageSize))
@@ -33,9 +45,9 @@ watch(pages, (count) => {
   page.value = Math.min(page.value, count - 1)
 })
 function toggle(event: Event) {
-  const input = event.target as HTMLInputElement
-  if (input.checked) {
-    input.checked = false
+  const input = event.target as HTMLElement & { selected: boolean }
+  if (input.selected) {
+    input.selected = false
     confirmation.value = 'enable'
   } else editor.enabled(false)
 }
@@ -153,30 +165,18 @@ function download() {
       >
     </section>
     <template v-if="editor.draft.value">
-      <label class="toggle"
-        ><input
-          type="checkbox"
-          :checked="editor.draft.value.enabled"
-          :disabled="!editor.editable.value"
-          @change="toggle"
-        />{{ t('usbRulesEnabled') }}</label
+      <AppSwitch
+        :selected="editor.draft.value.enabled"
+        :disabled="!editor.editable.value"
+        @change="toggle"
+        >{{ t('usbRulesEnabled') }}</AppSwitch
       >
-      <div class="layers" role="group" :aria-label="t('usbRulesCategories')">
-        <AppButton
-          v-for="item in ruleLayers"
-          :key="item.key"
-          :tone="layer === item.key ? 'tonal' : 'quiet'"
-          :aria-pressed="layer === item.key"
-          @click="layer = item.key"
-          >{{ t(item.label) }} · {{ editor.draft.value[item.key].length
-          }}<span
-            v-if="editor.issues.value.some((issue) => issue.layer === item.key)"
-            :aria-label="t('configInvalid')"
-          >
-            !</span
-          ></AppButton
-        >
-      </div>
+      <FilterGroup
+        v-model="layer"
+        class="layers"
+        :label="t('usbRulesCategories')"
+        :options="layerOptions"
+      />
       <section :aria-label="t(current.label)" class="layer-content">
         <h2>{{ t(current.label) }}</h2>
         <p class="muted">{{ t(current.hint) }}</p>
@@ -261,13 +261,8 @@ function download() {
   gap: var(--space-2);
 }
 .layers {
-  display: flex;
+  flex-wrap: nowrap;
   overflow-x: auto;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
-}
-.layers .btn {
-  flex-shrink: 0;
 }
 .rules-help summary {
   padding: var(--space-3) 0;
@@ -275,18 +270,7 @@ function download() {
 }
 .rules-help p {
   margin: var(--space-2) 0;
-  color: var(--muted);
-}
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 44px;
-}
-.toggle input {
-  width: 22px;
-  height: 22px;
-  accent-color: var(--accent);
+  color: var(--md-sys-color-on-surface-variant);
 }
 .layer-content > .btn {
   justify-self: start;
@@ -294,10 +278,10 @@ function download() {
 .save-bar {
   position: sticky;
   bottom: calc(var(--bottom-nav-height, 80px) + env(safe-area-inset-bottom));
-  background: var(--surface);
+  background: var(--app-color-card);
   padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
   z-index: 2;
 }
 .save-bar > .primary {
@@ -312,8 +296,8 @@ h2 {
   font-size: 1.125rem;
 }
 .operation {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   padding: var(--space-3);
   display: grid;
   gap: var(--space-2);
@@ -321,7 +305,7 @@ h2 {
 .operation .btn {
   justify-self: start;
 }
-@media (min-width: 651px) {
+@media (width >= 600px) {
   .save-bar {
     bottom: var(--space-3);
   }

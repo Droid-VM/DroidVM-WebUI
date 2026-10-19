@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { computed, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useImageImport } from '../model/import'
 import { taskPercent, taskStateKeys } from '../../tasks'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 import AppProgress from '../../../shared/ui/AppProgress.vue'
 import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
@@ -29,18 +32,17 @@ onBeforeUnmount(model.leave)
         @clear="model.clearPreviewTracking"
       />
       <form @submit.prevent="model.readPreview">
-        <label
-          >{{ t('imageImportSource')
-          }}<input
-            v-model="model.source.value"
-            data-testid="image-import-source"
-            :disabled="model.pending.value || !!model.entry.value"
-            placeholder="/storage/emulated/0/DroidVM/linux.qcow2"
-            autocomplete="off"
-            spellcheck="false"
-            required
-        /></label>
-        <p>{{ t('imageImportSourceHint') }}</p>
+        <AppTextField
+          v-model="model.source.value"
+          :label="t('imageImportSource')"
+          :supporting-text="t('imageImportSourceHint')"
+          data-testid="image-import-source"
+          :disabled="model.pending.value || !!model.entry.value"
+          placeholder="/storage/emulated/0/DroidVM/linux.qcow2"
+          autocomplete="off"
+          spellcheck="false"
+          required
+        />
         <AppButton
           type="submit"
           data-testid="image-import-preview"
@@ -91,13 +93,11 @@ onBeforeUnmount(model.leave)
           </dl>
         </article>
         <template v-if="!model.entry.value">
-          <label class="check"
-            ><input
-              v-model="model.acknowledged.value"
-              data-testid="image-import-acknowledge"
-              type="checkbox"
-              :disabled="model.pending.value"
-            /><span>{{ t('imageImportConfirm') }}</span></label
+          <AppCheckbox
+            v-model="model.acknowledged.value"
+            data-testid="image-import-acknowledge"
+            :disabled="model.pending.value"
+            >{{ t('imageImportConfirm') }}</AppCheckbox
           >
           <AppButton
             tone="primary"
@@ -135,7 +135,7 @@ onBeforeUnmount(model.leave)
             @click="model.reconcile"
             >{{ t('queryStatus') }}</AppButton
           >
-          <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+          <AppLinkButton tone="tonal" to="/tasks">{{ t('diskTaskLink') }}</AppLinkButton>
         </div>
       </section>
       <section v-if="model.entry.value" data-testid="image-import-result" aria-live="polite">
@@ -172,25 +172,23 @@ onBeforeUnmount(model.leave)
             >
           </template>
           <div class="buttons">
-            <RouterLink
-              class="btn tonal"
+            <AppLinkButton
+              tone="tonal"
               :to="{
                 path: '/resources/disk',
                 query: { disk: model.result.value?.diskId ?? undefined },
               }"
-              >{{ t('diskViewResult') }}</RouterLink
+              >{{ t('diskViewResult') }}</AppLinkButton
             >
-            <RouterLink class="btn tonal" to="/vms/new">{{ t('createVm') }}</RouterLink>
+            <AppLinkButton tone="tonal" to="/vms/new">{{ t('createVm') }}</AppLinkButton>
           </div>
         </template>
         <template v-if="model.entry.value.state === 'done'">
           <p>{{ t('imageImportRestartHint') }}</p>
-          <RouterLink class="btn tonal" to="/resources/disk">{{ t('navDisk') }}</RouterLink>
-          <label class="check"
-            ><input v-model="model.outcomeAcknowledged.value" type="checkbox" /><span>{{
-              t('imageImportOutcomeConfirm')
-            }}</span></label
-          >
+          <AppLinkButton tone="tonal" to="/resources/disk">{{ t('navDisk') }}</AppLinkButton>
+          <AppCheckbox v-model="model.outcomeAcknowledged.value">{{
+            t('imageImportOutcomeConfirm')
+          }}</AppCheckbox>
           <AppButton
             data-testid="image-import-restart"
             :disabled="!model.canRestart.value || model.reviewingOutcome.value"
@@ -212,8 +210,7 @@ onBeforeUnmount(model.leave)
 .image-import,
 form,
 section,
-article,
-label {
+article {
   display: grid;
   min-width: 0;
   gap: var(--space-3);
@@ -227,26 +224,15 @@ p {
 }
 h2,
 h3 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 section,
 .chain li,
 .attachment {
   padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-}
-input:not([type='checkbox']) {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  font: inherit;
-  color: var(--ink);
-  background: var(--surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--app-color-card);
 }
 .chain {
   display: grid;
@@ -257,15 +243,6 @@ input:not([type='checkbox']) {
 }
 .chain li > * + * {
   margin-top: var(--space-2);
-}
-.check {
-  display: flex;
-  align-items: start;
-  gap: var(--space-2);
-}
-.check input {
-  flex: none;
-  margin-top: 4px;
 }
 .buttons {
   display: flex;
@@ -282,7 +259,7 @@ dl {
 dd {
   margin: 0;
 }
-@media (max-width: 480px) {
+@media (width < 480px) {
   .buttons > *,
   form > .btn {
     width: 100%;

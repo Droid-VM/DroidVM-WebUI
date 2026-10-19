@@ -7,7 +7,10 @@ import '@xterm/xterm/css/xterm.css'
 import { useVmTerminal } from '../model/terminal'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
 import EmptyState from '../../../shared/ui/EmptyState.vue'
+import { resolvedTheme } from '../../../shared/lib/theme'
 
 const props = defineProps<{ vmId: string; instanceId?: string }>()
 const model = useVmTerminal(),
@@ -52,6 +55,19 @@ function send(value: string) {
   }
   model.text(value)
 }
+// xterm paints on a canvas, so read the M3 roles instead of using CSS.
+function terminalTheme() {
+  const style = getComputedStyle(document.documentElement)
+  const color = (role: string) => style.getPropertyValue(`--md-sys-color-${role}`).trim()
+  return {
+    background: color('surface-container-lowest'),
+    foreground: color('on-surface'),
+    cursor: color('primary'),
+    cursorAccent: color('surface-container-lowest'),
+    selectionBackground: color('primary-container'),
+    selectionForeground: color('on-primary-container'),
+  }
+}
 function createTerminal() {
   if (!mounted || !host.value) return
   disposeTerminal()
@@ -66,12 +82,9 @@ function createTerminal() {
     disableStdin: !model.connected.value,
     logLevel: 'off',
     linkHandler: { activate: () => undefined },
-    theme: {
-      background: '#11151c',
-      foreground: '#e6edf5',
-      cursor: '#9ecbff',
-      selectionBackground: '#42556f',
-    },
+    // Keep guest ANSI colors readable on both light and dark backgrounds.
+    minimumContrastRatio: 4.5,
+    theme: terminalTheme(),
   })
   fit = new FitAddon()
   terminal.loadAddon(fit)
@@ -164,6 +177,9 @@ watch(model.connected, (connected) => {
   else control.value = false
 })
 watch(locale, () => terminal?.textarea?.setAttribute('aria-label', t('terminalInput')))
+watch(resolvedTheme, () => {
+  if (terminal) terminal.options.theme = terminalTheme()
+})
 watch(model.supported, async (supported) => {
   if (mounted) {
     await nextTick()
@@ -230,20 +246,19 @@ onUnmounted(() => {
     class="vm-terminal"
     :style="availableHeight ? { maxHeight: `${availableHeight}px` } : undefined"
   >
-    <div class="toolbar">
-      <label
-        ><span>{{ t('terminalStream') }}</span
-        ><select
-          data-testid="terminal-stream"
-          :value="model.stream.value"
-          :disabled="model.busy.value"
-          @change="model.select(($event.target as HTMLSelectElement).value)"
-        >
-          <option v-for="name in model.metadata.value?.streams" :key="name" :value="name">
-            {{ name }}
-          </option>
-        </select></label
+    <div class="toolbar session-toolbar">
+      <AppSelect
+        class="stream-select"
+        data-testid="terminal-stream"
+        :label="t('terminalStream')"
+        :value="model.stream.value"
+        :disabled="model.busy.value"
+        @change="model.select(($event.target as HTMLSelectElement).value)"
       >
+        <AppOption v-for="name in model.metadata.value?.streams" :key="name" :value="name">
+          {{ name }}
+        </AppOption>
+      </AppSelect>
       <AppButton
         v-if="!model.connected.value"
         data-testid="terminal-connect"
@@ -291,7 +306,7 @@ onUnmounted(() => {
       data-testid="terminal-output"
       :aria-label="t('terminalOutput')"
     />
-    <div class="keyboard" :aria-label="t('terminalKeys')">
+    <div class="keyboard session-toolbar" :aria-label="t('terminalKeys')">
       <AppButton :disabled="!model.connected.value" :aria-pressed="control" @click="toggleControl"
         >Ctrl</AppButton
       >
@@ -331,32 +346,17 @@ onUnmounted(() => {
   gap: var(--space-2);
   flex-shrink: 0;
 }
-.toolbar label {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  min-width: 0;
-  flex: 1 1 150px;
-}
-select {
-  min-width: 0;
-  max-width: 100%;
-  flex: 1;
-  min-height: var(--touch-target);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  padding: var(--space-2);
+.toolbar .stream-select {
+  flex: 0 1 280px;
+  width: auto;
 }
 .terminal-host {
   flex: 1 1 260px;
   min-width: 0;
   min-height: 120px;
   overflow: hidden;
-  background: #11151c;
-  border-radius: var(--radius-sm);
+  background: var(--md-sys-color-surface-container-lowest);
+  border-radius: var(--md-sys-shape-corner-medium);
   padding: 8px;
 }
 .terminal-host :deep(.xterm) {
@@ -372,13 +372,13 @@ select {
 .terminal-notices,
 .terminal-help,
 .note {
-  font-size: var(--font-sm);
+  font-size: var(--md-sys-typescale-body-medium-size);
   overflow-wrap: anywhere;
 }
 .terminal-notices {
   max-height: 150px;
   overflow: auto;
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--md-sys-color-primary);
   padding-left: var(--space-2);
 }
 p {
@@ -392,7 +392,7 @@ p {
   max-height: 130px;
   overflow: auto;
 }
-@media (max-width: 450px) {
+@media (width < 480px) {
   .toolbar,
   .keyboard {
     gap: var(--space-1);

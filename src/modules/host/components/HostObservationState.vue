@@ -63,7 +63,7 @@ const observed = computed(() =>
 }
 p {
   margin: 0;
-  font-size: var(--font-sm);
+  font-size: var(--md-sys-typescale-body-medium-size);
   overflow-wrap: anywhere;
 }
 </style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../shared/ui/AppLinkButton.vue'
 import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -12,6 +13,9 @@ import { taskStateKeys } from '../modules/tasks'
 import AppButton from '../shared/ui/AppButton.vue'
 import AppNotice from '../shared/ui/AppNotice.vue'
 import AppDialog from '../shared/ui/AppDialog.vue'
+import AppCheckbox from '../shared/ui/AppCheckbox.vue'
+import AppOption from '../shared/ui/AppOption.vue'
+import AppSelect from '../shared/ui/AppSelect.vue'
 import OperationTrackingNotice from '../shared/ui/OperationTrackingNotice.vue'
 const model = useHugepageProcesses(),
   pool = useHugepages(),
@@ -71,18 +75,18 @@ onBeforeUnmount(() => {
     />
     <template v-else>
       <div class="controls">
-        <label
-          >{{ t('hpProcessSource')
-          }}<select
-            :value="model.source.value"
-            data-testid="hugepage-process-source"
-            @change="changeSource"
-          >
-            <option v-for="source in sources" :key="source" :value="source">
-              {{ t(sourceLabels[source]) }}
-            </option>
-          </select></label
-        ><AppButton
+        <AppSelect
+          class="source-select"
+          :label="t('hpProcessSource')"
+          :value="model.source.value"
+          data-testid="hugepage-process-source"
+          @change="changeSource"
+        >
+          <AppOption v-for="source in sources" :key="source" :value="source">
+            {{ t(sourceLabels[source]) }}
+          </AppOption>
+        </AppSelect>
+        <AppButton
           data-testid="hugepage-process-refresh"
           :disabled="model.loading.value"
           @click="model.refresh"
@@ -163,7 +167,7 @@ onBeforeUnmount(() => {
             :disabled="pool.checking.value"
             @click="pool.reconcile"
             >{{ t('queryStatus') }}</AppButton
-          ><RouterLink class="btn tonal" to="/hugepages">{{ t('hugepagesTitle') }}</RouterLink>
+          ><AppLinkButton tone="tonal" to="/hugepages">{{ t('hugepagesTitle') }}</AppLinkButton>
         </div>
       </section>
     </template>
@@ -219,12 +223,11 @@ onBeforeUnmount(() => {
         <p>
           {{ t(model.review.value.signal === 'kill' ? 'hpProcessKillRisk' : 'hpProcessTermRisk') }}
         </p>
-        <label class="signal-confirm"
-          ><input
-            v-model="model.confirmSignal.value"
-            type="checkbox"
-            data-testid="hugepage-process-confirm-check"
-          />{{ t('hpProcessSignalAcknowledgment') }}</label
+        <AppCheckbox
+          v-model="model.confirmSignal.value"
+          class="signal-confirm"
+          data-testid="hugepage-process-confirm-check"
+          >{{ t('hpProcessSignalAcknowledgment') }}</AppCheckbox
         >
         <div class="buttons">
           <AppButton @click="model.cancelReview">{{ t('cancel') }}</AppButton
@@ -290,8 +293,8 @@ onBeforeUnmount(() => {
 .hugepage-processes-page {
   display: grid;
   gap: var(--space-4);
-  padding: var(--space-4);
   min-width: 0;
+  max-width: var(--app-content-width);
 }
 .hugepage-processes-page > a {
   display: inline-flex;
@@ -304,7 +307,7 @@ h2 {
   overflow-wrap: anywhere;
 }
 h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 p {
   line-height: 1.6;
@@ -312,35 +315,17 @@ p {
 }
 .controls {
   display: flex;
-  align-items: end;
+  align-items: center;
   flex-wrap: wrap;
   gap: var(--space-3);
 }
-.controls label {
-  display: grid;
-  gap: var(--space-2);
+.controls .source-select {
   flex: 1;
-  min-width: 0;
-}
-select {
-  min-height: 48px;
-  width: 100%;
-  min-width: 0;
-  padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-}
-select:focus-visible,
-.signal-confirm input:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
+  width: auto;
 }
 .observation {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
+  background: var(--app-color-card);
+  border-radius: var(--md-sys-shape-corner-large);
   padding: var(--space-4);
   min-width: 0;
 }
@@ -350,8 +335,8 @@ select:focus-visible,
   min-width: 0;
 }
 .muted {
-  color: var(--muted);
-  font-size: var(--font-sm);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
 }
 .buttons {
   display: flex;
@@ -359,17 +344,8 @@ select:focus-visible,
   gap: var(--space-2);
 }
 .signal-confirm {
-  display: flex;
-  align-items: center;
-  min-height: 48px;
-  gap: var(--space-3);
   line-height: 1.5;
   margin-block: var(--space-3);
-}
-.signal-confirm input {
-  width: 24px;
-  height: 24px;
-  flex: 0 0 24px;
 }
 .stack-text {
   white-space: pre-wrap;
@@ -377,9 +353,9 @@ select:focus-visible,
   max-height: 50vh;
   overflow: auto;
   padding: var(--space-3);
-  background: var(--soft);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-sm);
+  background: var(--app-color-raised);
+  border-radius: var(--md-sys-shape-corner-medium);
+  font-size: var(--md-sys-typescale-body-medium-size);
 }
 .btn {
   min-height: 48px;

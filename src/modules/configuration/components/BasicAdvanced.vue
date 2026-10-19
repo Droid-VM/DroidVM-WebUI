@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch, useId } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cloneConfiguration, encodeDocument, fieldText, type ConfigObject } from '../model/document'
 import { environmentValid, lineArray, stringLines, topologyIssues } from '../model/basic'
@@ -9,12 +9,13 @@ import CpuTopologyPreview from './CpuTopologyPreview.vue'
 import { cpuPlacementPreview, seedManualTopology } from '../model/cpuPlacement'
 import { useResourceCatalog } from '../../resources'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 
 const props = defineProps<{ document: ConfigObject; disabled: boolean; active: boolean }>()
 const emit = defineEmits<{ change: [document: ConfigObject]; dirty: [] }>()
 const { t } = useI18n()
 const root = ref<HTMLElement>()
-const labelId = useId()
 const cpus = useResourceCatalog().cpus
 const preview = computed(() =>
   cpus.status.value === 'ready' && fieldText(props.document.backend).toLowerCase() === 'crosvm'
@@ -115,6 +116,10 @@ watch(
   },
   { immediate: true },
 )
+function hint(field: (typeof fields)[number]) {
+  if (!editable(field.key, field.lines)) return t('configUnsupportedShape')
+  return field.hint ? t(field.hint) : ''
+}
 defineExpose({ validate })
 </script>
 
@@ -122,15 +127,12 @@ defineExpose({ validate })
   <section ref="root" class="basic-advanced">
     <h3>{{ t('configBasicAdvanced') }}</h3>
     <CpuAffinityEditor :document="document" :disabled="disabled" @change="emit('change', $event)" />
-    <label class="topology-toggle">
-      <input
-        type="checkbox"
-        :checked="document.cpu_topology_auto !== false"
-        :disabled="disabled"
-        @change="changeAuto"
-      />
-      <span>{{ t('configTopologyAuto') }}</span>
-    </label>
+    <AppCheckbox
+      :checked="document.cpu_topology_auto !== false"
+      :disabled="disabled"
+      @change="changeAuto"
+      >{{ t('configTopologyAuto') }}</AppCheckbox
+    >
     <CpuTopologyPreview :document="document" :active="active" />
     <AppButton
       v-if="document.cpu_topology_auto === false && cpus.supported.value"
@@ -138,39 +140,34 @@ defineExpose({ validate })
       @click="seedManual"
       >{{ t('cpuSeedManual') }}</AppButton
     >
-    <label v-for="field in fields" :key="field.key">
-      <span>{{ t(field.label) }}</span>
-      <textarea
+    <template v-for="field in fields" :key="field.key">
+      <AppTextField
         v-if="field.lines || field.multiline"
-        :data-basic-path="field.key"
-        :aria-label="t(field.label)"
-        :aria-describedby="`${labelId}-${field.key}`"
-        :value="display(field.key, field.lines)"
+        type="textarea"
         rows="4"
+        :label="t(field.label)"
+        :supporting-text="hint(field)"
+        :data-basic-path="field.key"
+        :value="display(field.key, field.lines)"
         :disabled="disabled"
         :readonly="!editable(field.key, field.lines)"
         spellcheck="false"
         @input="emit('dirty')"
         @change="change(field.key, $event, field.lines)"
       />
-      <input
+      <AppTextField
         v-else
+        :label="t(field.label)"
+        :supporting-text="hint(field)"
         :data-basic-path="field.key"
-        :aria-label="t(field.label)"
-        :aria-describedby="`${labelId}-${field.key}`"
         :value="display(field.key)"
-        type="text"
         :disabled="disabled || inactive(field.manual)"
         :readonly="!editable(field.key)"
         spellcheck="false"
         @input="emit('dirty')"
         @change="change(field.key, $event)"
       />
-      <small v-if="!editable(field.key, field.lines)" :id="`${labelId}-${field.key}`">{{
-        t('configUnsupportedShape')
-      }}</small>
-      <small v-else-if="field.hint" :id="`${labelId}-${field.key}`">{{ t(field.hint) }}</small>
-    </label>
+    </template>
   </section>
 </template>
 
@@ -180,33 +177,5 @@ defineExpose({ validate })
   gap: var(--space-4);
   min-width: 0;
   margin-top: var(--space-5);
-}
-label {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-.topology-toggle {
-  display: flex;
-  align-items: center;
-}
-input[type='text'],
-textarea {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-}
-textarea {
-  resize: vertical;
-}
-small {
-  color: var(--muted);
-  overflow-wrap: anywhere;
 }
 </style>

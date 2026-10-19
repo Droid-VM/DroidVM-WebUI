@@ -7,6 +7,10 @@ import { taskStateKeys } from '../modules/tasks'
 import AppButton from '../shared/ui/AppButton.vue'
 import AppNotice from '../shared/ui/AppNotice.vue'
 import AppDialog from '../shared/ui/AppDialog.vue'
+import AppCheckbox from '../shared/ui/AppCheckbox.vue'
+import AppOption from '../shared/ui/AppOption.vue'
+import AppSelect from '../shared/ui/AppSelect.vue'
+import AppSwitch from '../shared/ui/AppSwitch.vue'
 import OperationTrackingNotice from '../shared/ui/OperationTrackingNotice.vue'
 const model = useUsbAcm(),
   { t } = useI18n()
@@ -122,30 +126,32 @@ onBeforeUnmount(model.deactivate)
           data-testid="usb-acm-uncertain"
         />
         <section class="menu" :aria-label="t('usbAcmEditTitle')">
-          <label class="menu-row"
+          <AppSwitch
+            v-model="model.draft.enabled"
+            class="menu-row"
+            data-testid="usb-acm-enabled"
+            :disabled="!model.editable.value"
+            @change="model.cancelReview"
             ><span class="grow"
               ><strong>{{ t('usbAcmEnable') }}</strong
               ><small>{{ t('usbAcmEnableHint') }}</small></span
-            ><input
-              v-model="model.draft.enabled"
-              type="checkbox"
-              data-testid="usb-acm-enabled"
-              :disabled="!model.editable.value"
-              @change="model.cancelReview"
-          /></label>
-          <label class="menu-row"
-            ><span class="grow"
+            ></AppSwitch
+          >
+          <div class="menu-row">
+            <span class="grow"
               ><strong>{{ t('usbAcmPorts') }}</strong
               ><small>{{ t('usbAcmPortsHint') }}</small></span
-            ><select
+            ><AppSelect
               v-model.number="model.draft.ports"
+              class="row-select"
+              :aria-label="t('usbAcmPorts')"
               data-testid="usb-acm-ports"
               :disabled="!model.editable.value"
               @change="model.cancelReview"
             >
-              <option v-for="count in 6" :key="count" :value="count">{{ count }}</option>
-            </select></label
-          >
+              <AppOption v-for="count in 6" :key="count" :value="count">{{ count }}</AppOption>
+            </AppSelect>
+          </div>
         </section>
         <AppNotice
           v-if="model.conflict.value"
@@ -240,12 +246,11 @@ onBeforeUnmount(model.deactivate)
         </p>
         <p v-else>{{ t('usbAcmApplySavedHint') }}</p>
         <p>{{ t('usbAcmDisconnectHint') }}</p>
-        <label class="confirm-disconnect"
-          ><input
-            v-model="model.confirmDisconnect.value"
-            type="checkbox"
-            data-testid="usb-acm-confirm-disconnect"
-          /><span>{{ t('usbAcmConfirmDisconnect') }}</span></label
+        <AppCheckbox
+          v-model="model.confirmDisconnect.value"
+          class="confirm-disconnect"
+          data-testid="usb-acm-confirm-disconnect"
+          >{{ t('usbAcmConfirmDisconnect') }}</AppCheckbox
         >
         <div class="actions">
           <AppButton @click="model.cancelReview">{{ t('cancel') }}</AppButton
@@ -277,6 +282,7 @@ onBeforeUnmount(model.deactivate)
   display: grid;
   gap: var(--space-4);
   min-width: 0;
+  max-width: var(--app-content-width);
 }
 header h1 {
   margin-block: 0 var(--space-2);
@@ -290,31 +296,21 @@ p {
   margin-block: var(--space-2);
 }
 h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 .menu {
   margin: 0;
 }
 .menu-row {
   gap: var(--space-4);
-  align-items: flex-start;
+  align-items: center;
 }
 .grow {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-input[type='checkbox'] {
-  flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  accent-color: var(--accent);
-}
-.menu-row input {
-  margin-block: 10px;
-}
-select {
-  flex: 0 0 auto;
-  min-width: 64px;
+.row-select {
+  width: 120px;
 }
 .actions {
   display: flex;
@@ -323,8 +319,8 @@ select {
 }
 .observation,
 .receipt {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
   padding: var(--space-4);
   min-width: 0;
 }

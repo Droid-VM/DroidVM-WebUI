@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAgentRescue } from '../model/rescue'
@@ -7,6 +8,7 @@ import { useVisiblePolling } from '../../../shared/model/visiblePolling'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppDialog from '../../../shared/ui/AppDialog.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
 const { t } = useI18n(),
   rescue = useAgentRescue()
 const selected = ref<string | null>(null),
@@ -49,11 +51,11 @@ useVisiblePolling(() => rescue.supported.value, rescue.refresh, ['tasks', 'disks
           <p v-if="session.expired || !session.remainingMs">{{ t('agentRescueExpired') }}</p>
           <p v-if="session.closing">{{ t('agentRescueClosing') }}</p>
           <div class="buttons">
-            <RouterLink
+            <AppLinkButton
               v-if="!session.closing && !session.expired && session.remainingMs > 0"
-              class="btn tonal"
+              tone="tonal"
               :to="`/agent/rescue/${session.id}`"
-              >{{ t('agentRescueOpen') }}</RouterLink
+              >{{ t('agentRescueOpen') }}</AppLinkButton
             >
             <AppButton :disabled="!rescue.canClose(session.id)" @click="review(session.id)">{{
               t('agentRescueClose')
@@ -97,11 +99,7 @@ useVisiblePolling(() => rescue.supported.value, rescue.refresh, ['tasks', 'disks
       <div class="confirmation">
         <p>{{ t('agentRescueCloseWarning') }}</p>
         <p class="session-id">{{ selected }}</p>
-        <label class="check"
-          ><input v-model="confirmed" type="checkbox" /><span>{{
-            t('agentRescueCloseConfirm')
-          }}</span></label
-        >
+        <AppCheckbox v-model="confirmed">{{ t('agentRescueCloseConfirm') }}</AppCheckbox>
         <div class="buttons">
           <AppButton @click="selected = null">{{ t('cancel') }}</AppButton
           ><AppButton
@@ -131,8 +129,8 @@ useVisiblePolling(() => rescue.supported.value, rescue.refresh, ['tasks', 'disks
 }
 .sessions li,
 .close-result {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   padding: var(--space-3);
 }
 h2,
@@ -143,7 +141,7 @@ ul {
 }
 h2,
 h3 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 .session-id {
   overflow-wrap: anywhere;
@@ -155,14 +153,6 @@ h3 {
   gap: var(--space-3);
   margin-top: var(--space-2);
 }
-.check {
-  display: flex;
-  align-items: start;
-  gap: var(--space-2);
-}
-.check input {
-  flex: none;
-}
 dl {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
@@ -171,7 +161,7 @@ dl {
 dd {
   margin: 0;
 }
-@media (max-width: 480px) {
+@media (width < 480px) {
   .buttons > *,
   .rescue-panel > .btn {
     width: 100%;

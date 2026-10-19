@@ -7,6 +7,7 @@ import { taskStateKeys } from '../modules/tasks'
 import AppButton from '../shared/ui/AppButton.vue'
 import AppNotice from '../shared/ui/AppNotice.vue'
 import AppDialog from '../shared/ui/AppDialog.vue'
+import AppSwitch from '../shared/ui/AppSwitch.vue'
 import OperationTrackingNotice from '../shared/ui/OperationTrackingNotice.vue'
 const model = useHostPreferences(),
   { t } = useI18n()
@@ -67,19 +68,20 @@ onBeforeUnmount(model.deactivate)
           :title="t('hostPreferencesUncertain')"
         />
         <section class="menu" :aria-label="t('settingsCategoryVm')">
-          <label v-for="key in preferenceKeys" :key="key" class="menu-row">
+          <AppSwitch
+            v-for="key in preferenceKeys"
+            :key="key"
+            v-model="model.draft[key]"
+            class="menu-row"
+            :data-testid="`host-preference-${key}`"
+            :disabled="!model.editable.value"
+            @change="model.cancelReview"
+          >
             <span class="grow"
               ><strong>{{ t(labels[key].title) }}</strong
               ><small>{{ t(labels[key].hint) }}</small></span
             >
-            <input
-              v-model="model.draft[key]"
-              type="checkbox"
-              :data-testid="`host-preference-${key}`"
-              :disabled="!model.editable.value"
-              @change="model.cancelReview"
-            />
-          </label>
+          </AppSwitch>
         </section>
         <AppNotice
           v-if="model.conflict.value"
@@ -172,6 +174,7 @@ onBeforeUnmount(model.deactivate)
   display: grid;
   gap: var(--space-4);
   min-width: 0;
+  max-width: var(--app-content-width);
 }
 header h1 {
   margin-block: 0 var(--space-2);
@@ -191,21 +194,14 @@ p {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.menu-row input {
-  flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  margin-block: 10px;
-  accent-color: var(--accent);
-}
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
 .receipt {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
   padding: var(--space-4);
 }
 li {

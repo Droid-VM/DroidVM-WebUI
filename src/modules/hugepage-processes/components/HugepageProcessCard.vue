@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { useI18n } from 'vue-i18n'
 import type { ProcessEntry } from '../api/http'
 import { useHugepageProcesses } from '../model/processes'
@@ -38,11 +39,9 @@ const bytes = (value: string | null) =>
       <div>
         <dt>{{ t('hpProcessVm') }}</dt>
         <dd>
-          <RouterLink
-            v-if="row.vm"
-            class="btn quiet"
-            :to="`/vms/${encodeURIComponent(row.vm.id)}`"
-            >{{ row.vm.name || row.vm.id }}</RouterLink
+          <AppLinkButton v-if="row.vm" :to="`/vms/${encodeURIComponent(row.vm.id)}`">{{
+            row.vm.name || row.vm.id
+          }}</AppLinkButton
           ><span v-else>{{ t('hpProcessNoVm') }}</span>
         </dd>
       </div>
@@ -96,9 +95,9 @@ const bytes = (value: string | null) =>
 .process-card {
   min-width: 0;
   padding: var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--app-color-card);
 }
 header {
   display: flex;
@@ -108,7 +107,7 @@ header {
   gap: var(--space-2);
 }
 h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
   margin: 0;
   overflow-wrap: anywhere;
 }
@@ -118,8 +117,8 @@ h2 {
 }
 .muted,
 dt {
-  color: var(--muted);
-  font-size: var(--font-sm);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
 }
 dl {
   display: grid;

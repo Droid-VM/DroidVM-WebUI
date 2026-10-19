@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import LanguageSelect from '../shared/ui/LanguageSelect.vue'
 import AppButton from '../shared/ui/AppButton.vue'
+import AppSegmentedButton from '../shared/ui/AppSegmentedButton.vue'
 import ResourceRow from '../shared/ui/ResourceRow.vue'
 import { themeMode } from '../shared/lib/theme'
 import { useSession } from '../modules/session'
@@ -56,6 +57,13 @@ const backupLinks = computed(() => [
     available: transfers.supported.value,
   },
 ])
+const themeOptions = computed(() =>
+  (['system', 'light', 'dark'] as const).map((value) => ({
+    value,
+    icon: value,
+    label: t({ system: 'themeSystem', light: 'themeLight', dark: 'themeDark' }[value]),
+  })),
+)
 </script>
 <template>
   <div class="page-heading desktop-only">
@@ -75,14 +83,10 @@ const backupLinks = computed(() => [
           "
         />
         <LanguageSelect />
-        <label class="menu-row"
-          ><span class="grow">{{ t('theme') }}</span
-          ><select v-model="themeMode" :aria-label="t('theme')">
-            <option value="system">{{ t('themeSystem') }}</option>
-            <option value="light">{{ t('themeLight') }}</option>
-            <option value="dark">{{ t('themeDark') }}</option>
-          </select></label
-        >
+        <div class="menu-row theme-row">
+          <span class="grow">{{ t('theme') }}</span
+          ><AppSegmentedButton v-model="themeMode" :label="t('theme')" :options="themeOptions" />
+        </div>
       </div>
     </section>
     <section class="settings-group" aria-labelledby="settings-vm">
@@ -209,7 +213,7 @@ const backupLinks = computed(() => [
 .settings-group h2 {
   margin: 0;
   padding-inline: var(--space-4);
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 .settings-group .menu {
   margin: 0;
@@ -219,11 +223,19 @@ const backupLinks = computed(() => [
   min-width: 0;
   overflow-wrap: anywhere;
 }
-@media (max-width: 480px) {
+@media (width < 600px) {
+  .theme-row {
+    flex-wrap: wrap;
+  }
+  .theme-row .segmented {
+    width: 100%;
+  }
+}
+@media (width < 480px) {
   .menu-row {
     flex-wrap: wrap;
   }
-  .menu-row select {
+  .menu-row .segmented {
     max-width: 100%;
   }
 }

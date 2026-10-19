@@ -5,6 +5,8 @@ import { useAgentOperations, validAgentPassword, type AgentOperation } from '../
 import AppDialog from '../../../shared/ui/AppDialog.vue'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 
 const props = withDefaults(defineProps<{ rootOnly?: boolean; allowRescue?: boolean }>(), {
   rootOnly: false,
@@ -79,30 +81,26 @@ onBeforeUnmount(clear)
         <AppNotice v-if="!agent.writable.value" tone="warning" :title="t('agentDiskUnavailable')" />
         <template v-if="isPassword">
           <p>{{ t('agentPasswordHint') }}</p>
-          <label
-            >{{ t('agentPasswordNew') }}
-            <input
-              v-model="password"
-              type="password"
-              autocomplete="new-password"
-              maxlength="128"
-              :disabled="!agent.writable.value"
-              required
-              data-testid="agent-password"
-            />
-          </label>
-          <label
-            >{{ t('agentPasswordConfirm') }}
-            <input
-              v-model="confirmation"
-              type="password"
-              autocomplete="new-password"
-              maxlength="128"
-              :disabled="!agent.writable.value"
-              required
-              data-testid="agent-password-confirm"
-            />
-          </label>
+          <AppTextField
+            v-model="password"
+            :label="t('agentPasswordNew')"
+            type="password"
+            autocomplete="new-password"
+            maxlength="128"
+            :disabled="!agent.writable.value"
+            required
+            data-testid="agent-password"
+          />
+          <AppTextField
+            v-model="confirmation"
+            :label="t('agentPasswordConfirm')"
+            type="password"
+            autocomplete="new-password"
+            maxlength="128"
+            :disabled="!agent.writable.value"
+            required
+            data-testid="agent-password-confirm"
+          />
           <p class="muted">{{ t('agentPasswordRule', { symbols: '!@#%^*+-=_.,:?' }) }}</p>
           <p v-if="password && !validAgentPassword(password)" role="status">
             {{ t('agentPasswordInvalid') }}
@@ -110,26 +108,25 @@ onBeforeUnmount(clear)
           <p v-else-if="confirmation && confirmation !== password" role="status">
             {{ t('agentPasswordMismatch') }}
           </p>
-          <label v-if="!rootOnly" class="check"
-            ><input v-model="normalUsers" type="checkbox" :disabled="!agent.writable.value" />
-            <span>{{ t('agentNormalUsers') }}</span></label
-          >
+          <AppCheckbox v-if="!rootOnly" v-model="normalUsers" :disabled="!agent.writable.value">{{
+            t('agentNormalUsers')
+          }}</AppCheckbox>
         </template>
         <p v-else>{{ t('agentGrowHint') }}</p>
         <p>{{ t('agentAutomaticCleanupHint') }}</p>
-        <label v-if="allowRescue && agent.rescueSupported.value" class="check"
-          ><input v-model="rescue" type="checkbox" :disabled="!agent.writable.value" /><span>{{
-            t('agentRescueKeep')
-          }}</span></label
+        <AppCheckbox
+          v-if="allowRescue && agent.rescueSupported.value"
+          v-model="rescue"
+          :disabled="!agent.writable.value"
+          >{{ t('agentRescueKeep') }}</AppCheckbox
         >
         <template v-if="allowRescue && rescue"
           ><p>{{ t('agentRescueKeepWarning') }}</p>
           <p>{{ t('agentRescueLifetime') }}</p></template
         >
-        <label class="check"
-          ><input v-model="confirmed" type="checkbox" :disabled="!agent.writable.value" />
-          <span>{{ t('agentConfirmWrites') }}</span></label
-        >
+        <AppCheckbox v-model="confirmed" :disabled="!agent.writable.value">{{
+          t('agentConfirmWrites')
+        }}</AppCheckbox>
       </template>
       <div class="buttons">
         <AppButton @click="close">{{ t('cancel') }}</AppButton>
@@ -154,37 +151,12 @@ p {
   margin: 0;
   overflow-wrap: anywhere;
 }
-label {
-  display: grid;
-  gap: var(--space-2);
-}
-input[type='password'] {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-}
-.check {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  min-height: 44px;
-}
-.check input {
-  flex: 0 0 auto;
-  margin-top: 4px;
-}
 .buttons {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-@media (max-width: 600px) {
+@media (width < 600px) {
   .buttons .btn {
     flex: 1 1 100%;
   }

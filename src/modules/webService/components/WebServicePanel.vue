@@ -1,9 +1,15 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWebService } from '../model/service'
 import { taskStateKeys } from '../../tasks'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
+import AppSwitch from '../../../shared/ui/AppSwitch.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 const model = useWebService(),
   { t } = useI18n()
@@ -63,46 +69,42 @@ onBeforeUnmount(model.leave)
       <form v-if="model.baseline.value" @submit.prevent="model.reviewAction('configure')">
         <fieldset :disabled="!model.editable.value">
           <legend>{{ t('webServiceGeneral') }}</legend>
-          <label class="check"
-            ><input v-model="model.draft.enabled" type="checkbox" /><span>{{
-              t('webServiceEnabled')
-            }}</span></label
-          >
-          <label
-            >{{ t('webServicePort')
-            }}<input v-model="model.draft.port" inputmode="numeric" autocomplete="off" required
-          /></label>
-          <p>{{ t('webServicePortHint') }}</p>
+          <AppSwitch v-model="model.draft.enabled">{{ t('webServiceEnabled') }}</AppSwitch>
+          <AppTextField
+            v-model="model.draft.port"
+            :label="t('webServicePort')"
+            :supporting-text="t('webServicePortHint')"
+            inputmode="numeric"
+            autocomplete="off"
+            required
+          />
         </fieldset>
         <fieldset :disabled="!model.editable.value">
           <legend>{{ t('webServiceAccess') }}</legend>
-          <label
-            >{{ t('webServiceScope')
-            }}<select v-model="model.draft.scope">
-              <option value="lan">{{ t('webServiceLan') }}</option>
-              <option value="all">{{ t('webServiceAll') }}</option>
-            </select></label
+          <AppSelect
+            v-model="model.draft.scope"
+            :label="t('webServiceScope')"
+            :supporting-text="t('webServiceScopeHint')"
           >
-          <p>{{ t('webServiceScopeHint') }}</p>
+            <AppOption value="lan">{{ t('webServiceLan') }}</AppOption>
+            <AppOption value="all">{{ t('webServiceAll') }}</AppOption>
+          </AppSelect>
           <template v-if="model.lanAutoLoginSupported.value">
-            <label class="check"
-              ><input v-model="model.draft.lanAutoLogin" type="checkbox" />{{
-                t('webServiceLanAutoLogin')
-              }}</label
-            >
+            <AppSwitch v-model="model.draft.lanAutoLogin">{{
+              t('webServiceLanAutoLogin')
+            }}</AppSwitch>
             <p>{{ t('webServiceLanAutoLoginHint') }}</p>
           </template>
-          <label
-            >{{ t('webServiceOrigins')
-            }}<textarea
-              v-model="model.draft.origins"
-              rows="4"
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="http://example.test:8080"
-            />
-          </label>
-          <p>{{ t('webServiceOriginsHint') }}</p>
+          <AppTextField
+            v-model="model.draft.origins"
+            type="textarea"
+            rows="4"
+            :label="t('webServiceOrigins')"
+            :supporting-text="t('webServiceOriginsHint')"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="http://example.test:8080"
+          />
         </fieldset>
         <p v-if="!model.valid.value">{{ t('webServiceInvalid') }}</p>
         <p>{{ t('webServiceReloadDraftHint') }}</p>
@@ -113,7 +115,9 @@ onBeforeUnmount(model.leave)
             :disabled="!model.editable.value || !model.valid.value || !model.dirty.value"
             >{{ t('webServiceReview') }}</AppButton
           ><AppButton
-            :disabled="!model.editable.value || !model.baseline.value.enabled || !model.valid.value"
+            :disabled="
+              !model.editable.value || !model.baseline.value?.enabled || !model.valid.value
+            "
             @click="model.reviewAction('restart')"
             >{{ t('webServiceRestartReview') }}</AppButton
           >
@@ -159,11 +163,7 @@ onBeforeUnmount(model.leave)
           tone="warning"
           :title="t('webServiceDisableHint')"
         />
-        <label class="check"
-          ><input v-model="model.acknowledged.value" type="checkbox" /><span>{{
-            t('webServiceConfirm')
-          }}</span></label
-        >
+        <AppCheckbox v-model="model.acknowledged.value">{{ t('webServiceConfirm') }}</AppCheckbox>
         <div class="buttons">
           <AppButton @click="model.cancelReview">{{ t('diskBackToForm') }}</AppButton
           ><AppButton
@@ -217,15 +217,13 @@ onBeforeUnmount(model.leave)
             "
             @click="model.reconcile"
             >{{ t('webServiceVerify') }}</AppButton
-          ><RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+          ><AppLinkButton tone="tonal" to="/tasks">{{ t('diskTaskLink') }}</AppLinkButton>
         </div>
         <div v-if="model.locked.value && model.entry.value.state === 'done'" class="recovery">
           <p>{{ t('webServiceOutcomeHint') }}</p>
-          <label class="check"
-            ><input v-model="model.outcomeAcknowledged.value" type="checkbox" /><span>{{
-              t('webServiceOutcomeConfirm')
-            }}</span></label
-          >
+          <AppCheckbox v-model="model.outcomeAcknowledged.value">{{
+            t('webServiceOutcomeConfirm')
+          }}</AppCheckbox>
           <AppButton :disabled="!model.canRestartWorkflow.value" @click="model.restartWorkflow">{{
             t('webServiceRestartWorkflow')
           }}</AppButton>
@@ -243,7 +241,6 @@ onBeforeUnmount(model.leave)
 section,
 form,
 fieldset,
-label,
 .recovery {
   display: grid;
   min-width: 0;
@@ -258,38 +255,13 @@ p {
 }
 h2,
 h3 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 section,
 fieldset {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   padding: var(--space-3);
-}
-input:not([type='checkbox']),
-select,
-textarea {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  font: inherit;
-  color: var(--ink);
-  background: var(--surface);
-}
-textarea {
-  resize: vertical;
-}
-.check {
-  display: flex;
-  align-items: start;
-  gap: var(--space-2);
-}
-.check input {
-  flex: none;
-  margin-top: 4px;
 }
 .buttons {
   display: flex;
@@ -313,7 +285,7 @@ dl {
 dd {
   margin: 0;
 }
-@media (max-width: 480px) {
+@media (width < 480px) {
   .buttons > * {
     width: 100%;
   }

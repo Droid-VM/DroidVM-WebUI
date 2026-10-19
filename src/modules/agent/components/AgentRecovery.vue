@@ -79,12 +79,12 @@ function run() {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   overflow-wrap: anywhere;
 }
 h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
   margin: 0;
 }
 p {
@@ -96,7 +96,7 @@ p {
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
-@media (max-width: 600px) {
+@media (width < 600px) {
   .buttons .btn {
     flex: 1 1 100%;
   }

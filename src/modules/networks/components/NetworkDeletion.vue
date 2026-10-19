@@ -205,7 +205,7 @@ p {
   margin: 0;
 }
 h3 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 section {
   display: grid;
@@ -222,8 +222,8 @@ li {
   display: grid;
   gap: var(--space-1);
   padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
 }
 .buttons {
   display: flex;
@@ -231,6 +231,6 @@ li {
   gap: var(--space-2);
 }
 .error {
-  color: var(--danger);
+  color: var(--md-sys-color-error);
 }
 </style>

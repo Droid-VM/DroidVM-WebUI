@@ -5,6 +5,9 @@ import { useLogViewer } from '../model/viewer'
 import { useVisiblePolling } from '../../../shared/model/visiblePolling'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
+import AppSwitch from '../../../shared/ui/AppSwitch.vue'
 import EmptyState from '../../../shared/ui/EmptyState.vue'
 const props = defineProps<{ vmId: string; instanceId?: string }>()
 const { t, n } = useI18n()
@@ -62,18 +65,17 @@ function download() {
     :description="t('vmLogsUnavailableHint')"
   />
   <section v-else class="log-viewer" :aria-busy="busy">
-    <div class="toolbar">
-      <label class="stream"
-        ><span>{{ t('vmLogStream') }}</span
-        ><select
-          :value="stream"
-          :disabled="!target"
-          @change="viewer.select(($event.target as HTMLSelectElement).value)"
-        >
-          <option v-for="name in target?.streams" :key="name" :value="name">{{ name }}</option>
-        </select></label
+    <div class="toolbar session-toolbar">
+      <AppSelect
+        class="stream"
+        :label="t('vmLogStream')"
+        :value="stream"
+        :disabled="!target"
+        @change="viewer.select(($event.target as HTMLSelectElement).value)"
       >
-      <label class="follow"><input v-model="follow" type="checkbox" />{{ t('vmLogFollow') }}</label>
+        <AppOption v-for="name in target?.streams" :key="name" :value="name">{{ name }}</AppOption>
+      </AppSelect>
+      <AppSwitch v-model="follow" class="follow">{{ t('vmLogFollow') }}</AppSwitch>
       <AppButton
         :disabled="busy"
         @click="target && problem?.code !== 'conflict' ? viewer.refresh() : viewer.open(vmId)"
@@ -115,30 +117,14 @@ function download() {
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-.stream {
-  display: grid;
-  gap: var(--space-1);
-  min-width: 120px;
-}
-select {
-  min-height: var(--touch-target);
-  padding: var(--space-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-}
-.follow {
-  display: flex;
-  align-items: center;
-  min-height: var(--touch-target);
-  gap: var(--space-2);
+.toolbar .stream {
+  flex: 0 1 200px;
+  width: auto;
 }
 .log-note {
   margin: 0;
-  font-size: var(--font-sm);
-  color: var(--muted);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  color: var(--md-sys-color-on-surface-variant);
 }
 .log-output {
   flex: 1;
@@ -147,8 +133,8 @@ select {
   overflow: auto;
   margin: 0;
   padding: var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--soft);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--app-color-raised);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font:

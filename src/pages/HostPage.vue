@@ -14,7 +14,7 @@ const { t } = useI18n()
 .host-page {
   display: grid;
   gap: var(--space-4);
-  padding: var(--space-4);
   min-width: 0;
+  max-width: var(--app-content-width);
 }
 </style>

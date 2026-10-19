@@ -47,7 +47,7 @@ section {
   overflow-wrap: anywhere;
 }
 .rescue-page {
-  padding: var(--space-4);
+  max-width: var(--app-content-width);
 }
 h2,
 p {

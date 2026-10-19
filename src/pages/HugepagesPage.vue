@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../shared/ui/AppLinkButton.vue'
 import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -18,6 +19,7 @@ import { useHugepageProcesses } from '../modules/hugepage-processes'
 import AppButton from '../shared/ui/AppButton.vue'
 import AppNotice from '../shared/ui/AppNotice.vue'
 import AppDialog from '../shared/ui/AppDialog.vue'
+import AppCheckbox from '../shared/ui/AppCheckbox.vue'
 import OperationTrackingNotice from '../shared/ui/OperationTrackingNotice.vue'
 const model = useHugepages(),
   { t } = useI18n()
@@ -122,12 +124,12 @@ onBeforeUnmount(model.deactivate)
         >{{ t('hugepagesRefresh') }}</AppButton
       >
       <p>{{ t('hugepagesIntro') }}</p>
-      <RouterLink
+      <AppLinkButton
         v-if="processes.supported.value"
-        class="btn tonal"
+        tone="tonal"
         to="/hugepages/processes"
         data-testid="hugepages-processes-link"
-        >{{ t('hpProcessTitle') }}</RouterLink
+        >{{ t('hpProcessTitle') }}</AppLinkButton
       >
     </header>
     <fieldset
@@ -164,7 +166,7 @@ onBeforeUnmount(model.deactivate)
         ><p>{{ t('hugepagesManagementUnavailableHint') }}</p></AppNotice
       >
       <div
-        class="section-nav"
+        class="section-nav tabs"
         role="tablist"
         :aria-label="t('hugepagesSectionNav')"
         @keydown="moveTab"
@@ -258,13 +260,9 @@ onBeforeUnmount(model.deactivate)
       <p>{{ t('hugepagesTaskHint') }}</p>
       <template v-if="model.requiresRiskConfirmation.value">
         <p>{{ t(riskMessage) }}</p>
-        <label class="confirmation-choice"
-          ><input
-            v-model="model.confirmRisk.value"
-            type="checkbox"
-            data-testid="hugepages-confirm-risk"
-          />{{ t('hugepagesRiskAcknowledgment') }}</label
-        >
+        <AppCheckbox v-model="model.confirmRisk.value" data-testid="hugepages-confirm-risk">{{
+          t('hugepagesRiskAcknowledgment')
+        }}</AppCheckbox>
       </template>
       <div class="buttons">
         <AppButton @click="model.cancelReview">{{ t('cancel') }}</AppButton
@@ -286,8 +284,8 @@ onBeforeUnmount(model.deactivate)
 .hugepages-page {
   display: grid;
   gap: var(--space-4);
-  padding: var(--space-4);
   min-width: 0;
+  max-width: var(--app-content-width);
 }
 .hugepages-page header h1,
 .hugepages-page h2 {
@@ -304,23 +302,20 @@ onBeforeUnmount(model.deactivate)
   align-items: center;
   gap: var(--space-2);
 }
-.hugepages-page header h1 {
-  font-size: var(--font-heading);
-}
 .hugepages-page header p {
   grid-column: 1 / -1;
   margin: 0;
 }
 .hugepages-page h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 .hugepages-page h3 {
   font-size: 1rem;
   margin: var(--space-4) 0 var(--space-2);
 }
 .hugepages-page .panel {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
+  background: var(--app-color-card);
+  border-radius: var(--md-sys-shape-corner-large);
   padding: var(--space-4);
   min-width: 0;
   scroll-margin-top: var(--space-4);
@@ -333,8 +328,8 @@ onBeforeUnmount(model.deactivate)
 .hugepages-page dt,
 .hugepages-page small,
 .hugepages-page .hint {
-  color: var(--muted);
-  font-size: var(--font-sm);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
 }
 .hugepages-page dd {
   margin: 4px 0 0;
@@ -347,30 +342,6 @@ onBeforeUnmount(model.deactivate)
   padding: 0;
   margin: 0;
   min-width: 0;
-}
-.hugepages-page label {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-.hugepages-page input:not([type='checkbox']),
-.hugepages-page select {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  min-height: 48px;
-  padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--soft);
-  color: var(--ink);
-  font: inherit;
-}
-.hugepages-page input:focus-visible,
-.hugepages-page select:focus-visible,
-.hugepages-page .section-nav button:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
 }
 .hugepages-page .buttons {
   display: flex;
@@ -386,49 +357,13 @@ onBeforeUnmount(model.deactivate)
   overflow-wrap: anywhere;
   line-height: 1.6;
 }
-.hugepages-page .section-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.hugepages-page .section-nav button {
-  display: flex;
-  align-items: center;
-  min-height: 48px;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  cursor: pointer;
-  max-width: 100%;
-}
-.hugepages-page .section-nav button[aria-selected='true'] {
-  background: var(--soft);
-  border-color: var(--primary);
-  font-weight: 600;
-}
 .hugepages-page .setting-card {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
   margin-top: var(--space-4);
   padding-top: var(--space-2);
   min-width: 0;
 }
-.hugepages-page .confirmation-choice {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 48px;
-  line-height: 1.5;
-}
-.hugepages-page .confirmation-choice input {
-  width: 24px;
-  height: 24px;
-  flex: 0 0 24px;
-  accent-color: var(--primary);
-}
-@media (max-width: 380px) {
+@media (width < 380px) {
   .hugepages-page .facts {
     grid-template-columns: minmax(0, 1fr);
   }

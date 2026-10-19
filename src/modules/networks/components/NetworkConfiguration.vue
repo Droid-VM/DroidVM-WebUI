@@ -169,9 +169,9 @@ form {
 .network-card {
   min-width: 0;
   padding: var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--app-color-card);
   overflow-wrap: anywhere;
 }
 .fields {
@@ -186,7 +186,7 @@ form {
   gap: var(--space-2);
 }
 h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 .toolbar h2 {
   margin-right: auto;
@@ -198,7 +198,7 @@ pre {
 .save-bar {
   padding: var(--space-3) 0;
 }
-@media (max-width: 650px) {
+@media (width < 600px) {
   .fields {
     grid-template-columns: minmax(0, 1fr);
   }

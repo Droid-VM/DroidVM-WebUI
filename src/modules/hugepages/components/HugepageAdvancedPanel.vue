@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import { useHugepages } from '../model/hugepages'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 const model = useHugepages()
 const { t, n } = useI18n()
 const setting = (key: string) => model.status.value?.advanced?.find((item) => item.key === key)
@@ -62,21 +63,20 @@ const valueLabel = (value: string | null | undefined) =>
           !model.editable.value || !setting(field.key) || model.status.value?.installed !== true
         "
       >
-        <label :for="`hugepages-advanced-input-${field.key}`"
-          >{{ t('hugepagesAdvancedValue')
-          }}<input
-            :id="`hugepages-advanced-input-${field.key}`"
-            v-model="model.draft.advanced[field.key]"
-            inputmode="numeric"
-            autocomplete="off"
-            :data-testid="`hugepages-advanced-input-${field.key}`"
-        /></label>
-        <small>{{
-          t('hugepagesAdvancedRange', {
-            minimum: n(Number(field.minimum)),
-            maximum: n(Number(field.maximum)),
-          })
-        }}</small>
+        <AppTextField
+          :id="`hugepages-advanced-input-${field.key}`"
+          v-model="model.draft.advanced[field.key]"
+          :label="t('hugepagesAdvancedValue')"
+          :supporting-text="
+            t('hugepagesAdvancedRange', {
+              minimum: n(Number(field.minimum)),
+              maximum: n(Number(field.maximum)),
+            })
+          "
+          inputmode="numeric"
+          autocomplete="off"
+          :data-testid="`hugepages-advanced-input-${field.key}`"
+        />
         <p v-if="!model.validAdvanced(field.key, model.draft.advanced[field.key])" role="alert">
           {{ t('hugepagesAdvancedInvalid') }}
         </p>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
@@ -10,6 +11,7 @@ import {
 import { taskPercent, taskStateKeys } from '../../tasks'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
 import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 import AppProgress from '../../../shared/ui/AppProgress.vue'
 const model = useConfigurationBackup(),
@@ -39,12 +41,13 @@ onBeforeUnmount(model.leave)
       <section>
         <h2>{{ t('backupExportTitle') }}</h2>
         <p>{{ t('backupExportHint') }}</p>
-        <a
-          class="btn tonal download"
+        <AppLinkButton
+          tone="tonal"
+          class="download"
           :href="configurationBackupDownloadHref"
           download="DroidVM_backup.json"
           @click="handedOff = true"
-          >{{ t('backupDownload') }}</a
+          >{{ t('backupDownload') }}</AppLinkButton
         >
         <p v-if="handedOff" role="status">{{ t('transferHandedOff') }}</p>
       </section>
@@ -53,7 +56,7 @@ onBeforeUnmount(model.leave)
         <p>{{ t('backupMergeHint') }}</p>
         <p>{{ t('backupSizeHint', { bytes: bytes(backupMaximumBytes) }) }}</p>
         <p>{{ t('backupReloadHint') }}</p>
-        <label
+        <label class="file"
           >{{ t('backupSelect')
           }}<input
             type="file"
@@ -96,11 +99,7 @@ onBeforeUnmount(model.leave)
             </section>
           </div>
           <p>{{ t('backupOrderHint') }}</p>
-          <label class="check"
-            ><input v-model="model.acknowledged.value" type="checkbox" /><span>{{
-              t('backupConfirm')
-            }}</span></label
-          >
+          <AppCheckbox v-model="model.acknowledged.value">{{ t('backupConfirm') }}</AppCheckbox>
           <AppButton tone="primary" :disabled="!model.canCommit.value" @click="model.commit">{{
             t('backupCommit')
           }}</AppButton>
@@ -158,23 +157,21 @@ onBeforeUnmount(model.leave)
             :disabled="model.checking.value || model.entry.value.state === 'posting'"
             @click="model.reconcile"
             >{{ t('queryStatus') }}</AppButton
-          ><RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+          ><AppLinkButton tone="tonal" to="/tasks">{{ t('diskTaskLink') }}</AppLinkButton>
         </div>
         <div v-if="model.recoveryRequired.value" class="recovery">
           <p v-if="!model.result.value">{{ t('backupUnknownResult') }}</p>
           <p>{{ t('backupPartialHint') }}</p>
           <div class="buttons">
-            <RouterLink class="btn tonal" to="/vms">{{ t('navVms') }}</RouterLink
-            ><RouterLink class="btn tonal" to="/resources/network">{{ t('navNetwork') }}</RouterLink
-            ><RouterLink class="btn tonal" to="/resources/disk">{{ t('navDisk') }}</RouterLink>
+            <AppLinkButton tone="tonal" to="/vms">{{ t('navVms') }}</AppLinkButton
+            ><AppLinkButton tone="tonal" to="/resources/network">{{
+              t('navNetwork')
+            }}</AppLinkButton
+            ><AppLinkButton tone="tonal" to="/resources/disk">{{ t('navDisk') }}</AppLinkButton>
           </div>
-          <label class="check"
-            ><input
-              v-model="model.recoveryAcknowledged.value"
-              type="checkbox"
-              :disabled="model.pending.value"
-            /><span>{{ t('backupRecoveryConfirm') }}</span></label
-          >
+          <AppCheckbox v-model="model.recoveryAcknowledged.value" :disabled="model.pending.value">{{
+            t('backupRecoveryConfirm')
+          }}</AppCheckbox>
           <AppButton
             :disabled="model.pending.value || !model.recoveryAcknowledged.value"
             @click="model.restartAfterReview"
@@ -188,7 +185,7 @@ onBeforeUnmount(model.leave)
 <style scoped>
 .backup-panel,
 section,
-label,
+.file,
 .preview,
 .recovery {
   display: grid;
@@ -205,12 +202,12 @@ p {
 }
 h2,
 h3 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 section,
 .recovery {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   padding: var(--space-3);
 }
 .categories {
@@ -232,22 +229,13 @@ input::file-selector-button {
   max-width: 100%;
   margin: 0 8px 8px 0;
 }
-.check {
-  display: flex;
-  align-items: start;
-  gap: var(--space-2);
-}
-.check input {
-  flex: none;
-  margin-top: 4px;
-}
 .buttons {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
 }
-@media (max-width: 480px) {
+@media (width < 480px) {
   .buttons > *,
   .preview > .btn {
     width: 100%;
