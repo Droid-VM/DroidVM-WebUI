@@ -33,7 +33,7 @@ test('loading is indeterminate and empty inventory is not a disconnected state',
   await page.goto('/dev.html?scenario=loading#/vms')
   const progress = page.getByRole('progressbar', { name: '正在读取', exact: true })
   await expect(progress).toBeVisible()
-  await expect(progress).not.toHaveAttribute('value')
+  await expect(progress).not.toHaveAttribute('aria-valuenow')
   await expect(page.locator('[data-vm]')).toHaveCount(4)
   await page.goto('/dev.html?scenario=empty#/vms')
   await expect(page.getByRole('heading', { name: '暂无虚拟机' })).toBeVisible()
@@ -56,7 +56,7 @@ test('long names, large text, mobile controls and changed viewport remain usable
       .getByRole('searchbox')
       .evaluate((element) => parseFloat(getComputedStyle(element).fontSize)),
   ).toBeGreaterThanOrEqual(16)
-  await page.locator('[data-vm]').first().getByRole('link', { name: '详情', exact: true }).click()
+  await page.locator('[data-vm]').first().locator('.vm-specs').click()
   await expect(page.getByRole('dialog')).toContainText('用于检查长名称换行的虚拟机')
   expect(
     await page
@@ -93,14 +93,30 @@ test('navigation restores list scroll and moves keyboard focus to main content',
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before)
 })
 
+test('a missing page bundle after an upgrade reloads once into the target route', async ({
+  page,
+}) => {
+  await page.goto('/dev.html#/vms')
+  await expect(page.locator('[data-vm]')).toHaveCount(4)
+  let loads = 0
+  page.on('load', () => loads++)
+  await page.route('**/pages/TasksPage.vue*', (route) => route.abort())
+  await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '任务' }).click()
+  await expect.poll(() => loads).toBe(1)
+  await expect(page).toHaveURL(/#\/tasks$/)
+  // The reloaded page fails the same way and must not reload again.
+  await page.waitForTimeout(1000)
+  expect(loads).toBe(1)
+})
+
 test('nested confirmations keep scroll locked, trap focus and report failures', async ({
   page,
 }) => {
   await page.goto('/dev.html#/components')
   const unknown = page.getByRole('progressbar', { name: '未知进度', exact: true })
-  await expect(unknown).not.toHaveAttribute('value')
+  await expect(unknown).not.toHaveAttribute('aria-valuenow')
   await expect(page.getByRole('progressbar', { name: '已知进度', exact: true })).toHaveAttribute(
-    'value',
+    'aria-valuenow',
     '42',
   )
   await page.getByRole('checkbox', { name: '演示提交失败' }).check()

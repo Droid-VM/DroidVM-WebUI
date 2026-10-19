@@ -44,7 +44,7 @@ async function openTasks(page: Page, request: APIRequestContext) {
   const tokenResponse = await request.post('http://127.0.0.1:5189/__fixture/pairing')
   const { pairingToken } = await tokenResponse.json()
   await page.goto('/#/tasks')
-  await page.locator('#pairing-token').fill(pairingToken)
+  await page.getByLabel('配对码', { exact: true }).fill(pairingToken)
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.locator('[data-task]')).toHaveCount(1)
   return {
@@ -64,7 +64,7 @@ test('mobile tasks show unknown progress and confirm cancellation once', async (
   await page.setViewportSize({ width: 320, height: 568 })
   const state = await openTasks(page, request)
   await expect(page.getByRole('heading', { name: '磁盘操作', exact: true })).toBeVisible()
-  expect(await page.locator('progress').getAttribute('value')).toBeNull()
+  await expect(page.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   let writes = 0
   await page.route('**/api/v1/tasks/cancel', async (route) => {

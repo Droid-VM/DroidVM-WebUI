@@ -32,7 +32,7 @@ async function openVm(page: Page, request: APIRequestContext) {
   const tokenResponse = await request.post('http://127.0.0.1:5189/__fixture/pairing')
   const { pairingToken } = await tokenResponse.json()
   await page.goto('/#/vms')
-  await page.locator('#pairing-token').fill(pairingToken)
+  await page.getByLabel('配对码', { exact: true }).fill(pairingToken)
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.locator('[data-vm]')).toHaveCount(1)
   return {
@@ -151,7 +151,7 @@ test('details confirm suspend in a nested dialog and uncertainty allows only sto
     lifecycle: { ...source.vm().lifecycle!, actions: ['stop', 'reboot', 'suspend'] },
   })
   await page.getByRole('button', { name: '刷新列表', exact: true }).click()
-  await page.locator('[data-vm]').getByRole('link', { name: '详情', exact: true }).click()
+  await page.locator('[data-vm]').locator('.vm-specs').click()
   await page.route('**/api/v1/vm-operations', async (route) => {
     const body = route.request().postDataJSON()
     expect(body.action).toBe('suspend')
@@ -177,17 +177,14 @@ test('details confirm suspend in a nested dialog and uncertainty allows only sto
       },
     })
   })
-  await page.getByRole('dialog').getByRole('button', { name: '挂起', exact: true }).click()
+  const details = page.getByRole('region', { name: '虚拟机详情' })
+  await details.getByRole('button', { name: '挂起', exact: true }).click()
   await page
     .getByRole('dialog', { name: '挂起', exact: true })
     .getByRole('button', { name: '挂起', exact: true })
     .click()
-  await expect(page.getByRole('dialog')).toHaveCount(1)
-  await expect(page.getByRole('dialog')).toContainText('待核实')
-  await expect(
-    page.getByRole('dialog').getByRole('button', { name: '停止', exact: true }),
-  ).toBeEnabled()
-  await expect(
-    page.getByRole('dialog').getByRole('button', { name: '挂起', exact: true }),
-  ).toHaveCount(0)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(details).toContainText('待核实')
+  await expect(details.getByRole('button', { name: '停止', exact: true })).toBeEnabled()
+  await expect(details.getByRole('button', { name: '挂起', exact: true })).toHaveCount(0)
 })

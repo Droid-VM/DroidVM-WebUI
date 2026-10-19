@@ -5,6 +5,7 @@ import zhHans from './locales/zh-Hans.json'
 import zhHant from './locales/zh-Hant.json'
 import { onBeforeUnmount, ref } from 'vue'
 import AppButton from '../src/shared/ui/AppButton.vue'
+import AppCheckbox from '../src/shared/ui/AppCheckbox.vue'
 import AppDialog from '../src/shared/ui/AppDialog.vue'
 import ConfirmDialog from '../src/shared/ui/ConfirmDialog.vue'
 import AppNotice from '../src/shared/ui/AppNotice.vue'
@@ -58,8 +59,7 @@ onBeforeUnmount(() => {
   </section>
   <section class="panel workbench">
     <h2>{{ t('dialogs') }}</h2>
-    <label class="failure-toggle"
-      ><input v-model="fail" type="checkbox" />{{ t('simulateFailure') }}</label
+    <AppCheckbox v-model="fail" class="failure-toggle">{{ t('simulateFailure') }}</AppCheckbox
     ><AppButton tone="tonal" @click="openConfirmation">{{ t('openConfirmation') }}</AppButton
     ><AppButton @click="parentOpen = true">{{ t('openNested') }}</AppButton>
   </section>
