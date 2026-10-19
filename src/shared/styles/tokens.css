@@ -1,0 +1,67 @@
+/* Material 3 Q palette reused from docs/webui/style-candidates/material-refined.css. */
+:root {
+  font-family: 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+  --bg: #f8f9fc;
+  --surface: #fff;
+  --soft: #f0f3f8;
+  --ink: #20242c;
+  --muted: #636b78;
+  --line: #e0e5ee;
+  --accent: #0b57d0;
+  --tint: #d3e3fd;
+  --on-tint: #173d76;
+  --good: #20764d;
+  --good-bg: #e5f3e9;
+  --warn: #8d6209;
+  --warn-bg: #fff0ce;
+  --primary-text: #fff;
+  --danger: #b3261e;
+  --danger-bg: #f9dedc;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-9: 36px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-dialog: 28px;
+  --radius-pill: 999px;
+  --font-xs: 0.75rem;
+  --font-caption: 0.625rem;
+  --font-label: 0.6875rem;
+  --font-sm: 0.8125rem;
+  --font-body: 0.875rem;
+  --font-heading: 1rem;
+  --font-card: 0.9375rem;
+  --font-detail: 1.0625rem;
+  --font-stat: 1.5625rem;
+  --font-mobile-title: 1.375rem;
+  --font-title: 2rem;
+  --touch-target: 44px;
+  --focus-ring: 2px solid var(--accent);
+  color-scheme: light;
+}
+:root[data-color='dark'] {
+  --bg: #111318;
+  --surface: #1c2028;
+  --soft: #252a34;
+  --ink: #e2e5ed;
+  --muted: #adb5c5;
+  --line: #373e4c;
+  --accent: #a8c7fa;
+  --tint: #203f6c;
+  --on-tint: #d3e3fd;
+  --good: #93d6ad;
+  --good-bg: #213e2c;
+  --warn: #e8c570;
+  --warn-bg: #3b321c;
+  --primary-text: #062e6f;
+  --danger: #ffb4ab;
+  --danger-bg: #601410;
+  color-scheme: dark;
+}
