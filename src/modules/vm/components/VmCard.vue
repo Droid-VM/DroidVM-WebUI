@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
+import { selectsCard } from '../../../shared/lib/cardClick'
 import type { Vm } from '../api/gateway'
 import { stateLabelKeys } from '../model/inventory'
 import AppIcon from '../../../shared/ui/AppIcon.vue'
@@ -9,11 +11,16 @@ import AppButton from '../../../shared/ui/AppButton.vue'
 import { useVmActions } from '../model/operations'
 const { t, n } = useI18n()
 const actions = useVmActions()
-defineProps<{ vm: Vm }>()
+const props = defineProps<{ vm: Vm }>()
+const router = useRouter()
+// The name link stays the keyboard path; the rest of the card is a pointer shortcut.
+function select(event: MouseEvent) {
+  if (selectsCard(event)) void router.push(`/vms/${encodeURIComponent(props.vm.id)}`)
+}
 </script>
 
 <template>
-  <article class="vm-card" :data-vm="vm.id">
+  <article class="vm-card card" :data-vm="vm.id" @click="select">
     <header>
       <span class="os-mark"><AppIcon name="vm" /></span>
       <RouterLink :to="`/vms/${encodeURIComponent(vm.id)}`" class="vm-name"
@@ -47,11 +54,11 @@ defineProps<{ vm: Vm }>()
     <p class="vm-note desktop-only">{{ t('loadUnavailable') }}</p>
     <VmActionControls :vm="vm" />
     <footer>
-      <RouterLink
+      <AppLinkButton
         v-if="vm.state === 'RUNNING'"
-        class="btn tonal"
+        tone="tonal"
         :to="`/vms/${encodeURIComponent(vm.id)}/console`"
-        >{{ t('console') }}</RouterLink
+        >{{ t('console') }}</AppLinkButton
       >
       <AppButton
         v-else-if="!vm.lifecycle || !actions.supported.value"
@@ -59,9 +66,6 @@ defineProps<{ vm: Vm }>()
         :title="t('vmActionsUnavailable')"
         >{{ vm.state === 'STOPPED' ? t('start') : t(stateLabelKeys[vm.state]) }}</AppButton
       >
-      <RouterLink class="btn quiet" :to="`/vms/${encodeURIComponent(vm.id)}`">{{
-        t('details')
-      }}</RouterLink>
       <AppButton
         v-if="vm.state === 'RUNNING' && (!vm.lifecycle || !actions.supported.value)"
         disabled
@@ -75,11 +79,14 @@ defineProps<{ vm: Vm }>()
 
 <style scoped>
 .vm-card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  padding: 21px;
-  min-width: 0;
+  cursor: pointer;
+}
+.vm-card:hover {
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 4%, var(--app-color-card));
+}
+.vm-card.selected {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: inset 0 0 0 1px var(--md-sys-color-primary);
 }
 header {
   display: flex;
@@ -92,8 +99,8 @@ header {
   height: 43px;
   display: grid;
   place-items: center;
-  background: var(--tint);
-  color: var(--accent);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-primary);
   border-radius: 14px;
   flex-shrink: 0;
 }
@@ -101,38 +108,38 @@ header {
   min-width: 0;
   flex: 1;
   text-decoration: none;
-  color: var(--ink);
+  color: var(--md-sys-color-on-surface);
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-height: var(--touch-target);
 }
 .vm-name strong {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
   overflow-wrap: anywhere;
 }
 .vm-name small {
-  font-size: var(--font-label);
+  font-size: var(--md-sys-typescale-label-small-size);
   margin-top: var(--space-1);
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
 }
 .badge {
-  font-size: var(--font-label);
+  font-size: var(--md-sys-typescale-label-small-size);
   padding: 5px 9px;
-  border-radius: var(--radius-lg);
-  background: var(--soft);
-  color: var(--muted);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--app-color-raised);
+  color: var(--md-sys-color-on-surface-variant);
   white-space: nowrap;
 }
 .running {
-  background: var(--good-bg);
-  color: var(--good);
+  background: var(--app-color-success-container);
+  color: var(--app-color-success);
 }
 .starting,
 .stopping,
 .rebooting {
-  background: var(--warn-bg);
-  color: var(--warn);
+  background: var(--app-color-warning-container);
+  color: var(--app-color-warning);
 }
 .vm-specs {
   display: grid;
@@ -144,36 +151,35 @@ header {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--muted);
-  font-size: var(--font-xs);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
 }
 .vm-specs .icon {
   width: 16px;
   height: 16px;
 }
 .vm-specs dd {
-  font-size: var(--font-body);
+  font-size: var(--md-sys-typescale-body-medium-size);
   margin: 7px 0 0;
 }
 .vm-note {
-  font-size: var(--font-xs);
-  color: var(--muted);
+  font-size: var(--md-sys-typescale-body-small-size);
+  color: var(--md-sys-color-on-surface-variant);
   margin-bottom: var(--space-5);
 }
 footer {
   display: flex;
   gap: 5px;
   align-items: center;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
   padding-top: var(--space-3);
 }
 .stop-button {
   margin-left: auto;
 }
-@media (max-width: 650px) {
+@media (width < 600px) {
   .vm-card {
-    border-radius: var(--radius-lg);
-    padding: 14px;
+    padding: var(--space-3);
   }
   header {
     gap: var(--space-2);
@@ -181,16 +187,16 @@ footer {
   .os-mark {
     width: 34px;
     height: 34px;
-    border-radius: var(--radius-sm);
+    border-radius: var(--md-sys-shape-corner-medium);
   }
   .vm-name strong {
-    font-size: var(--font-card);
+    font-size: var(--md-sys-typescale-title-medium-size);
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
   }
   .badge {
-    font-size: var(--font-xs);
+    font-size: var(--md-sys-typescale-body-small-size);
     padding: var(--space-1) var(--space-2);
   }
   .vm-specs {
@@ -204,9 +210,9 @@ footer {
     gap: 6px;
   }
   .vm-specs dd {
-    font-size: var(--font-sm);
+    font-size: var(--md-sys-typescale-body-medium-size);
     margin: 0;
-    color: var(--muted);
+    color: var(--md-sys-color-on-surface-variant);
   }
   footer {
     padding-top: 10px;

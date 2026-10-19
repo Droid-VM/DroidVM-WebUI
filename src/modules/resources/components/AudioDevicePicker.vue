@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n'
 import type { AudioDevice } from '../api/gateway'
 import { useResourceCatalog } from '../model/catalog'
 import type { MessageKey } from '../../../shared/i18n'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
 
 const props = defineProps<{
   current: string
@@ -48,47 +50,27 @@ function change(event: Event) {
 </script>
 
 <template>
-  <label class="audio-picker">
-    <span>{{ t('configAudioHost') }}</span>
-    <select
-      :value="selected"
-      :disabled="disabled"
-      :aria-label="t('configAudioHost')"
-      @change="change"
-    >
-      <option :value="defaultKey">{{ t('configAudioSystemDefault') }}</option>
-      <option v-if="missing" :value="selected">
-        {{ savedLabel || selected }} ·
-        {{ t(source.status.value === 'ready' ? 'audioDeviceMissing' : 'audioDeviceSaved') }}
-      </option>
-      <option v-for="device in devices" :key="device.id" :value="device.key">
-        {{ label(device) }}
-      </option>
-    </select>
-    <small v-if="missing && source.status.value === 'ready'" class="muted">{{
-      t('audioDeviceMissingHint')
-    }}</small>
-  </label>
+  <AppSelect
+    class="audio-picker"
+    :label="t('configAudioHost')"
+    :supporting-text="missing && source.status.value === 'ready' ? t('audioDeviceMissingHint') : ''"
+    :value="selected"
+    :disabled="disabled"
+    @change="change"
+  >
+    <AppOption :value="defaultKey">{{ t('configAudioSystemDefault') }}</AppOption>
+    <AppOption v-if="missing" :value="selected">
+      {{ savedLabel || selected }} ·
+      {{ t(source.status.value === 'ready' ? 'audioDeviceMissing' : 'audioDeviceSaved') }}
+    </AppOption>
+    <AppOption v-for="device in devices" :key="device.id" :value="device.key">
+      {{ label(device) }}
+    </AppOption>
+  </AppSelect>
 </template>
 
 <style scoped>
 .audio-picker {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
   margin-bottom: var(--space-3);
-}
-select {
-  width: 100%;
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-}
-small {
-  overflow-wrap: anywhere;
 }
 </style>

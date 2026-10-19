@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
 import type { Vm } from '../api/gateway'
 import { stateLabelKeys } from '../model/inventory'
 import VmActionControls from './VmActionControls.vue'
@@ -73,32 +73,31 @@ const uptime = computed(() => {
     </div>
   </dl>
   <div class="detail-actions">
-    <RouterLink
+    <AppLinkButton
       v-if="configuration.supported.value"
-      class="btn tonal"
+      tone="tonal"
       :to="`/vms/${encodeURIComponent(vm.id)}/edit`"
-      >{{ t('configEdit') }}</RouterLink
+      >{{ t('configEdit') }}</AppLinkButton
     >
-    <RouterLink
+    <AppLinkButton
       v-if="configuration.supported.value"
-      class="btn tonal"
+      tone="tonal"
       :to="`/vms/${encodeURIComponent(vm.id)}/copy`"
-      >{{ t('configCopy') }}</RouterLink
+      >{{ t('configCopy') }}</AppLinkButton
     >
-    <RouterLink
+    <AppLinkButton
       v-if="logs.supported.value"
-      class="btn tonal"
+      tone="tonal"
       :to="`/vms/${encodeURIComponent(vm.id)}/logs`"
-      >{{ t('vmLogs') }}</RouterLink
+      >{{ t('vmLogs') }}</AppLinkButton
     >
-    <RouterLink class="btn tonal" :to="`/vms/${encodeURIComponent(vm.id)}/console`">{{
+    <AppLinkButton tone="tonal" :to="`/vms/${encodeURIComponent(vm.id)}/console`">{{
       t('graphicalConsole')
-    }}</RouterLink>
-    <RouterLink
+    }}</AppLinkButton>
+    <AppLinkButton
       v-if="terminal.supported.value"
-      class="btn quiet"
       :to="`/vms/${encodeURIComponent(vm.id)}/terminal`"
-      >{{ t('terminal') }}</RouterLink
+      >{{ t('terminal') }}</AppLinkButton
     >
   </div>
   <VmActionControls :vm="vm" expanded />
@@ -116,18 +115,18 @@ const uptime = computed(() => {
   min-width: 0;
 }
 dt {
-  font-size: var(--font-xs);
-  color: var(--muted);
+  font-size: var(--md-sys-typescale-body-small-size);
+  color: var(--md-sys-color-on-surface-variant);
   margin-bottom: 6px;
 }
 dd {
   margin: 0;
-  font-size: var(--font-body);
+  font-size: var(--md-sys-typescale-body-medium-size);
   overflow-wrap: anywhere;
 }
 small {
-  color: var(--muted);
-  font-size: var(--font-xs);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
 }
 .detail-actions {
   display: flex;

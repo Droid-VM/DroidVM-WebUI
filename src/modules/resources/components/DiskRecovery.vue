@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDiskActions } from '../model/diskOperations'
@@ -65,7 +66,7 @@ function run() {
       <AppButton :disabled="!recovery.allowed.value" @click="prepare">{{
         t('diskRecover')
       }}</AppButton>
-      <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+      <AppLinkButton tone="tonal" to="/tasks">{{ t('diskTaskLink') }}</AppLinkButton>
     </div>
     <AppDialog :open="confirm" :title="t('diskRecoveryTitle')" @close="confirm = false">
       <p>{{ t('diskRecoveryConfirm') }}</p>
@@ -83,12 +84,12 @@ function run() {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   overflow-wrap: anywhere;
 }
 h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
   margin: 0;
 }
 p {

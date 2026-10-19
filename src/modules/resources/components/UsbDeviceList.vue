@@ -11,6 +11,8 @@ import UsbOperationStatus from './UsbOperationStatus.vue'
 import { useVisiblePolling } from '../../../shared/model/visiblePolling'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import AppIcon from '../../../shared/ui/AppIcon.vue'
+import SearchField from '../../../shared/ui/SearchField.vue'
 import EmptyState from '../../../shared/ui/EmptyState.vue'
 
 const { t } = useI18n(),
@@ -62,8 +64,20 @@ useVisiblePolling(() => source.supported.value, refresh)
     />
     <template v-else>
       <p class="muted">{{ t('usbCatalogHint') }}</p>
-      <label>{{ t('resourceSearch') }}<input v-model="query" type="search" /></label>
-      <AppButton @click="refresh">{{ t('refreshList') }}</AppButton>
+      <div class="list-tools">
+        <SearchField
+          v-model="query"
+          :label="t('resourceSearch')"
+          :placeholder="t('resourceSearch')"
+        />
+        <AppButton
+          tone="icon"
+          :aria-label="t('refreshList')"
+          :title="t('refreshList')"
+          @click="refresh"
+          ><AppIcon name="refresh"
+        /></AppButton>
+      </div>
       <AppNotice v-if="source.problem.value" tone="error" :title="t(source.problem.value.titleKey)">
         <p>{{ t(source.problem.value.descriptionKey) }}</p>
       </AppNotice>
@@ -121,36 +135,31 @@ useVisiblePolling(() => source.supported.value, refresh)
 </template>
 
 <style scoped>
-.usb-list,
-label {
+.usb-list {
   display: grid;
   gap: var(--space-3);
   min-width: 0;
 }
-label {
+.list-tools {
+  display: flex;
   gap: var(--space-2);
+  align-items: center;
 }
-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
+.list-tools .search-field {
+  flex: 1;
 }
 .btn {
   justify-self: start;
 }
 .usb-card {
   padding: var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--app-color-card);
   overflow-wrap: anywhere;
 }
 h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
   margin: 0;
 }
 p {
@@ -162,7 +171,7 @@ dl {
   gap: var(--space-2);
 }
 dt {
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
 }
 dd {
   margin: 0;

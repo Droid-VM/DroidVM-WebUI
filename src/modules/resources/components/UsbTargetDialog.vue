@@ -5,6 +5,8 @@ import type { UsbDevice, UsbVmTarget } from '../api/gateway'
 import type { UsbTarget } from '../api/usbOperations'
 import AppDialog from '../../../shared/ui/AppDialog.vue'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
 
 const props = defineProps<{
   device: UsbDevice | null
@@ -46,16 +48,13 @@ function submit() {
     <template v-if="device">
       <p>{{ device.product || `${device.vendorId}:${device.productId}` }} · {{ device.sysfs }}</p>
       <p>{{ t('usbTargetConfirm') }}</p>
-      <label class="usb-target-label">
-        {{ t('usbTarget') }}
-        <select v-model="selected" :disabled="!enabled">
-          <option value="host">{{ t('usbTargetHost') }}</option>
-          <option value="idle">{{ t('usbTargetIdle') }}</option>
-          <option v-for="vm in targetChoices" :key="vm.vmId" :value="`vm:${vm.vmId}`">
-            {{ vm.vmName || vm.vmId }} · {{ vm.controllerId }}
-          </option>
-        </select>
-      </label>
+      <AppSelect v-model="selected" :label="t('usbTarget')" :disabled="!enabled">
+        <AppOption value="host">{{ t('usbTargetHost') }}</AppOption>
+        <AppOption value="idle">{{ t('usbTargetIdle') }}</AppOption>
+        <AppOption v-for="vm in targetChoices" :key="vm.vmId" :value="`vm:${vm.vmId}`">
+          {{ vm.vmName || vm.vmId }} · {{ vm.controllerId }}
+        </AppOption>
+      </AppSelect>
       <p v-if="!targetChoices.length" class="muted">{{ t('usbNoTargets') }}</p>
       <p class="muted">{{ t('usbManualLockHint') }}</p>
       <div class="usb-target-actions">
@@ -69,21 +68,6 @@ function submit() {
 </template>
 
 <style scoped>
-.usb-target-label {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-select {
-  width: 100%;
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-}
 .usb-target-actions {
   display: flex;
   flex-wrap: wrap;

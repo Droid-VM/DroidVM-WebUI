@@ -6,8 +6,10 @@ import { taskStateKeys } from '../../tasks'
 import { useVisiblePolling } from '../../../shared/model/visiblePolling'
 import AppDialog from '../../../shared/ui/AppDialog.vue'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppIcon from '../../../shared/ui/AppIcon.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
+defineProps<{ inline?: boolean }>()
 const model = useNetworkRuntime(),
   { t } = useI18n()
 const detail = computed(() => model.detail.value)
@@ -31,14 +33,22 @@ useVisiblePolling(
 <template>
   <AppDialog
     :open="!!model.id.value"
+    :inline="inline"
     :title="detail?.network.name || t('networkDetails')"
     @close="model.close"
   >
     <div class="network-details">
       <div class="toolbar">
-        <AppButton :disabled="model.loading.value" @click="model.refresh">{{
-          t('refreshList')
-        }}</AppButton>
+        <slot name="actions" />
+        <AppButton
+          tone="icon"
+          class="refresh"
+          :aria-label="t('refreshList')"
+          :title="t('refreshList')"
+          :disabled="model.loading.value"
+          @click="model.refresh"
+          ><AppIcon name="refresh"
+        /></AppButton>
       </div>
       <AppNotice v-if="model.problem.value" tone="error" :title="t(model.problem.value.titleKey)"
         ><p>{{ t(model.problem.value.descriptionKey) }}</p></AppNotice
@@ -196,20 +206,25 @@ useVisiblePolling(
 .toolbar {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
+}
+.toolbar .refresh {
+  margin-inline-start: auto;
 }
 dl {
   display: grid;
   gap: var(--space-2);
   margin: 0;
 }
-dl > div {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-3);
+dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 dt {
-  color: var(--muted);
+  margin-bottom: var(--space-1);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
 }
 dd {
   margin: 0;
@@ -221,6 +236,6 @@ li + li {
   margin-top: var(--space-2);
 }
 h3 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
 }
 </style>

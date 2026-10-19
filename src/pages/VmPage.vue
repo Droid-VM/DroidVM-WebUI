@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../shared/ui/AppLinkButton.vue'
 import { useI18n } from 'vue-i18n'
 import { computed, nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -8,9 +9,9 @@ import { VmTerminal } from '../modules/terminal'
 import { VmConsole } from '../modules/graphics'
 import OperationTrackingNotice from '../shared/ui/OperationTrackingNotice.vue'
 import { HostSummary } from '../modules/host'
-import { useConfigurationEditor } from '../modules/configuration'
-import { usePackageExport, usePackageImport } from '../modules/packages'
+import { usePackageExport } from '../modules/packages'
 import { useVisiblePolling } from '../shared/model/visiblePolling'
+import { useMediaQuery } from '../shared/lib/mediaQuery'
 import AppButton from '../shared/ui/AppButton.vue'
 import AppIcon from '../shared/ui/AppIcon.vue'
 import AppDialog from '../shared/ui/AppDialog.vue'
@@ -24,9 +25,7 @@ const { t, n } = useI18n()
 const inventory = useInventory()
 const { items, visible, status, problem, running, query, filter, reload, mode } = inventory
 const actions = useVmActions()
-const configuration = useConfigurationEditor()
 const packageExport = usePackageExport()
-const packageImport = usePackageImport()
 useVisiblePolling(
   () => mode === 'http',
   async () => {
@@ -43,13 +42,12 @@ const route = useRoute()
 const router = useRouter()
 const searchVisible = ref(Boolean(query.value))
 const hostExpanded = ref(false)
-const creationOpen = ref(false)
-const canChooseCreation = computed(
-  () => configuration.canCreate.value || packageImport.supported.value,
-)
 const searchInput = ref<InstanceType<typeof SearchField>>()
 const selected = computed(() => items.value.find((vm) => vm.id === route.params.id))
 const session = computed(() => String(route.params.session || ''))
+// List-detail: wide screens show details beside the list; sessions stay full screen.
+const expanded = useMediaQuery('(width >= 840px)')
+const detailInPane = computed(() => expanded.value && !session.value)
 const filters = [
   { value: 'all', label: 'filterAll' },
   { value: 'RUNNING', label: 'stateRunning' },
@@ -77,10 +75,6 @@ async function toggleSearch() {
 function closeDetails() {
   void router.replace('/vms')
 }
-function chooseCreation(path: '/vms/new' | '/packages/import') {
-  creationOpen.value = false
-  void router.push(path)
-}
 </script>
 
 <template>
@@ -94,25 +88,11 @@ function chooseCreation(path: '/vms/new' | '/packages/import') {
       <h1>{{ t('navVms') }}</h1>
       <p class="muted">{{ t('vmsHint') }}</p>
     </div>
-    <AppButton
-      tone="primary"
-      :disabled="!canChooseCreation"
-      :title="canChooseCreation ? t('createVm') : t('createUnavailable')"
-      aria-haspopup="dialog"
-      @click="creationOpen = true"
-      ><AppIcon name="plus" />{{ t('createVm') }}</AppButton
-    >
   </div>
-  <AppButton
-    v-if="canChooseCreation"
-    class="mobile-only create-mobile"
-    tone="primary"
-    aria-haspopup="dialog"
-    @click="creationOpen = true"
+  <details
+    class="overview card-filled"
+    @toggle="hostExpanded = ($event.target as HTMLDetailsElement).open"
   >
-    <AppIcon name="plus" />{{ t('createVm') }}
-  </AppButton>
-  <details class="overview" @toggle="hostExpanded = ($event.target as HTMLDetailsElement).open">
     <summary>
       <span
         ><i18n-t keypath="runningCount" tag="span" scope="global"
@@ -138,6 +118,7 @@ function chooseCreation(path: '/vms/new' | '/packages/import') {
         />
         <AppButton
           v-if="mode === 'http' && (status === 'ready' || status === 'loading')"
+          tone="icon"
           class="refresh-list"
           :aria-label="t('refreshList')"
           :title="t('refreshList')"
@@ -146,9 +127,10 @@ function chooseCreation(path: '/vms/new' | '/packages/import') {
           ><AppIcon name="refresh"
         /></AppButton>
         <AppButton
+          tone="icon"
           class="mobile-only search-toggle"
           :aria-label="t('searchVms')"
-          :aria-expanded="searchVisible || Boolean(query)"
+          :aria-expanded="String(searchVisible || Boolean(query))"
           @click="toggleSearch"
           ><AppIcon name="search"
         /></AppButton>
@@ -196,120 +178,83 @@ function chooseCreation(path: '/vms/new' | '/packages/import') {
         icon="search"
       />
       <section v-else class="vm-cards" :aria-label="t('vmList')">
-        <VmCard v-for="vm in visible" :key="vm.id" :vm="vm" />
+        <VmCard
+          v-for="vm in visible"
+          :key="vm.id"
+          :vm="vm"
+          :class="{ selected: detailInPane && vm.id === route.params.id }"
+        />
       </section>
       <span v-if="status === 'ready'" class="sr-only" role="status">{{
         t('visibleCount', { visible: n(visible.length), total: n(items.length) })
       }}</span>
     </section>
-    <aside class="side-panels desktop-only">
-      <section class="panel console-panel">
-        <h2>{{ t('console') }}</h2>
-        <div class="screen-placeholder">
-          <AppIcon name="vm" />
-          <p>{{ t('selectVmHint') }}</p>
-        </div>
-      </section>
-      <section class="panel">
-        <h2>{{ t('navTasks') }}</h2>
-        <p class="muted">{{ t('tasksUnavailable') }}</p>
-      </section>
-      <section class="panel">
-        <h2>{{ t('recentEvents') }}</h2>
-        <p class="muted">{{ t('eventsUnavailable') }}</p>
-      </section>
-    </aside>
-  </div>
-  <AppDialog :open="creationOpen" :title="t('createVm')" @close="creationOpen = false">
-    <div class="creation-options">
-      <AppButton
-        tone="tonal"
-        :disabled="!configuration.canCreate.value"
-        @click="chooseCreation('/vms/new')"
-        ><AppIcon name="settings" />{{ t('createVmCustom') }}</AppButton
-      >
-      <AppButton
-        tone="tonal"
-        :disabled="!packageImport.supported.value"
-        @click="chooseCreation('/packages/import')"
-        ><AppIcon name="disk" />{{ t('createVmImport') }}</AppButton
-      >
+    <div v-if="detailInPane && !route.params.id" class="pane-placeholder">
+      <AppIcon name="vm" />
+      <p>{{ t('selectVmDetailsHint') }}</p>
     </div>
-  </AppDialog>
-  <AppDialog
-    :open="Boolean(route.params.id)"
-    :title="
-      session
-        ? t('sessionTitle', {
-            name: selected?.name || t('navVms'),
-            session:
-              session === 'logs'
-                ? t('vmLogs')
-                : session === 'terminal'
-                  ? t('terminal')
-                  : t('console'),
-          })
-        : t('vmDetails')
-    "
-    :fullscreen="Boolean(session)"
-    :guest-keyboard="session === 'console'"
-    @close="closeDetails"
-  >
-    <EmptyState
-      v-if="status !== 'ready'"
-      :title="problem ? t(problem.titleKey) : t('loadingDetails')"
-      :description="problem ? t(problem.descriptionKey) : t('pleaseWait')"
-    />
-    <EmptyState v-else-if="!selected" :title="t('missingVm')" :description="t('missingVmHint')" />
-    <VmLogs
-      v-else-if="session === 'logs'"
-      :vm-id="selected.id"
-      :instance-id="selected.lifecycle?.instanceId"
-    />
-    <VmTerminal
-      v-else-if="session === 'terminal'"
-      :vm-id="selected.id"
-      :instance-id="selected.lifecycle?.instanceId"
-    />
-    <VmConsole
-      v-else-if="session === 'console'"
-      :vm-id="selected.id"
-      :instance-id="selected.lifecycle?.instanceId"
-    />
-    <EmptyState
-      v-else-if="session"
-      :icon="session === 'terminal' ? 'terminal' : 'vm'"
-      :title="t('sessionUnavailable')"
-      :description="t('sessionUnavailableHint')"
-    />
-    <template v-else>
-      <VmDetails :vm="selected" />
-      <p v-if="packageExport.supported.value">
-        <RouterLink class="btn tonal" :to="`/packages/export/${encodeURIComponent(selected.id)}`">{{
-          t('packageExportTitle')
-        }}</RouterLink>
-      </p>
-    </template>
-  </AppDialog>
+    <AppDialog
+      :open="Boolean(route.params.id)"
+      :inline="detailInPane"
+      :title="
+        session
+          ? t('sessionTitle', {
+              name: selected?.name || t('navVms'),
+              session:
+                session === 'logs'
+                  ? t('vmLogs')
+                  : session === 'terminal'
+                    ? t('terminal')
+                    : t('console'),
+            })
+          : t('vmDetails')
+      "
+      :fullscreen="Boolean(session)"
+      :guest-keyboard="session === 'console'"
+      @close="closeDetails"
+    >
+      <EmptyState
+        v-if="status !== 'ready'"
+        :title="problem ? t(problem.titleKey) : t('loadingDetails')"
+        :description="problem ? t(problem.descriptionKey) : t('pleaseWait')"
+      />
+      <EmptyState v-else-if="!selected" :title="t('missingVm')" :description="t('missingVmHint')" />
+      <VmLogs
+        v-else-if="session === 'logs'"
+        :vm-id="selected.id"
+        :instance-id="selected.lifecycle?.instanceId"
+      />
+      <VmTerminal
+        v-else-if="session === 'terminal'"
+        :vm-id="selected.id"
+        :instance-id="selected.lifecycle?.instanceId"
+      />
+      <VmConsole
+        v-else-if="session === 'console'"
+        :vm-id="selected.id"
+        :instance-id="selected.lifecycle?.instanceId"
+      />
+      <EmptyState
+        v-else-if="session"
+        :icon="session === 'terminal' ? 'terminal' : 'vm'"
+        :title="t('sessionUnavailable')"
+        :description="t('sessionUnavailableHint')"
+      />
+      <template v-else>
+        <VmDetails :vm="selected" />
+        <p v-if="packageExport.supported.value">
+          <AppLinkButton tone="tonal" :to="`/packages/export/${encodeURIComponent(selected.id)}`">{{
+            t('packageExportTitle')
+          }}</AppLinkButton>
+        </p>
+      </template>
+    </AppDialog>
+  </div>
 </template>
 
 <style scoped>
-.creation-options {
-  display: grid;
-  gap: var(--space-3);
-}
-.creation-options .btn {
-  justify-content: flex-start;
-  min-height: 56px;
-  white-space: normal;
-  text-align: start;
-}
-.create-mobile {
-  margin-bottom: var(--space-4);
-}
 .overview {
-  border-radius: 22px;
-  background: var(--soft);
+  padding: 0;
   margin-bottom: var(--space-6);
 }
 summary {
@@ -330,11 +275,11 @@ summary > span {
   align-items: center;
 }
 summary small {
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
 }
 summary > span:last-child {
-  color: var(--accent);
-  font-size: var(--font-sm);
+  color: var(--md-sys-color-primary);
+  font-size: var(--md-sys-typescale-body-medium-size);
 }
 summary .icon {
   width: 16px;
@@ -346,8 +291,9 @@ summary .icon {
 }
 .vm-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 310px;
+  grid-template-columns: 400px minmax(0, 1fr);
   gap: var(--space-6);
+  align-items: start;
 }
 .instances {
   min-width: 0;
@@ -369,59 +315,29 @@ summary .icon {
 }
 .vm-cards {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
 }
-.side-panels {
-  display: grid;
-  align-content: start;
-  gap: 18px;
-}
-.console-panel {
-  background: var(--soft);
-}
-.screen-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 190px;
-  border-radius: 14px;
-  background: var(--surface);
-  color: var(--muted);
-  text-align: center;
-  padding: var(--space-4);
-  font-size: var(--font-sm);
-}
-.screen-placeholder > .icon {
-  width: 36px;
-  height: 36px;
-}
-@media (max-width: 1100px) {
+@media (width < 1200px) {
   .vm-layout {
-    grid-template-columns: 1fr;
-  }
-  .side-panels {
-    display: none;
+    grid-template-columns: 360px minmax(0, 1fr);
   }
 }
-@media (max-width: 760px) {
-  .vm-cards {
-    grid-template-columns: 1fr;
+@media (width < 840px) {
+  .vm-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
-@media (max-width: 650px) {
+@media (width < 600px) {
   .overview {
-    border-radius: var(--radius-md);
     margin-bottom: 10px;
   }
   summary {
     min-height: var(--touch-target);
     padding: 10px var(--space-3);
-    font-size: var(--font-sm);
+    font-size: var(--md-sys-typescale-body-medium-size);
   }
   summary > span:last-child {
-    font-size: var(--font-xs);
+    font-size: var(--md-sys-typescale-body-small-size);
   }
   .list-tools {
     gap: var(--space-2);
@@ -445,6 +361,8 @@ summary .icon {
   }
   .vm-cards {
     gap: var(--space-3);
+    /* Keep the last card clear of the floating create button. */
+    padding-bottom: 72px;
   }
 }
 </style>

@@ -11,6 +11,7 @@ import {
   type CpuInterval,
 } from '../../../shared/lib/cpuSet'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
 import AppDialog from '../../../shared/ui/AppDialog.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 
@@ -112,14 +113,15 @@ function tier(khz: number | null) {
         {{ t('cpuMissing', { cores: missing }) }}
       </p>
       <div class="cpu-cores">
-        <label v-for="core in source.items.value" :key="core.id">
-          <input
-            type="checkbox"
-            :aria-label="`CPU${core.id}`"
-            :checked="hasCpu(selection, core.id)"
-            :disabled="disabled || source.status.value !== 'ready'"
-            @change="toggle(core.id)"
-          />
+        <AppCheckbox
+          v-for="core in source.items.value"
+          :key="core.id"
+          class="cpu-core"
+          :aria-label="`CPU${core.id}`"
+          :checked="hasCpu(selection, core.id)"
+          :disabled="disabled || source.status.value !== 'ready'"
+          @change="toggle(core.id)"
+        >
           <span
             ><strong>CPU{{ core.id }}</strong> · {{ frequency(core.maxFrequencyKHz) }}
             <span v-if="tier(core.maxFrequencyKHz)">· {{ tier(core.maxFrequencyKHz) }}</span>
@@ -137,7 +139,7 @@ function tier(khz: number | null) {
               }}{{ core.capacityEstimated ? ` · ${t('cpuEstimated')}` : '' }}</small
             >
           </span>
-        </label>
+        </AppCheckbox>
       </div>
       <div class="cpu-actions cpu-footer">
         <p v-if="!selectionValid && selectionLimit" role="status">
@@ -168,19 +170,19 @@ function tier(khz: number | null) {
   max-height: 45dvh;
   overflow-y: auto;
 }
-.cpu-cores label {
+.cpu-core {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  background: var(--app-color-card);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   overflow-wrap: anywhere;
 }
 small {
   display: block;
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
 }
 .cpu-selection,
 .cpu-hint {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppLinkButton from '../../../shared/ui/AppLinkButton.vue'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDiskActions } from '../model/diskOperations'
@@ -8,6 +9,7 @@ import { taskPercent, taskStateKeys } from '../../tasks'
 import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 import type { MessageKey } from '../../../shared/i18n'
 import AppButton from '../../../shared/ui/AppButton.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 import AppProgress from '../../../shared/ui/AppProgress.vue'
 withDefaults(defineProps<{ showResult?: boolean; showRetry?: boolean }>(), {
@@ -94,11 +96,7 @@ function retry() {
             entry.task?.state === 'succeeded'
           "
         >
-          <label
-            ><input v-model="growConfirmed" type="checkbox" />{{
-              t('diskGrowResumeConfirm')
-            }}</label
-          >
+          <AppCheckbox v-model="growConfirmed">{{ t('diskGrowResumeConfirm') }}</AppCheckbox>
           <AppButton
             :disabled="
               !growConfirmed ||
@@ -146,7 +144,7 @@ function retry() {
         @click="resources.diskDetail.open(entry.task.diskId!)"
         >{{ t('diskViewResult') }}</AppButton
       >
-      <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+      <AppLinkButton tone="tonal" to="/tasks">{{ t('diskTaskLink') }}</AppLinkButton>
     </template>
   </section>
 </template>
@@ -155,8 +153,8 @@ function retry() {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   overflow-wrap: anywhere;
 }
 p {
@@ -169,10 +167,10 @@ p {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3);
-  border-inline-start: 3px solid var(--line);
+  border-inline-start: 3px solid var(--md-sys-color-outline-variant);
   min-width: 0;
 }
-@media (max-width: 480px) {
+@media (width < 480px) {
   .btn {
     width: 100%;
     justify-self: stretch;

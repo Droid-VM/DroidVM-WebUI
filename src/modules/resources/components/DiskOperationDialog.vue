@@ -10,6 +10,10 @@ import CpuCorePicker from './CpuCorePicker.vue'
 import AppDialog from '../../../shared/ui/AppDialog.vue'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
+import AppTextField from '../../../shared/ui/AppTextField.vue'
 
 const { t, locale } = useI18n(),
   actions = useDiskActions()
@@ -250,119 +254,107 @@ onBeforeUnmount(actions.close)
         </p>
         <p>{{ t(actions.optimizing.value ? 'diskOptimizeEffect' : effectKeys[action]) }}</p>
         <form v-if="!candidate" @submit.prevent="review">
-          <label v-if="action === 'convert' && !actions.optimizing.value" class="check"
-            ><input v-model="form.relocate" type="checkbox" />{{ t('diskRelocate') }}</label
+          <AppCheckbox
+            v-if="action === 'convert' && !actions.optimizing.value"
+            v-model="form.relocate"
+            >{{ t('diskRelocate') }}</AppCheckbox
           >
           <template v-if="needsPath">
-            <label
-              >{{ t('diskHostFolder')
-              }}<input
-                v-model="form.folder"
-                required
-                autocomplete="off"
-                placeholder="/storage/emulated/0/DroidVM"
-            /></label>
-            <small>{{ t('diskHostPathHint') }}</small>
-            <label
-              >{{ t('diskFileName') }}<input v-model="form.name" required autocomplete="off"
-            /></label>
+            <AppTextField
+              v-model="form.folder"
+              :label="t('diskHostFolder')"
+              :supporting-text="t('diskHostPathHint')"
+              required
+              autocomplete="off"
+              placeholder="/storage/emulated/0/DroidVM"
+            />
+            <AppTextField
+              v-model="form.name"
+              :label="t('diskFileName')"
+              required
+              autocomplete="off"
+            />
           </template>
           <template v-if="action === 'create' && actions.selected.value">
-            <label class="check"
-              ><input v-model="form.inheritSize" type="checkbox" />{{ t('diskInheritSize') }}</label
-            >
-            <label
-              >{{ t('diskAttachPolicy')
-              }}<select v-model="form.attach">
-                <option value="readonly">{{ t('diskAttachReadonly') }}</option>
-                <option value="follow">{{ t('diskAttachFollow') }}</option>
-              </select></label
-            >
+            <AppCheckbox v-model="form.inheritSize">{{ t('diskInheritSize') }}</AppCheckbox>
+            <AppSelect v-model="form.attach" :label="t('diskAttachPolicy')">
+              <AppOption value="readonly">{{ t('diskAttachReadonly') }}</AppOption>
+              <AppOption value="follow">{{ t('diskAttachFollow') }}</AppOption>
+            </AppSelect>
           </template>
           <template v-if="needsSize">
-            <label
-              >{{ t('diskNewSize') }}<input v-model="form.size" required inputmode="decimal"
-            /></label>
-            <label
-              >{{ t('diskSizeUnit')
-              }}<select v-model="form.unit">
-                <option>B</option>
-                <option>MiB</option>
-                <option>GiB</option>
-              </select></label
-            >
+            <AppTextField
+              v-model="form.size"
+              :label="t('diskNewSize')"
+              required
+              inputmode="decimal"
+            />
+            <AppSelect v-model="form.unit" :label="t('diskSizeUnit')">
+              <AppOption value="B">B</AppOption>
+              <AppOption value="MiB">MiB</AppOption>
+              <AppOption value="GiB">GiB</AppOption>
+            </AppSelect>
           </template>
-          <label v-if="formatVisible"
-            >{{ t('diskActualFormat')
-            }}<select v-model="form.format">
-              <option>qcow2</option>
-              <option>raw</option>
-              <template v-if="action === 'create'"
-                ><option>vhdx</option>
-                <option>vdi</option>
-                <option>vmdk</option></template
-              >
-            </select></label
-          >
+          <AppSelect v-if="formatVisible" v-model="form.format" :label="t('diskActualFormat')">
+            <AppOption value="qcow2">qcow2</AppOption>
+            <AppOption value="raw">raw</AppOption>
+            <template v-if="action === 'create'"
+              ><AppOption value="vhdx">vhdx</AppOption>
+              <AppOption value="vdi">vdi</AppOption>
+              <AppOption value="vmdk">vmdk</AppOption></template
+            >
+          </AppSelect>
           <template v-if="optionsVisible">
-            <label
-              >{{ t('diskCompression')
-              }}<select v-model="form.compression">
-                <option value="none">{{ t('diskNoCompression') }}</option>
-                <option value="deflate">Deflate</option>
-                <option value="zstd">Zstd</option>
-              </select></label
-            >
-            <label class="check"
-              ><input v-model="form.preallocate" type="checkbox" />{{ t('diskPreallocate') }}</label
-            >
+            <AppSelect v-model="form.compression" :label="t('diskCompression')">
+              <AppOption value="none">{{ t('diskNoCompression') }}</AppOption>
+              <AppOption value="deflate">Deflate</AppOption>
+              <AppOption value="zstd">Zstd</AppOption>
+            </AppSelect>
+            <AppCheckbox v-model="form.preallocate">{{ t('diskPreallocate') }}</AppCheckbox>
           </template>
-          <label v-if="action === 'resize'" class="check"
-            ><input v-model="form.shrink" type="checkbox" />{{ t('diskAllowShrink') }}</label
-          >
+          <AppCheckbox v-if="action === 'resize'" v-model="form.shrink">{{
+            t('diskAllowShrink')
+          }}</AppCheckbox>
           <p v-if="action === 'resize' && form.shrink" class="warning">
             {{ t('diskShrinkWarning') }}
           </p>
           <template v-if="action === 'resize'">
-            <label class="check"
-              ><input v-model="grow" type="checkbox" :disabled="!growAvailable" />{{
-                t('diskGrowAfterResize')
-              }}</label
-            >
+            <AppCheckbox v-model="grow" :disabled="!growAvailable">{{
+              t('diskGrowAfterResize')
+            }}</AppCheckbox>
             <small>{{ t('diskGrowEligibility') }}</small>
           </template>
-          <label v-if="action === 'delete'" class="check"
-            ><input v-model="form.deleteFiles" type="checkbox" />{{ t('diskDeleteFiles') }}</label
-          >
+          <AppCheckbox v-if="action === 'delete'" v-model="form.deleteFiles">{{
+            t('diskDeleteFiles')
+          }}</AppCheckbox>
           <p v-if="action === 'delete'">
             {{ t(form.deleteFiles ? 'diskDeleteFilesEffect' : 'diskKeepFilesEffect') }}
           </p>
           <template
             v-if="actions.optimizing.value && actions.optimizeDefaults.value?.compression === 'ask'"
           >
-            <label class="check"
-              ><input
-                v-model="actions.optimizeConfirmed.value"
-                type="checkbox"
-                data-testid="disk-optimize-compression-confirm"
-                :disabled="actions.rememberBusy.value"
-              />{{ t('diskOptimizeConfirmCompression') }}</label
+            <AppCheckbox
+              v-model="actions.optimizeConfirmed.value"
+              data-testid="disk-optimize-compression-confirm"
+              :disabled="actions.rememberBusy.value"
+              >{{ t('diskOptimizeConfirmCompression') }}</AppCheckbox
             >
-            <label v-if="actions.optimizeDefaults.value.canRemember" class="check"
-              ><input
-                v-model="remember"
-                type="checkbox"
-                data-testid="disk-optimize-remember"
-                :disabled="actions.rememberBusy.value"
-              />{{ t('diskOptimizeRemember') }}</label
+            <AppCheckbox
+              v-if="actions.optimizeDefaults.value.canRemember"
+              v-model="remember"
+              data-testid="disk-optimize-remember"
+              :disabled="actions.rememberBusy.value"
+              >{{ t('diskOptimizeRemember') }}</AppCheckbox
             >
           </template>
           <details>
             <summary>{{ t('diskAdvanced') }}</summary>
-            <label
-              >{{ t('diskCpuAffinity') }}<input v-model="form.cpus" placeholder="0-3,7"
-            /></label>
-            <small>{{ t('diskCpuHint') }}</small>
+            <AppTextField
+              v-model="form.cpus"
+              :label="t('diskCpuAffinity')"
+              :supporting-text="t('diskCpuHint')"
+              placeholder="0-3,7"
+            />
             <CpuCorePicker
               :current="form.cpus"
               :title="t('diskPickCpu')"
@@ -437,9 +429,7 @@ onBeforeUnmount(actions.close)
             <p v-if="!impact?.attachments.length">{{ t('diskNoAttachments') }}</p>
           </details>
           <p>{{ t('diskConfirmationHint') }}</p>
-          <label class="check"
-            ><input v-model="acknowledged" type="checkbox" />{{ t('diskAcknowledge') }}</label
-          >
+          <AppCheckbox v-model="acknowledged">{{ t('diskAcknowledge') }}</AppCheckbox>
           <div class="buttons">
             <AppButton @click="candidate = null">{{ t('diskBackToForm') }}</AppButton
             ><AppButton
@@ -464,32 +454,11 @@ onBeforeUnmount(actions.close)
 <style scoped>
 .disk-form,
 form,
-label {
+details {
   display: grid;
   gap: var(--space-3);
   min-width: 0;
   overflow-wrap: anywhere;
-}
-input:not([type='checkbox']),
-select {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-}
-.check {
-  display: flex;
-  align-items: start;
-  gap: var(--space-2);
-}
-.check input {
-  flex: none;
-  margin-top: 4px;
 }
 .buttons {
   display: flex;
@@ -518,6 +487,6 @@ summary {
   margin-block: var(--space-2);
 }
 .warning {
-  color: var(--danger);
+  color: var(--md-sys-color-error);
 }
 </style>

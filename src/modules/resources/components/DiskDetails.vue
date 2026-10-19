@@ -6,11 +6,13 @@ import type { MessageKey } from '../../../shared/i18n'
 import AppDialog from '../../../shared/ui/AppDialog.vue'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import AppIcon from '../../../shared/ui/AppIcon.vue'
 import { useDiskActions } from '../model/diskOperations'
 import { diskActionKeys } from '../model/diskForm'
 import type { DiskAction } from '../api/diskOperations'
 import { useAgentOperations, type AgentAction } from '../../agent'
 
+defineProps<{ inline?: boolean }>()
 const { t, locale } = useI18n()
 const source = useResourceCatalog().diskDetail
 const detail = source.data
@@ -22,16 +24,9 @@ function maintain(action: AgentAction) {
   source.close()
   void agent.prepare(id, action)
 }
-const actionList: DiskAction[] = [
-  'create',
-  'clone',
-  'resize',
-  'convert',
-  'flatten',
-  'commit',
-  'reset',
-  'delete',
-]
+// Everyday operations first; chain rewrites and delete are secondary.
+const commonActions: DiskAction[] = ['resize', 'clone', 'convert']
+const chainActions: DiskAction[] = ['create', 'flatten', 'commit', 'reset']
 function operate(action: DiskAction) {
   const id = detail.value?.disk.id
   if (!id) return
@@ -66,102 +61,151 @@ const bytes = (value: string | null) =>
   value === null
     ? t('diskUnknown')
     : t('diskBytes', { value: BigInt(value).toLocaleString(locale.value) })
+const size = (value: string | null) => {
+  if (value === null) return t('diskUnknown')
+  const raw = Number(BigInt(value))
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
+  let unit = 0,
+    amount = raw
+  while (amount >= 1024 && unit < units.length - 1) {
+    amount /= 1024
+    unit++
+  }
+  return `${amount.toLocaleString(locale.value, { maximumFractionDigits: unit ? 1 : 0 })} ${units[unit]}`
+}
 onBeforeUnmount(() => source.close())
 </script>
 
 <template>
-  <AppDialog :open="!!source.id.value" :title="t('diskDetails')" @close="source.close">
+  <AppDialog
+    :open="!!source.id.value"
+    :inline="inline"
+    :title="t('diskDetails')"
+    @close="source.close"
+  >
     <div class="disk-detail">
-      <AppButton :disabled="source.status.value === 'loading'" @click="source.refresh">{{
-        t('refreshList')
-      }}</AppButton>
-      <p v-if="source.status.value === 'loading'" role="status">{{ t('processing') }}</p>
+      <p v-if="source.status.value === 'loading' && !detail" role="status">
+        {{ t('processing') }}
+      </p>
       <AppNotice v-if="source.problem.value" tone="error" :title="t(source.problem.value.titleKey)"
         ><p>{{ t(source.problem.value.descriptionKey) }}</p></AppNotice
       >
       <template v-if="detail">
-        <h3>{{ detail.disk.name || detail.disk.id }}</h3>
-        <p>{{ detail.disk.path }}</p>
+        <header class="identity">
+          <div>
+            <h3>{{ detail.disk.name || detail.disk.id }}</h3>
+            <p class="path">{{ detail.disk.path }}</p>
+          </div>
+          <AppButton
+            tone="icon"
+            :aria-label="t('refreshList')"
+            :title="t('refreshList')"
+            :disabled="source.status.value === 'loading'"
+            @click="source.refresh"
+            ><AppIcon name="refresh"
+          /></AppButton>
+        </header>
+        <p class="summary">
+          <span>{{ detail.inspection.format ?? t('diskUnknown') }}</span>
+          <span :title="bytes(detail.inspection.virtualBytes)">{{
+            size(detail.inspection.virtualBytes)
+          }}</span>
+          <span :title="bytes(detail.inspection.allocatedBytes)"
+            >{{ t('diskAllocatedBytes') }} {{ size(detail.inspection.allocatedBytes) }}</span
+          >
+        </p>
         <AppNotice
-          :tone="detail.inspection.state === 'ready' ? 'info' : 'warning'"
+          v-if="detail.inspection.state !== 'ready'"
+          tone="warning"
           :title="t(stateLabel)"
         />
-        <dl>
-          <dt>{{ t('diskActualFormat') }}</dt>
-          <dd>{{ detail.inspection.format ?? t('diskUnknown') }}</dd>
-          <template v-for="(key, index) in byteRows" :key="key"
-            ><dt>{{ t(byteLabels[index]!) }}</dt>
-            <dd>{{ bytes(detail.inspection[key]) }}</dd></template
-          >
-          <template v-for="(key, index) in flagRows" :key="key"
-            ><dt>{{ t(flagLabels[index]!) }}</dt>
-            <dd>{{ boolText(detail.inspection[key]) }}</dd></template
-          >
-          <dt>{{ t('diskCompression') }}</dt>
-          <dd>{{ detail.inspection.compression ?? t('diskUnknown') }}</dd>
-          <dt>{{ t('diskReadOnlyRequired') }}</dt>
-          <dd>{{ boolText(detail.readOnlyRequired) }}</dd>
-        </dl>
-        <p class="muted">{{ t('diskReadOnlyHint') }}</p>
-        <div v-if="agent.supported.value" class="disk-actions">
-          <AppButton
-            :disabled="!agent.allowed.value"
-            data-testid="agent-password-open"
-            @click="maintain('chpasswd')"
-            >{{ t('agentPasswordTitle') }}</AppButton
-          >
-          <AppButton
-            :disabled="!agent.allowed.value"
-            data-testid="agent-grow-open"
-            @click="maintain('autogrow')"
-            >{{ t('agentGrowTitle') }}</AppButton
-          >
-        </div>
-        <div v-if="actions.supported.value" class="disk-actions">
-          <AppButton
-            :disabled="!actions.allowed.value"
-            data-testid="disk-optimize-open"
-            @click="optimize"
-            >{{ t('diskOptimizeTitle') }}</AppButton
-          >
-          <AppButton
-            v-for="action in actionList"
-            :key="action"
-            :disabled="!actions.allowed.value"
-            @click="operate(action)"
-            >{{ t(action === 'create' ? 'diskCreateOverlay' : diskActionKeys[action]) }}</AppButton
-          >
-        </div>
-        <details open>
-          <summary>{{ t('diskChain') }}</summary>
-          <p v-if="!detail.chainComplete">{{ t('diskChainIncomplete') }}</p>
-          <ol>
-            <li v-for="disk in detail.chain" :key="disk.id">
-              <strong>{{ disk.name || disk.id }}</strong>
-              <p>{{ disk.path }}</p>
-            </li>
-          </ol>
-        </details>
-        <details>
-          <summary>{{ t('diskChildren', { count: detail.children.length }) }}</summary>
-          <ul>
-            <li v-for="disk in detail.children" :key="disk.id">
-              {{ disk.name || disk.id }}
-              <p>{{ disk.path }}</p>
-            </li>
-          </ul>
-        </details>
-        <details open>
-          <summary>{{ t('diskAttachments', { count: detail.attachments.length }) }}</summary>
-          <p v-if="!detail.attachments.length">{{ t('diskNoAttachments') }}</p>
-          <ul>
+        <section v-if="actions.supported.value" class="section">
+          <h4>{{ t('diskSectionOperations') }}</h4>
+          <div class="disk-actions">
+            <AppButton
+              tone="tonal"
+              :disabled="!actions.allowed.value"
+              data-testid="disk-optimize-open"
+              @click="optimize"
+              >{{ t('diskOptimizeTitle') }}</AppButton
+            >
+            <AppButton
+              v-for="action in commonActions"
+              :key="action"
+              tone="tonal"
+              :disabled="!actions.allowed.value"
+              @click="operate(action)"
+              >{{ t(diskActionKeys[action]) }}</AppButton
+            >
+          </div>
+          <div class="disk-actions">
+            <AppButton
+              v-for="action in chainActions"
+              :key="action"
+              :disabled="!actions.allowed.value"
+              @click="operate(action)"
+              >{{
+                t(action === 'create' ? 'diskCreateOverlay' : diskActionKeys[action])
+              }}</AppButton
+            >
+            <AppButton
+              class="danger"
+              :disabled="!actions.allowed.value"
+              @click="operate('delete')"
+              >{{ t(diskActionKeys.delete) }}</AppButton
+            >
+          </div>
+        </section>
+        <section v-if="agent.supported.value" class="section">
+          <h4>{{ t('diskSectionGuest') }}</h4>
+          <div class="disk-actions">
+            <AppButton
+              tone="tonal"
+              :disabled="!agent.allowed.value"
+              data-testid="agent-password-open"
+              @click="maintain('chpasswd')"
+              >{{ t('agentPasswordTitle') }}</AppButton
+            >
+            <AppButton
+              tone="tonal"
+              :disabled="!agent.allowed.value"
+              data-testid="agent-grow-open"
+              @click="maintain('autogrow')"
+              >{{ t('agentGrowTitle') }}</AppButton
+            >
+          </div>
+        </section>
+        <section class="section">
+          <h4>{{ t('diskSectionInfo') }}</h4>
+          <dl>
+            <div v-for="(key, index) in byteRows" :key="key">
+              <dt>{{ t(byteLabels[index]!) }}</dt>
+              <dd :title="bytes(detail.inspection[key])">{{ size(detail.inspection[key]) }}</dd>
+            </div>
+            <div v-for="(key, index) in flagRows" :key="key">
+              <dt>{{ t(flagLabels[index]!) }}</dt>
+              <dd>{{ boolText(detail.inspection[key]) }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('diskCompression') }}</dt>
+              <dd>{{ detail.inspection.compression ?? t('diskUnknown') }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('diskReadOnlyRequired') }}</dt>
+              <dd>{{ boolText(detail.readOnlyRequired) }}</dd>
+            </div>
+          </dl>
+          <p class="hint">{{ t('diskReadOnlyHint') }}</p>
+        </section>
+        <section class="section">
+          <h4>{{ t('diskAttachments', { count: detail.attachments.length }) }}</h4>
+          <p v-if="!detail.attachments.length" class="hint">{{ t('diskNoAttachments') }}</p>
+          <ul class="rows">
             <li v-for="slot in detail.attachments" :key="`${slot.vmId}:${slot.slot}`">
               <strong>{{ slot.vmName || slot.vmId }}</strong>
-              <p>
+              <span>
                 {{ t('diskSlot', { slot: slot.slot + 1 }) }} ·
-                {{ t(slot.readOnly ? 'diskReadOnly' : 'diskReadWrite') }}
-              </p>
-              <p>
+                {{ t(slot.readOnly ? 'diskReadOnly' : 'diskReadWrite') }} ·
                 {{
                   t(
                     slot.diskId === detail.disk.id
@@ -169,13 +213,31 @@ onBeforeUnmount(() => source.close())
                       : 'diskInheritedReference',
                   )
                 }}
-              </p>
-              <p v-if="slot.diskId !== detail.disk.id" class="muted">{{ slot.diskId }}</p>
+              </span>
             </li>
           </ul>
-        </details>
-        <p class="muted">{{ t('diskInspectionHint') }}</p>
-        <p class="muted">
+        </section>
+        <section class="section">
+          <h4>{{ t('diskChain') }}</h4>
+          <p v-if="!detail.chainComplete" class="hint">{{ t('diskChainIncomplete') }}</p>
+          <ol class="rows">
+            <li v-for="disk in detail.chain" :key="disk.id">
+              <strong>{{ disk.name || disk.id }}</strong>
+              <span>{{ disk.path }}</span>
+            </li>
+          </ol>
+          <details v-if="detail.children.length">
+            <summary>{{ t('diskChildren', { count: detail.children.length }) }}</summary>
+            <ul class="rows">
+              <li v-for="disk in detail.children" :key="disk.id">
+                <strong>{{ disk.name || disk.id }}</strong>
+                <span>{{ disk.path }}</span>
+              </li>
+            </ul>
+          </details>
+        </section>
+        <p class="hint">
+          {{ t('diskInspectionHint') }}
           {{ t('diskChecked', { time: new Date(detail.checkedAtMs).toLocaleString(locale) }) }}
         </p>
       </template>
@@ -186,46 +248,88 @@ onBeforeUnmount(() => source.close())
 <style scoped>
 .disk-detail {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.btn {
-  justify-self: start;
+.identity {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.identity > div {
+  flex: 1;
+  min-width: 0;
+}
+h3 {
+  margin: 0;
+  font-size: var(--md-sys-typescale-title-large-size);
+  font-weight: 400;
+}
+.path,
+.hint {
+  margin: var(--space-1) 0 0;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: 1.5;
+}
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+.summary span {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: 500;
+}
+.section {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+h4 {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-title-small-size);
+  font-weight: 500;
 }
 .disk-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-h3,
-p {
-  margin: 0;
-}
 dl {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
-  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
+}
+dt {
+  margin-bottom: 2px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
 }
 dd {
   margin: 0;
 }
-details {
-  padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+.rows {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-summary {
-  cursor: pointer;
+.rows li {
+  display: grid;
+  gap: 2px;
 }
-ul,
-ol {
-  padding-inline-start: var(--space-4);
-}
-li {
-  margin-block: var(--space-3);
-}
-li p {
-  margin-top: var(--space-1);
+.rows span {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
 }
 </style>

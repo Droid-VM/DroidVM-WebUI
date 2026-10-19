@@ -100,11 +100,11 @@ async function confirm() {
 }
 p {
   margin: var(--space-2) 0;
-  font-size: var(--font-sm);
-  color: var(--muted);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  color: var(--md-sys-color-on-surface-variant);
   overflow-wrap: anywhere;
 }
 .warning {
-  color: var(--warn);
+  color: var(--app-color-warning);
 }
 </style>

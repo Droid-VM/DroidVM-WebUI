@@ -6,6 +6,8 @@ import { useResourceCatalog } from '../model/catalog'
 import { useVisiblePolling } from '../../../shared/model/visiblePolling'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import AppOption from '../../../shared/ui/AppOption.vue'
+import AppSelect from '../../../shared/ui/AppSelect.vue'
 const props = defineProps<{
   kind: Extract<ResourceKind, 'disk' | 'network'>
   disabled: boolean
@@ -62,17 +64,18 @@ function add() {
       <p>{{ t(source.problem.value.descriptionKey) }}</p>
       <AppButton @click="source.refresh">{{ t('refreshList') }}</AppButton>
     </AppNotice>
-    <label
-      ><span>{{ t(kind === 'disk' ? 'resourceChooseDisk' : 'resourceChooseNetwork') }}</span>
-      <select v-model="selected" :disabled="disabled || source.status.value !== 'ready'">
-        <option value="" disabled>
-          {{ t(source.status.value === 'loading' ? 'processing' : 'resourceChoose') }}
-        </option>
-        <option v-for="item in choices" :key="item.id" :value="item.id">
-          {{ item.name || item.id }}
-        </option>
-      </select>
-    </label>
+    <AppSelect
+      v-model="selected"
+      :label="t(kind === 'disk' ? 'resourceChooseDisk' : 'resourceChooseNetwork')"
+      :disabled="disabled || source.status.value !== 'ready'"
+    >
+      <AppOption value="" disabled>
+        {{ t(source.status.value === 'loading' ? 'processing' : 'resourceChoose') }}
+      </AppOption>
+      <AppOption v-for="item in choices" :key="item.id" :value="item.id">
+        {{ item.name || item.id }}
+      </AppOption>
+    </AppSelect>
     <p v-if="source.status.value === 'ready' && !choices.length" class="muted">
       {{ t('resourceNoneSelectable') }}
     </p>
@@ -99,21 +102,6 @@ function add() {
   gap: var(--space-3);
   margin-bottom: var(--space-4);
   min-width: 0;
-}
-label {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-select {
-  width: 100%;
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
 }
 .btn {
   justify-self: start;

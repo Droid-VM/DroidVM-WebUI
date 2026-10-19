@@ -58,8 +58,8 @@ const { t } = useI18n(),
   min-width: 0;
 }
 article {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
   padding: var(--space-3);
   overflow-wrap: anywhere;
 }
