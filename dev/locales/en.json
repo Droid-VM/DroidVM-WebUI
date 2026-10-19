@@ -1,0 +1,20 @@
+{
+  "workbenchTitle": "Components and states",
+  "workbenchHint": "For development checks only. No host or VM actions are performed.",
+  "confirmationReceived": "Confirmation received",
+  "noBusinessAction": "No business action was performed.",
+  "progress": "Progress",
+  "knownProgress": "Known progress",
+  "unknownProgress": "Unknown progress",
+  "dialogs": "Dialogs",
+  "simulateFailure": "Simulate submission failure",
+  "openConfirmation": "Open confirmation",
+  "openNested": "Open nested dialog",
+  "vmScenarios": "VM state scenarios",
+  "outerDetails": "Outer details",
+  "nestedHint": "Closing the inner dialog keeps focus and scrolling constrained to the outer dialog.",
+  "confirmInDetails": "Confirm in details",
+  "confirmationExample": "Example confirmation",
+  "confirmationHint": "This is a UI check. No real changes are submitted.",
+  "failure": "Simulated failure: confirm again or cancel."
+}

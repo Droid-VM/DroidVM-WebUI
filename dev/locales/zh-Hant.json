@@ -1,0 +1,20 @@
+{
+  "workbenchTitle": "元件與狀態驗證",
+  "workbenchHint": "僅用於開發驗證，不執行任何主機或虛擬機操作。",
+  "confirmationReceived": "已收到確認意圖",
+  "noBusinessAction": "未執行任何業務操作。",
+  "progress": "進度",
+  "knownProgress": "已知進度",
+  "unknownProgress": "未知進度",
+  "dialogs": "對話框",
+  "simulateFailure": "示範提交失敗",
+  "openConfirmation": "開啟確認對話框",
+  "openNested": "開啟巢狀對話框",
+  "vmScenarios": "VM 狀態情境",
+  "outerDetails": "外層詳細資訊",
+  "nestedHint": "關閉內層確認框後，外層詳細資訊會繼續限制焦點並鎖定捲動。",
+  "confirmInDetails": "在詳細資訊中確認",
+  "confirmationExample": "確認操作範例",
+  "confirmationHint": "這是介面驗證，不會提交實際修改。",
+  "failure": "示範失敗：可重新確認或取消。"
+}

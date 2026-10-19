@@ -1,0 +1,20 @@
+{
+  "workbenchTitle": "组件与状态验证",
+  "workbenchHint": "仅用于开发验证，不执行任何宿主或虚拟机操作。",
+  "confirmationReceived": "确认意图已收到",
+  "noBusinessAction": "未执行任何业务操作。",
+  "progress": "进度",
+  "knownProgress": "已知进度",
+  "unknownProgress": "未知进度",
+  "dialogs": "对话框",
+  "simulateFailure": "演示提交失败",
+  "openConfirmation": "打开确认对话框",
+  "openNested": "打开嵌套对话框",
+  "vmScenarios": "VM 状态场景",
+  "outerDetails": "外层详情",
+  "nestedHint": "关闭内层确认框后，外层详情继续保持焦点约束和滚动锁定。",
+  "confirmInDetails": "在详情中确认",
+  "confirmationExample": "确认操作示例",
+  "confirmationHint": "这是界面验证，不会提交真实修改。",
+  "failure": "演示失败：可重新确认或取消。"
+}

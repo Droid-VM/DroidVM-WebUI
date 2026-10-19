@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "id": "demo-debian",
+      "name": "Debian 13",
+      "state": "RUNNING",
+      "backend": "crosvm",
+      "cpuCount": 4,
+      "memoryMiB": 4096
+    },
+    {
+      "id": "demo-windows",
+      "name": "Windows 11 ARM64",
+      "state": "STOPPED",
+      "backend": "QEMU",
+      "cpuCount": 4,
+      "memoryMiB": 6144
+    },
+    {
+      "id": "demo-alpine",
+      "name": "Alpine Linux",
+      "state": "RUNNING",
+      "backend": "crosvm",
+      "cpuCount": 2,
+      "memoryMiB": 1024
+    },
+    {
+      "id": "demo-ubuntu",
+      "name": "Ubuntu Server",
+      "state": "STARTING",
+      "backend": "QEMU",
+      "cpuCount": 2,
+      "memoryMiB": 2048
+    }
+  ]
+}
