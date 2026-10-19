@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import type { Vm } from '../api/gateway'
@@ -11,7 +12,17 @@ const { t, n } = useI18n()
 const logs = useLogViewer()
 const terminal = useVmTerminal()
 const configuration = useConfigurationEditor()
-defineProps<{ vm: Vm }>()
+const props = defineProps<{ vm: Vm }>()
+const uptime = computed(() => {
+  if (props.vm.uptimeMs == null) return t('notAvailable')
+  const seconds = BigInt(props.vm.uptimeMs) / 1000n
+  return t('vmObservedUptime', {
+    days: n(Number(seconds / 86400n)),
+    hours: n(Number((seconds / 3600n) % 24n)),
+    minutes: n(Number((seconds / 60n) % 60n)),
+    seconds: n(Number(seconds % 60n)),
+  })
+})
 </script>
 
 <template>
@@ -40,8 +51,24 @@ defineProps<{ vm: Vm }>()
       <dt>{{ t('memory') }}</dt>
       <dd>{{ vm.memoryMiB === null ? t('notAvailable') : `${n(vm.memoryMiB)} MiB` }}</dd>
     </div>
-    <div v-for="label in [t('ipAddress'), t('uptime'), t('systemDisk')]" :key="label">
-      <dt>{{ label }}</dt>
+    <div>
+      <dt>{{ t('ipAddress') }}</dt>
+      <dd>
+        {{
+          vm.ipAddresses?.length
+            ? vm.ipAddresses.join(' · ')
+            : t(vm.ipAddresses == null ? 'notAvailable' : 'vmIpNoLease')
+        }}
+      </dd>
+      <small>{{ t('vmIpObservedHint') }}</small>
+    </div>
+    <div>
+      <dt>{{ t('uptime') }}</dt>
+      <dd>{{ uptime }}</dd>
+      <small>{{ t('vmUptimeHint') }}</small>
+    </div>
+    <div>
+      <dt>{{ t('systemDisk') }}</dt>
       <dd>{{ t('unavailable') }}</dd>
     </div>
   </dl>
@@ -97,6 +124,10 @@ dd {
   margin: 0;
   font-size: var(--font-body);
   overflow-wrap: anywhere;
+}
+small {
+  color: var(--muted);
+  font-size: var(--font-xs);
 }
 .detail-actions {
   display: flex;

@@ -16,6 +16,17 @@ export function parseSnapshot(value: unknown): VmSnapshot {
   if (!validate(value) || new Set(value.items.map((vm) => vm.id)).size !== value.items.length) {
     throw new ApiError('invalid-response', '服务返回的数据不兼容，请检查前后端版本。')
   }
+  if (
+    value.items.some(
+      (vm) =>
+        (vm.uptimeMs != null &&
+          (!['RUNNING', 'SUSPENDED', 'STOPPING'].includes(vm.state) ||
+            BigInt(vm.uptimeMs) > 18446744073709551615n)) ||
+        (vm.ipAddresses != null &&
+          (vm.state !== 'RUNNING' || new Set(vm.ipAddresses).size !== vm.ipAddresses.length)),
+    )
+  )
+    throw new ApiError('invalid-response', 'Invalid VM runtime observations')
   return value
 }
 

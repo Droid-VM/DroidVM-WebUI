@@ -5,7 +5,7 @@ import { formatHostBytes } from '../lib/format'
 import HostMetrics from './HostMetrics.vue'
 import HostObservationState from './HostObservationState.vue'
 const host = useHostMonitoring(),
-  { t, n, locale } = useI18n()
+  { t, n, d, locale } = useI18n()
 const count = (value: number | null | undefined) => (value == null ? '—' : n(value))
 </script>
 <template>
@@ -43,7 +43,7 @@ const count = (value: number | null | undefined) => (value == null ? '—' : n(v
           <dd data-testid="host-daemon-pid">{{ host.data.value?.daemon.pid ?? '—' }}</dd>
         </div>
       </dl>
-      <RouterLink to="/settings/service">{{ t('webServiceTitle') }}</RouterLink>
+      <RouterLink class="btn quiet" to="/settings/service">{{ t('webServiceTitle') }}</RouterLink>
     </section>
     <section class="host-section" :aria-label="t('hostResources')">
       <h2>{{ t('hostResources') }}</h2>
@@ -54,7 +54,7 @@ const count = (value: number | null | undefined) => (value == null ? '—' : n(v
       <dl>
         <div>
           <dt>
-            <RouterLink to="/vms">{{ t('navVms') }}</RouterLink>
+            <RouterLink class="btn quiet" to="/vms">{{ t('navVms') }}</RouterLink>
           </dt>
           <dd data-testid="host-vm-count">
             {{
@@ -67,7 +67,9 @@ const count = (value: number | null | undefined) => (value == null ? '—' : n(v
         </div>
         <div>
           <dt>
-            <RouterLink to="/resources/network">{{ t('hostNetworkCount') }}</RouterLink>
+            <RouterLink class="btn quiet" to="/resources/network">{{
+              t('hostNetworkCount')
+            }}</RouterLink>
           </dt>
           <dd data-testid="host-network-count">
             {{
@@ -80,7 +82,7 @@ const count = (value: number | null | undefined) => (value == null ? '—' : n(v
         </div>
         <div>
           <dt>
-            <RouterLink to="/resources/disk">{{ t('hostDiskCount') }}</RouterLink>
+            <RouterLink class="btn quiet" to="/resources/disk">{{ t('hostDiskCount') }}</RouterLink>
           </dt>
           <dd data-testid="host-disk-count">{{ count(host.data.value?.inventory.diskCount) }}</dd>
         </div>
@@ -92,6 +94,24 @@ const count = (value: number | null | undefined) => (value == null ? '—' : n(v
       <p class="muted">{{ t('hostInventoryHint') }}</p>
       <p v-if="host.data.value?.inventory.diskVirtualBytes == null" class="muted">
         {{ t('hostDiskVirtualUnknown') }}
+      </p>
+      <p v-if="host.data.value?.inventory.diskVirtualKnownCount != null" class="muted">
+        {{
+          t('hostDiskVirtualCoverage', {
+            known: count(host.data.value.inventory.diskVirtualKnownCount),
+            total: count(host.data.value.inventory.diskCount),
+          })
+        }}
+      </p>
+      <p v-if="host.data.value?.inventory.diskVirtualObservedAtMs != null" class="muted">
+        {{
+          t('hostDiskVirtualObserved', {
+            time: d(Number(host.data.value.inventory.diskVirtualObservedAtMs), {
+              dateStyle: 'short',
+              timeStyle: 'medium',
+            }),
+          })
+        }}
       </p>
     </section>
   </section>
@@ -144,11 +164,6 @@ dd {
 p {
   font-size: var(--font-sm);
   overflow-wrap: anywhere;
-}
-a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--touch-target);
 }
 @media (max-width: 650px) {
   dl {

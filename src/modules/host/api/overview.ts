@@ -48,7 +48,15 @@ export function createHostOverviewGateway(
       ]
       if (
         quantities.some((item) => item !== null && BigInt(item) > maximum) ||
-        BigInt(value.observedAtMs) > 8640000000000000n
+        BigInt(value.observedAtMs) > 8640000000000000n ||
+        (value.inventory.diskVirtualObservedAtMs != null &&
+          BigInt(value.inventory.diskVirtualObservedAtMs) > 8640000000000000n) ||
+        (value.inventory.diskVirtualKnownCount != null &&
+          value.inventory.diskCount != null &&
+          value.inventory.diskVirtualKnownCount > value.inventory.diskCount) ||
+        (value.inventory.diskVirtualBytes != null &&
+          value.inventory.diskVirtualKnownCount != null &&
+          value.inventory.diskVirtualKnownCount !== value.inventory.diskCount)
       )
         throw invalid()
       for (const [part, total] of [
