@@ -487,6 +487,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Restore an existing browser session. With LAN auto-login enabled, a directly connected peer may receive a temporary LAN session only with X-DroidVM-Session: 1, matching Origin when present, same-origin Fetch Metadata when present, and no local logout suppression cookie. */
         get: operations["getBrowserSession"];
         put?: never;
         post: operations["exchangePairing"];
@@ -1666,6 +1667,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/session/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read supported sign-in options before pairing. No credentials returned. Older servers may return 404. */
+        get: operations["getSessionOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/session/local": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Explicitly enter a temporary LAN-only session after logout. Requires trusted LAN transport and an exact Origin match; clears the local logout suppression cookie. */
+        post: operations["enterLocalSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/receipts/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 仅已认证管理员且有任务权限。通过原 requestId 找回当前任务或脱敏持久回执；保留原 epoch，旧 epoch 的回执不加入当前任务目录。active 为当前真实任务，terminal 为确定终态，unknown 为重启前开始但无持久终态，null 为缺失/过期；unknown/null 均不证明未执行，严禁自动重放写入。最多保留 256 项/2 MiB/30 天，永不保存密码、原始请求、配置正文或签名。 */
+        get: operations["findTaskReceipt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2373,6 +2425,8 @@ export interface components {
             versionCode: string;
             /** @description 已装配的浏览器适配器：session.v1、vm.list.v1、tasks.list.v1、tasks.cancel.v1；未知能力忽略，未声明的操作不可用。 */
             capabilities: string[];
+            /** @description 持久宿主标识，仅已配置回执存储时提供。恢复记录必须与当前认证宿主匹配，不能仅依赖地址。 */
+            hostId?: components["schemas"]["RequestId"];
         };
         ServerContext: {
             daemonEpoch: string;
@@ -2388,6 +2442,8 @@ export interface components {
         PairingRequest: {
             /** @description 本机管理员发放的一次性凭据，默认有效 5 分钟。 */
             pairingToken: string;
+            /** @description session.remember.v1; remember this browser for 30 days, including daemon restarts. Omitted means a temporary browser session. */
+            remember?: boolean;
         };
         BrowserSession: {
             server: components["schemas"]["ServerInfo"];
@@ -2399,6 +2455,9 @@ export interface components {
                 administrator: boolean;
                 manageTasks: boolean;
             };
+            remembered?: boolean;
+            /** @description Temporary session usable only while LAN auto-login is enabled and the request comes directly from a trusted LAN peer. */
+            lanOnly?: boolean;
         };
         ApiProblem: {
             error: {
@@ -2419,6 +2478,10 @@ export interface components {
             backend: string | null;
             cpuCount: number | null;
             memoryMiB: number | null;
+            /** @description Elapsed monotonic milliseconds since the current owned VMM process started; includes suspension. Null if no current live process is observed. Never inferred from persisted configuration. */
+            uptimeMs?: string | null;
+            /** @description Observed unexpired DHCP addresses matched to current runtime NIC network, MAC and VLAN. Null if observations are unavailable or stale; configured/static addresses are not inferred. */
+            ipAddresses?: string[] | null;
         };
         /** @description begin: revision (VM configuration revision)/bytes; append: uploadId/offset/data; abort: uploadId; commit: uploadId/requestId; status: requestId. Upload {expected: complete network configuration}; shared native ConfigUploads, at most 9 MiB. Native coordinator validates VM revision and exact network, requires affected VMs stopped, stops network and atomically removes its saved NIC references and configuration. IO failure can leave network stopped. Unknown receipt is queried, never replayed. */
         NetworkDeletionRequest: {
@@ -2877,6 +2940,8 @@ export interface components {
             /** @enum {string} */
             scope: "lan" | "all";
             publicOrigins: string[];
+            /** @description session.lan-auto.v1; automatically admit directly connected LAN browsers. Missing means false for older servers. */
+            lanAutoLogin?: boolean;
         };
         WebServiceStatus: {
             context: components["schemas"]["ServerContext"];
@@ -2992,7 +3057,7 @@ export interface components {
             context: components["schemas"]["ServerContext"];
             requestId: components["schemas"]["RequestId"];
             uploadId: components["schemas"]["RequestId"];
-            /** @description Absolute host path, at most 4096 UTF-8 bytes, no NUL. No URL downloading. */
+            /** @description Absolute host destination directory. Installation creates missing directories, reuses existing directories, and never overwrites an existing destination file. */
             folder: string;
             /** @description One UTF-8 basename, at most 255 bytes; neither dot nor dot-dot. No directory separators. */
             name: string;
@@ -3080,8 +3145,12 @@ export interface components {
                 networkCount: number | null;
                 runningNetworkCount: number | null;
                 diskCount: number | null;
-                /** @description Known registered virtual capacity only, null if unavailable. Reads never launch image inspection tools. */
+                /** @description Sum of virtual capacities only when every registered disk has a fresh observation for the current registry revision; otherwise null. Background inspections are bounded and do not run on the HTTP request thread. */
                 diskVirtualBytes: string | null;
+                /** @description Number of registered disks with a fresh successful virtual-capacity observation for the current registry revision. */
+                diskVirtualKnownCount?: number | null;
+                /** @description Oldest Unix millisecond timestamp among capacity observations contributing to this sample; null when no observation is available. */
+                diskVirtualObservedAtMs?: string | null;
             };
         };
         HugepageSnapshot: {
@@ -3500,6 +3569,22 @@ export interface components {
             uncertain: false;
         };
         DiskDefaultResult: components["schemas"]["DiskDefaultSaveResult"] | components["schemas"]["DiskDefaultCancelledResult"];
+        SessionOptions: {
+            rememberSupported: boolean;
+            lanAvailable: boolean;
+        };
+        TaskReceipt: {
+            epoch: components["schemas"]["RequestId"];
+            /** @enum {string} */
+            status: "active" | "terminal" | "unknown";
+            task: components["schemas"]["Task"];
+            version?: components["schemas"]["ConfigVersion"] | components["schemas"]["NetworkConfigResult"] | components["schemas"]["NetworkDeletionResult"] | components["schemas"]["UsbRulesVersion"];
+        };
+        TaskReceiptResponse: {
+            context: components["schemas"]["ServerContext"];
+            hostId: components["schemas"]["RequestId"];
+            receipt: components["schemas"]["TaskReceipt"] | null;
+        };
     };
     responses: {
         /** @description 结构化错误，不包含原始异常、路径或凭据，Cache-Control: no-store。 */
@@ -6735,6 +6820,85 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    getSessionOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sign-in options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionOptions"];
+                };
+            };
+        };
+    };
+    enterLocalSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Temporary LAN browser session */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrowserSession"];
+                };
+            };
+            /** @description LAN auto-login disabled, peer not directly connected, or origin rejected */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    findTaskReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["schemas"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 当前 context 与宿主标识，以及原始 epoch 的操作证据。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskReceiptResponse"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            500: components["responses"]["Problem"];
         };
     };
 }

@@ -44,6 +44,53 @@ const json = (value: unknown, status = 200) =>
 const signal = () => new AbortController().signal
 
 describe('session HTTP contract', () => {
+  it('adds the same-origin LAN header and negotiates optional remembered pairing without replay', async () => {
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(json({ rememberSupported: true, lanAvailable: true }))
+      .mockResolvedValueOnce(json({}, 401))
+      .mockResolvedValueOnce(json({ ...view(), remembered: true, lanOnly: false }, 201))
+    const session = createSession(createSessionGateway(createHttpClient({ fetch })))
+    await session.restore()
+    expect(session.options.value).toEqual({ rememberSupported: true, lanAvailable: true })
+    expect(fetch.mock.calls[1]?.[1]?.headers).toMatchObject({ 'X-DroidVM-Session': '1' })
+    await session.login('c'.repeat(64))
+    expect(JSON.parse(fetch.mock.calls[2]?.[1]?.body as string)).toEqual({
+      pairingToken: 'c'.repeat(64),
+      remember: true,
+    })
+    expect(session.current.value?.remembered).toBe(true)
+    expect(fetch.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1)
+    session.dispose()
+  })
+  it('omits remember for old services and resumes LAN only on an explicit action', async () => {
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(json({}, 404))
+      .mockResolvedValueOnce(json({}, 401))
+      .mockResolvedValueOnce(json(view(), 201))
+    const session = createSession(createSessionGateway(createHttpClient({ fetch })))
+    await session.restore()
+    await session.login('c'.repeat(64))
+    expect(JSON.parse(fetch.mock.calls[2]?.[1]?.body as string)).toEqual({
+      pairingToken: 'c'.repeat(64),
+    })
+    session.dispose()
+    const api = {
+      ...gateway(),
+      options: vi.fn().mockResolvedValue({ rememberSupported: true, lanAvailable: true }),
+      enterLocal: vi.fn().mockResolvedValue({ ...view(), lanOnly: true }),
+    }
+    const local = createSession(api)
+    await local.restore()
+    await local.logout()
+    expect(api.enterLocal).not.toHaveBeenCalled()
+    expect(local.status.value).toBe('anonymous')
+    await local.enterLocal()
+    expect(api.enterLocal).toHaveBeenCalledTimes(1)
+    expect(local.current.value?.lanOnly).toBe(true)
+    local.dispose()
+  })
   it('negotiates the major version and required session capability before returning a session', async () => {
     for (const server of [
       { ...view().server, apiMajor: 2 },

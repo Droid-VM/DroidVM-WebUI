@@ -208,3 +208,6 @@ export const DiskDefaultOperationRequest: ValidateFunction<components['schemas']
 export const DiskDefaultSaveResult: ValidateFunction<components['schemas']['DiskDefaultSaveResult']>
 export const DiskDefaultCancelledResult: ValidateFunction<components['schemas']['DiskDefaultCancelledResult']>
 export const DiskDefaultResult: ValidateFunction<components['schemas']['DiskDefaultResult']>
+export const SessionOptions: ValidateFunction<components['schemas']['SessionOptions']>
+export const TaskReceipt: ValidateFunction<components['schemas']['TaskReceipt']>
+export const TaskReceiptResponse: ValidateFunction<components['schemas']['TaskReceiptResponse']>

@@ -1,6 +1,10 @@
 import { expect, it, vi } from 'vitest'
 import { createWebService } from '../../src/modules/webService/model/service'
-import { parseWebSettings, webServiceDraft } from '../../src/modules/webService/lib/settings'
+import {
+  parseWebSettings,
+  sameWebSettings,
+  webServiceDraft,
+} from '../../src/modules/webService/lib/settings'
 import type {
   WebServiceGateway,
   WebServiceRequest,
@@ -78,6 +82,15 @@ it('keeps exact origin values, duplicate entries and explicit ports while checki
   expect(
     parseWebSettings({ ...draft, origins: Array(9).fill('http://example.test').join('\n') }),
   ).toBeNull()
+})
+
+it('keeps LAN auto-login when editing other settings and defaults old settings to disabled', () => {
+  expect(webServiceDraft(settings).lanAutoLogin).toBe(false)
+  expect(sameWebSettings(settings, { ...settings, lanAutoLogin: false })).toBe(true)
+  const draft = webServiceDraft({ ...settings, lanAutoLogin: true })
+  draft.port = '9090'
+  expect(parseWebSettings(draft)).toMatchObject({ port: 9090, lanAutoLogin: true })
+  expect(sameWebSettings(settings, parseWebSettings(draft)!)).toBe(false)
 })
 
 it('does not call a queued task applied until status matches and the actual listener is healthy', async () => {

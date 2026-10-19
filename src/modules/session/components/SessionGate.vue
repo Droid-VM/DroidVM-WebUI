@@ -10,6 +10,7 @@ import LanguageSelect from '../../../shared/ui/LanguageSelect.vue'
 const { t } = useI18n()
 const session = useSession()
 const pairing = ref('')
+const remember = ref(true)
 if (session)
   watch(
     session.status,
@@ -38,7 +39,7 @@ watch(allowed, async () => {
 async function login() {
   const token = pairing.value.trim()
   pairing.value = ''
-  await session?.login(token)
+  await session?.login(token, remember.value)
 }
 onUnmounted(() => {
   pairing.value = ''
@@ -105,8 +106,20 @@ onUnmounted(() => {
               aria-describedby="pairing-hint"
             />
             <small id="pairing-hint" class="muted">{{ t('sessionPairingFormat') }}</small>
+            <label v-if="session.options.value.rememberSupported" class="remember-browser">
+              <input v-model="remember" type="checkbox" />{{ t('sessionRemember') }}
+            </label>
+            <small v-if="session.options.value.rememberSupported" class="muted">{{
+              t('sessionRememberHint')
+            }}</small>
             <AppButton type="submit" tone="primary">{{ t('sessionLogin') }}</AppButton>
           </form>
+          <AppButton
+            v-if="session?.options.value.lanAvailable && session.status.value === 'anonymous'"
+            tone="tonal"
+            @click="session.enterLocal()"
+            >{{ t('sessionEnterLocal') }}</AppButton
+          >
           <AppButton @click="session?.restore()">{{ t('sessionCheck') }}</AppButton>
         </template>
       </template>
@@ -154,7 +167,7 @@ form p {
   margin: 0 0 var(--space-2);
   line-height: 1.6;
 }
-input {
+input[type='password'] {
   width: 100%;
   min-width: 0;
   min-height: 48px;
@@ -164,6 +177,16 @@ input {
   background: var(--soft);
   color: var(--ink);
   font-size: 1rem;
+}
+.remember-browser {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+.remember-browser input {
+  width: 20px;
+  height: 20px;
 }
 .login-preferences {
   margin-top: var(--space-5);

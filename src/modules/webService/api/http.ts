@@ -10,6 +10,7 @@ export type WebServiceStatus = Schemas['WebServiceStatus']
 export type WebServiceRequest = Omit<Schemas['WebServiceOperationRequest'], 'context'>
 export interface WebServiceGateway extends OperationGateway<WebServiceRequest> {
   read(signal: AbortSignal): Promise<WebServiceStatus>
+  lanAutoLoginSupported?(): boolean
 }
 interface Access {
   context: Schemas['ServerContext']
@@ -68,6 +69,7 @@ export function createWebServiceGateway(
   }
   return {
     supported,
+    lanAutoLoginSupported: () => !!access()?.capabilities.includes('session.lan-auto.v1'),
     async read(signal) {
       const current = scope(),
         value = await client.getJson('/api/v1/web-service', signal)
@@ -82,7 +84,18 @@ export function createWebServiceGateway(
     },
     async submit(request, signal) {
       const current = scope(),
-        body = { ...request, context: current.context }
+        body = {
+          ...request,
+          settings: { ...request.settings },
+          expected: { ...request.expected },
+          context: current.context,
+        }
+      if (!current.capabilities.includes('session.lan-auto.v1')) {
+        if (body.settings.lanAutoLogin || body.expected.lanAutoLogin)
+          throw new ApiError('unsupported', 'LAN auto-login unavailable')
+        delete body.settings.lanAutoLogin
+        delete body.expected.lanAutoLogin
+      }
       if (
         !validRequest(body) ||
         request.settings.publicOrigins.some((origin) => !validWebOrigin(origin)) ||

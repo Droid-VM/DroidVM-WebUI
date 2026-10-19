@@ -84,6 +84,14 @@ onBeforeUnmount(model.leave)
             </select></label
           >
           <p>{{ t('webServiceScopeHint') }}</p>
+          <template v-if="model.lanAutoLoginSupported.value">
+            <label class="check"
+              ><input v-model="model.draft.lanAutoLogin" type="checkbox" />{{
+                t('webServiceLanAutoLogin')
+              }}</label
+            >
+            <p>{{ t('webServiceLanAutoLoginHint') }}</p>
+          </template>
           <label
             >{{ t('webServiceOrigins')
             }}<textarea
@@ -130,6 +138,10 @@ onBeforeUnmount(model.leave)
           <dt>{{ t('webServiceScope') }}</dt>
           <dd>
             {{ t(model.review.value.settings.scope === 'lan' ? 'webServiceLan' : 'webServiceAll') }}
+          </dd>
+          <dt v-if="model.lanAutoLoginSupported.value">{{ t('webServiceLanAutoLogin') }}</dt>
+          <dd v-if="model.lanAutoLoginSupported.value">
+            {{ t(model.review.value.settings.lanAutoLogin ? 'webServiceOn' : 'webServiceOff') }}
           </dd>
           <dt>{{ t('webServiceOrigins') }}</dt>
           <dd>
@@ -205,7 +217,7 @@ onBeforeUnmount(model.leave)
             "
             @click="model.reconcile"
             >{{ t('webServiceVerify') }}</AppButton
-          ><RouterLink to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+          ><RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
         </div>
         <div v-if="model.locked.value && model.entry.value.state === 'done'" class="recovery">
           <p>{{ t('webServiceOutcomeHint') }}</p>

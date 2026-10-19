@@ -4,13 +4,17 @@ import { ApiError } from '../../../shared/api/errors'
 import type { HttpClient } from '../../../shared/api/httpClient'
 
 export type BrowserSession = components['schemas']['BrowserSession']
+export type SessionOptions = components['schemas']['SessionOptions']
 export interface SessionGateway {
   current(signal: AbortSignal): Promise<BrowserSession>
-  exchange(pairingToken: string, signal: AbortSignal): Promise<BrowserSession>
+  options?(signal: AbortSignal): Promise<SessionOptions>
+  enterLocal?(signal: AbortSignal): Promise<BrowserSession>
+  exchange(pairingToken: string, signal: AbortSignal, remember?: boolean): Promise<BrowserSession>
   logout(csrf: string, signal: AbortSignal): Promise<void>
 }
 const path = '/api/v1/session' satisfies keyof paths
 const validate = compileContract<BrowserSession>('BrowserSession')
+const validateOptions = compileContract<SessionOptions>('SessionOptions')
 function parse(value: unknown): BrowserSession {
   if (!validate(value)) throw new ApiError('invalid-response', 'Invalid session response')
   if (value.server.apiMajor !== 1 || !value.server.capabilities.includes('session.v1'))
@@ -20,11 +24,33 @@ function parse(value: unknown): BrowserSession {
 export function createSessionGateway(client: HttpClient): SessionGateway {
   return {
     async current(signal) {
-      return parse(await client.getJson(path, signal))
+      return parse(await client.getJson(path, signal, { 'X-DroidVM-Session': '1' }))
     },
-    async exchange(pairingToken, signal) {
+    async options(signal) {
+      try {
+        const value = await client.getJson('/api/v1/session/options', signal)
+        if (!validateOptions(value))
+          throw new ApiError('invalid-response', 'Invalid session options')
+        return value
+      } catch (cause) {
+        // Older servers have no options endpoint. No pairing mutation has happened.
+        if (
+          cause instanceof ApiError &&
+          (cause.code === 'unavailable' || cause.code === 'unsupported')
+        )
+          return { rememberSupported: false, lanAvailable: false }
+        throw cause
+      }
+    },
+    async enterLocal(signal) {
+      return parse(await client.postJson('/api/v1/session/local', {}, signal))
+    },
+    async exchange(pairingToken, signal, remember) {
       if (!/^[0-9a-f]{64}$/.test(pairingToken)) throw new TypeError('Invalid pairing token')
-      const body: components['schemas']['PairingRequest'] = { pairingToken }
+      const body: components['schemas']['PairingRequest'] = {
+        pairingToken,
+        ...(remember === undefined ? {} : { remember }),
+      }
       return parse(await client.postJson(path, body, signal))
     },
     logout: (csrf, signal) => client.delete(path, csrf, signal),

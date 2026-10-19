@@ -1,6 +1,6 @@
 import { inject, readonly, ref, shallowRef, type InjectionKey } from 'vue'
 import { ApiError, describeApiError, type ApiProblem } from '../../../shared/api/errors'
-import type { BrowserSession, SessionGateway } from '../api/gateway'
+import type { BrowserSession, SessionGateway, SessionOptions } from '../api/gateway'
 
 export type SessionStatus =
   | 'checking'
@@ -19,6 +19,7 @@ export function createSession(gateway: SessionGateway) {
   const problem = shallowRef<ApiProblem | null>(null)
   const expired = ref(false)
   const loginUncertain = ref(false)
+  const options = shallowRef<SessionOptions>({ rememberSupported: false, lanAvailable: false })
   let request: AbortController | undefined
   let generation = 0
   let disposed = false
@@ -33,18 +34,29 @@ export function createSession(gateway: SessionGateway) {
     problem.value = null
     status.value = next
   }
-  async function load(pairingToken?: string) {
+  async function load(pairingToken?: string, remember = true, local = false) {
     if (disposed || busy() || logoutCsrf !== undefined) return
-    clear(pairingToken === undefined ? 'checking' : 'authenticating')
+    clear(pairingToken === undefined && !local ? 'checking' : 'authenticating')
     const controller = new AbortController()
     request = controller
     const epoch = generation
     loginUncertain.value = false
     try {
+      if (pairingToken === undefined && !local && gateway.options) {
+        const available = await gateway.options(controller.signal)
+        if (disposed || epoch !== generation) return
+        options.value = available
+      }
       const result =
-        pairingToken === undefined
-          ? await gateway.current(controller.signal)
-          : await gateway.exchange(pairingToken, controller.signal)
+        local && gateway.enterLocal
+          ? await gateway.enterLocal(controller.signal)
+          : pairingToken === undefined
+            ? await gateway.current(controller.signal)
+            : await gateway.exchange(
+                pairingToken,
+                controller.signal,
+                options.value.rememberSupported ? remember : undefined,
+              )
       if (disposed || epoch !== generation) return
       current.value = result
       expired.value = false
@@ -59,7 +71,7 @@ export function createSession(gateway: SessionGateway) {
         status.value = 'error'
         // A response can disappear after the pairing was consumed. Offer a GET
         // to reconcile; never automatically exchange the one-time token again.
-        loginUncertain.value = pairingToken !== undefined
+        loginUncertain.value = pairingToken !== undefined || local
       }
     } finally {
       if (epoch === generation) request = undefined
@@ -105,9 +117,14 @@ export function createSession(gateway: SessionGateway) {
     problem: readonly(problem),
     expired: readonly(expired),
     loginUncertain: readonly(loginUncertain),
+    options: readonly(options),
     epoch: () => generation,
     restore: () => load(),
-    login: (token: string) => load(token),
+    login: (token: string, remember = true) => load(token, remember),
+    enterLocal: () =>
+      options.value.lanAvailable && gateway.enterLocal
+        ? load(undefined, false, true)
+        : Promise.resolve(),
     logout,
     expire,
     invalidate(cause: ApiError, epoch = generation) {

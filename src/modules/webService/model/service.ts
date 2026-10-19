@@ -195,6 +195,7 @@ export function createWebService(gateway: WebServiceGateway | undefined, newId =
   }
   return {
     supported: operations.supported,
+    lanAutoLoginSupported: computed(() => gateway?.lanAutoLoginSupported?.() ?? false),
     status: readonly(status),
     draft,
     baseline: readonly(baseline),

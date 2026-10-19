@@ -6,7 +6,7 @@ export interface PostOptions {
   status: 200 | 202
 }
 export interface HttpClient {
-  getJson(path: ApiPath, signal: AbortSignal): Promise<unknown>
+  getJson(path: ApiPath, signal: AbortSignal, headers?: Record<string, string>): Promise<unknown>
   postJson(
     path: ApiPath,
     body: unknown,
@@ -120,6 +120,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
     body?: unknown,
     csrf?: string,
     postStatus = 201,
+    headers?: Record<string, string>,
   ): Promise<unknown> {
     validatePath(path)
     signal.throwIfAborted()
@@ -139,6 +140,7 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
         redirect: 'error',
         headers: {
           Accept: 'application/json',
+          ...headers,
           ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
           ...(csrf !== undefined ? { 'X-DroidVM-CSRF': csrf } : {}),
         },
@@ -178,7 +180,8 @@ export function createHttpClient(options: HttpClientOptions = {}): HttpClient {
     }
   }
   return {
-    getJson: (path, signal) => send(path, signal, 'GET'),
+    getJson: (path, signal, headers) =>
+      send(path, signal, 'GET', undefined, undefined, 201, headers),
     postJson: (path, body, signal, options) =>
       send(path, signal, 'POST', body, options?.csrf, options?.status),
     async delete(path, csrf, signal) {

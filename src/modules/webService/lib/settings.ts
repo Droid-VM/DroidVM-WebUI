@@ -6,6 +6,7 @@ export interface WebServiceDraft {
   port: string
   scope: 'lan' | 'all'
   origins: string
+  lanAutoLogin: boolean
 }
 export function validWebOrigin(value: string) {
   if (!value.startsWith('http://') || value.length < 8 || value.length > 262) return false
@@ -18,6 +19,7 @@ export function sameWebSettings(a: WebServiceSettings, b: WebServiceSettings) {
     a.enabled === b.enabled &&
     a.port === b.port &&
     a.scope === b.scope &&
+    (a.lanAutoLogin ?? false) === (b.lanAutoLogin ?? false) &&
     a.publicOrigins.length === b.publicOrigins.length &&
     a.publicOrigins.every((origin, index) => origin === b.publicOrigins[index])
   )
@@ -31,6 +33,7 @@ export function webServiceDraft(settings?: WebServiceSettings): WebServiceDraft 
     port: String(settings?.port ?? 8080),
     scope: settings?.scope ?? 'lan',
     origins: settings?.publicOrigins.join('\n') ?? '',
+    lanAutoLogin: settings?.lanAutoLogin ?? false,
   }
 }
 export function parseWebSettings(draft: WebServiceDraft): WebServiceSettings | null {
@@ -46,5 +49,11 @@ export function parseWebSettings(draft: WebServiceDraft): WebServiceSettings | n
   )
     return null
   // Keep exact origins, including duplicates and explicit :80, as the native service does.
-  return { enabled: draft.enabled, port, scope: draft.scope, publicOrigins }
+  return {
+    enabled: draft.enabled,
+    port,
+    scope: draft.scope,
+    publicOrigins,
+    lanAutoLogin: draft.lanAutoLogin,
+  }
 }

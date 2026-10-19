@@ -21,7 +21,7 @@ const serverInfo = {
   daemonEpoch: secret(),
   version: 'fixture',
   versionCode: '9007199254740993',
-  capabilities: ['session.v1', 'vm.list.v1'],
+  capabilities: ['session.v1', 'session.remember.v1', 'session.lan-auto.v1', 'vm.list.v1'],
 }
 const currentSession = (request) => {
   const token = /(?:^|;\s*)droidvm-session=([0-9a-f]{64})(?:;|$)/.exec(
@@ -37,6 +37,8 @@ const server = createServer(async (request, response) => {
     pairings.add(token)
     return send(response, 201, { pairingToken: token })
   }
+  if (request.url === '/api/v1/session/options' && request.method === 'GET')
+    return send(response, 200, { rememberSupported: true, lanAvailable: false })
   if (request.url === '/api/v1/session') {
     if (request.headers.host !== '127.0.0.1:5178' || request.headers.accept !== 'application/json')
       return send(response, 403, {})
@@ -46,14 +48,20 @@ const server = createServer(async (request, response) => {
     if (request.method === 'POST') {
       if (request.headers['content-type'] !== 'application/json') return send(response, 400, {})
       let body = ''
+      let remember
       try {
         for await (const chunk of request) {
           body += chunk.toString('utf8')
           if (body.length > 4096) return send(response, 413, {})
         }
         const input = JSON.parse(body)
-        if (Object.keys(input).length !== 1 || !pairings.delete(input.pairingToken))
+        if (
+          Object.keys(input).some((key) => !['pairingToken', 'remember'].includes(key)) ||
+          ('remember' in input && typeof input.remember !== 'boolean') ||
+          !pairings.delete(input.pairingToken)
+        )
           return send(response, 401, { message: 'fixture-private-detail' })
+        remember = input.remember ?? false
       } catch {
         return send(response, 400, {})
       }
@@ -61,11 +69,16 @@ const server = createServer(async (request, response) => {
       const result = {
         id: secret(),
         csrfToken: secret(),
+        remembered: remember,
+        lanOnly: false,
         permissions: { administrator: true, manageTasks: true },
         server: serverInfo,
       }
       sessions.set(next, result)
-      response.setHeader('Set-Cookie', `droidvm-session=${next}; Path=/; HttpOnly; SameSite=Strict`)
+      response.setHeader(
+        'Set-Cookie',
+        `droidvm-session=${next}; Path=/; HttpOnly; SameSite=Strict${remember ? '; Max-Age=2592000' : ''}`,
+      )
       return send(response, 201, result)
     }
     if (!view || selectCase(request) === 'expired') return send(response, 401, {})
