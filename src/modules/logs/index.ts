@@ -1,0 +1,4 @@
+export { createHttpLogGateway } from './api/http'
+export type { LogGateway, LogList, LogRead, LogChunk } from './api/gateway'
+export { createLogViewer, logViewerKey, useLogViewer } from './model/viewer'
+export { default as VmLogs } from './components/VmLogs.vue'
