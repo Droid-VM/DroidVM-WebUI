@@ -104,7 +104,19 @@ small {
   font-size: var(--font-sm);
   color: var(--accent);
   background: transparent;
-  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+a.btn {
+  justify-self: start;
+  align-self: start;
+}
+.btn.back-link {
+  justify-content: flex-start;
+  text-align: start;
 }
 .btn.primary {
   color: var(--primary-text);
@@ -280,6 +292,9 @@ select {
   margin: auto;
   padding: 10px var(--space-9) var(--space-8);
 }
+.app-body > main:focus {
+  outline: none;
+}
 .page-heading {
   display: flex;
   align-items: center;
@@ -327,6 +342,18 @@ select {
 }
 .menu-row[aria-current='page'] {
   background: var(--tint);
+}
+.menu-row .grow {
+  overflow-wrap: anywhere;
+}
+a.menu-row:hover {
+  background: var(--soft);
+}
+a.menu-row:focus-visible {
+  outline-offset: -3px;
+}
+.menu-row[aria-disabled='true'] {
+  color: var(--muted);
 }
 .menu-row strong {
   display: block;

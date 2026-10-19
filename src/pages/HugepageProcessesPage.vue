@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
@@ -48,7 +49,7 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <div class="hugepage-processes-page" data-testid="hugepage-processes-page">
-    <RouterLink to="/hugepages">{{ t('hugepagesTitle') }}</RouterLink>
+    <AppBackLink to="/hugepages">{{ t('hugepagesTitle') }}</AppBackLink>
     <header>
       <h1>{{ t('hpProcessTitle') }}</h1>
       <p>{{ t('hpProcessIntro') }}</p>
@@ -162,7 +163,7 @@ onBeforeUnmount(() => {
             :disabled="pool.checking.value"
             @click="pool.reconcile"
             >{{ t('queryStatus') }}</AppButton
-          ><RouterLink to="/hugepages">{{ t('hugepagesTitle') }}</RouterLink>
+          ><RouterLink class="btn tonal" to="/hugepages">{{ t('hugepagesTitle') }}</RouterLink>
         </div>
       </section>
     </template>

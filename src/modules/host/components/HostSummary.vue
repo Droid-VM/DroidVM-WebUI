@@ -21,7 +21,7 @@ const host = useHostMonitoring(() => props.active),
     </template>
     <HostObservationState />
     <HostMetrics v-if="variant === 'metrics'" />
-    <RouterLink to="/host">{{ t('hostViewDetails') }}</RouterLink>
+    <RouterLink class="btn tonal" to="/host">{{ t('hostViewDetails') }}</RouterLink>
   </section>
 </template>
 <style scoped>
@@ -40,10 +40,5 @@ p {
 }
 h2 {
   font-size: var(--font-heading);
-}
-a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--touch-target);
 }
 </style>

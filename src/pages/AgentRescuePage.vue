@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { computed, onBeforeUnmount, provide } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -22,7 +23,7 @@ onBeforeUnmount(rescue.terminal.disconnect)
 </script>
 <template>
   <div class="rescue-page">
-    <RouterLink to="/resources/disk">{{ t('navDisk') }}</RouterLink>
+    <AppBackLink to="/resources/disk">{{ t('navDisk') }}</AppBackLink>
     <AgentRescuePanel />
     <section v-if="id" :aria-label="t('agentRescueOpen')">
       <h2>{{ t('agentRescueOpen') }}</h2>

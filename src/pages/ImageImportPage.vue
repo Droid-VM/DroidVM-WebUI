@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { useI18n } from 'vue-i18n'
 import { ImageImportPanel, ImageTransfersPanel } from '../modules/images'
 const { t } = useI18n()
 </script>
 <template>
   <div class="image-import-page">
-    <RouterLink to="/resources/disk">{{ t('navDisk') }}</RouterLink
+    <AppBackLink to="/resources/disk">{{ t('navDisk') }}</AppBackLink
     ><ImageTransfersPanel /><ImageImportPanel />
   </div>
 </template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDiskDefaults } from '../modules/diskDefaults'
@@ -18,7 +19,7 @@ onBeforeUnmount(model.deactivate)
 </script>
 <template>
   <div class="disk-defaults-page" data-testid="disk-defaults-page">
-    <RouterLink to="/more">{{ t('navMore') }}</RouterLink>
+    <AppBackLink to="/more">{{ t('navMore') }}</AppBackLink>
     <header>
       <h1>{{ t('diskDefaultsTitle') }}</h1>
       <p>{{ t('diskDefaultsScope') }}</p>

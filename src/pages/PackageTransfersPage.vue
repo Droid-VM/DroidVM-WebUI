@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { useI18n } from 'vue-i18n'
 import { PackageTransfersPanel } from '../modules/packages'
 const { t } = useI18n()
 </script>
 <template>
   <div class="package-page">
-    <RouterLink to="/packages/import">{{ t('packageImportTitle') }}</RouterLink
+    <AppBackLink to="/packages/import">{{ t('packageImportTitle') }}</AppBackLink
     ><PackageTransfersPanel />
   </div>
 </template>

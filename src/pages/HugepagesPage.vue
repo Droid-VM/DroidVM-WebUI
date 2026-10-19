@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
@@ -110,7 +111,7 @@ onBeforeUnmount(model.deactivate)
 </script>
 <template>
   <div class="hugepages-page" data-testid="hugepages-page">
-    <RouterLink to="/more">{{ t('navMore') }}</RouterLink>
+    <AppBackLink to="/more">{{ t('navMore') }}</AppBackLink>
     <header>
       <h1>{{ t('hugepagesTitle') }}</h1>
       <AppButton
@@ -123,6 +124,7 @@ onBeforeUnmount(model.deactivate)
       <p>{{ t('hugepagesIntro') }}</p>
       <RouterLink
         v-if="processes.supported.value"
+        class="btn tonal"
         to="/hugepages/processes"
         data-testid="hugepages-processes-link"
         >{{ t('hpProcessTitle') }}</RouterLink

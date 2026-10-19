@@ -83,7 +83,7 @@ function bytes(value: string) {
   <div class="import-form">
     <h1>{{ t('packageImportTitle') }}</h1>
     <p>{{ t('packageImportHostHint') }}</p>
-    <RouterLink v-if="transfers.supported.value" to="/packages/transfers">{{
+    <RouterLink v-if="transfers.supported.value" class="btn tonal" to="/packages/transfers">{{
       t('transferUpload')
     }}</RouterLink>
     <p>{{ t('packageExportLeaveHint') }}</p>
@@ -358,11 +358,13 @@ function bytes(value: string) {
               <p v-if="result.recoveryRequired">{{ t('packageImportRecoveryHint') }}</p>
               <RouterLink
                 v-if="result.registered && !result.registrationUncertain && result.vmId"
+                class="btn tonal"
                 :to="`/vms/${encodeURIComponent(result.vmId)}`"
                 >{{ t('packageImportOpenVm') }}</RouterLink
               >
               <RouterLink
                 v-else-if="result.registrationUncertain && result.vmId"
+                class="btn tonal"
                 :to="`/vms/${encodeURIComponent(result.vmId)}`"
                 >{{ t('packageImportInspectVm') }}</RouterLink
               >
@@ -375,7 +377,7 @@ function bytes(value: string) {
               {{ t('packageImportFailureHint') }}
             </p>
           </template>
-          <RouterLink to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+          <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
         </section>
       </template>
     </template>

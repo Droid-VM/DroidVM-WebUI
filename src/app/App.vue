@@ -13,7 +13,6 @@ import { usePackageExport, usePackageImport } from '../modules/packages'
 import { useConfigurationBackup } from '../modules/backups'
 import { useWebService } from '../modules/webService'
 import { useImageImport, useImageTransfers } from '../modules/images'
-import { useLinuxVmWizard } from '../modules/linuxVm'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -30,8 +29,6 @@ useVisiblePolling(
   imageTransfers.reconcile,
   ['tasks'],
 )
-const linuxVm = useLinuxVmWizard()
-useVisiblePolling(() => linuxVm.pending.value, linuxVm.reconcile, ['tasks'])
 useVisiblePolling(() => imageImport.pending.value, imageImport.reconcile, ['tasks'])
 useVisiblePolling(() => webService.pending.value, webService.reconcile)
 useVisiblePolling(

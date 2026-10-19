@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUsbAcm } from '../modules/usbAcm'
@@ -28,7 +29,7 @@ onBeforeUnmount(model.deactivate)
 </script>
 <template>
   <div class="usb-acm-page" data-testid="usb-acm-page">
-    <RouterLink to="/more">{{ t('navMore') }}</RouterLink>
+    <AppBackLink to="/more">{{ t('navMore') }}</AppBackLink>
     <header>
       <h1>{{ t('usbAcmTitle') }}</h1>
       <p>{{ t('usbAcmScope') }}</p>

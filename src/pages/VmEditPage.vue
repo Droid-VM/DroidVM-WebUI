@@ -71,7 +71,7 @@ const unload = (event: BeforeUnloadEvent) => {
 window.addEventListener('beforeunload', unload)
 onUnmounted(() => {
   window.removeEventListener('beforeunload', unload)
-  editor.reset()
+  editor.reset(true)
 })
 function leave() {
   allowLeave = true

@@ -16,6 +16,7 @@ const paths: Record<string, string> = {
   memory: 'M3 6h18v12H3z M7 10v4 M12 10v4 M17 10v4 M6 18v3 M10 18v3 M14 18v3 M18 18v3',
   activity: 'M2 12h5l3-8 4 16 3-8h5',
   chevron: 'M9 5l7 7-7 7',
+  back: 'M19 12H5 M12 5l-7 7 7 7',
   terminal: 'M4 6l6 6-6 6 M13 18h7',
   close: 'M6 6l12 12 M18 6L6 18',
   plus: 'M12 5v14 M5 12h14',

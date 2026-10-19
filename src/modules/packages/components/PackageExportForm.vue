@@ -216,9 +216,12 @@ function select(event: Event) {
             @click="prepareDownload"
             >{{ t('transferPrepareDownload') }}</AppButton
           >
-          <RouterLink v-else-if="transfers.downloadId.value" to="/packages/transfers">{{
-            t('transferExistingDownload')
-          }}</RouterLink>
+          <RouterLink
+            v-else-if="transfers.downloadId.value"
+            class="btn tonal"
+            to="/packages/transfers"
+            >{{ t('transferExistingDownload') }}</RouterLink
+          >
         </template>
         <p v-else-if="model.entry.value.state === 'done'">{{ t('packageExportRetryHint') }}</p>
         <div class="buttons">
@@ -231,7 +234,7 @@ function select(event: Event) {
           ><AppButton v-else :disabled="!model.allowed.value" @click="model.prepare()">{{
             t('packageExportReadPlan')
           }}</AppButton
-          ><RouterLink to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+          ><RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
         </div>
       </section>
     </template>

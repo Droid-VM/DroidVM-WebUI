@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -26,7 +27,7 @@ onBeforeUnmount(model.leave)
 </script>
 <template>
   <div class="package-page">
-    <RouterLink to="/vms">{{ t('navVms') }}</RouterLink>
+    <AppBackLink to="/vms">{{ t('navVms') }}</AppBackLink>
     <AppNotice
       v-if="inventory.problem.value"
       tone="error"

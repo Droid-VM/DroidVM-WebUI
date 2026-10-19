@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { PackageImportForm, usePackageImport } from '../modules/packages'
@@ -8,7 +9,7 @@ onBeforeUnmount(model.leave)
 </script>
 <template>
   <div class="package-page">
-    <RouterLink to="/vms">{{ t('navVms') }}</RouterLink
+    <AppBackLink to="/vms">{{ t('navVms') }}</AppBackLink
     ><PackageImportForm />
   </div>
 </template>

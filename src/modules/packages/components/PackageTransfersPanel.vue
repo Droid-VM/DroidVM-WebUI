@@ -260,6 +260,7 @@ onBeforeUnmount(model.pauseUpload)
           >
             <li v-for="file in model.download.value.files" :key="file.index">
               <a
+                class="btn tonal"
                 data-testid="package-download-file"
                 :href="packageDownloadHref(model.download.value.id, file.index)"
                 :download="file.name"
@@ -311,7 +312,9 @@ onBeforeUnmount(model.pauseUpload)
             >{{ t('transferForget') }}</AppButton
           >
         </template>
-        <RouterLink to="/packages/export">{{ t('packageExportTitle') }}</RouterLink>
+        <RouterLink class="btn tonal" to="/packages/export">{{
+          t('packageExportTitle')
+        }}</RouterLink>
       </section>
       <div v-if="forget" class="confirmation" role="group" :aria-label="t('transferForget')">
         <p>{{ t(forget === 'download' ? 'transferDownloadForgetHint' : 'transferForgetHint') }}</p>
@@ -371,10 +374,6 @@ ul {
 }
 li + li {
   margin-top: var(--space-2);
-}
-a {
-  display: inline-block;
-  padding-block: 8px;
 }
 .buttons {
   display: flex;

@@ -38,9 +38,11 @@ const bytes = (value: string | null) =>
       <div>
         <dt>{{ t('hpProcessVm') }}</dt>
         <dd>
-          <RouterLink v-if="row.vm" :to="`/vms/${encodeURIComponent(row.vm.id)}`">{{
-            row.vm.name || row.vm.id
-          }}</RouterLink
+          <RouterLink
+            v-if="row.vm"
+            class="btn quiet"
+            :to="`/vms/${encodeURIComponent(row.vm.id)}`"
+            >{{ row.vm.name || row.vm.id }}</RouterLink
           ><span v-else>{{ t('hpProcessNoVm') }}</span>
         </dd>
       </div>

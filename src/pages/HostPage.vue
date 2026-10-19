@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { useI18n } from 'vue-i18n'
 import { HostOverviewPanel } from '../modules/host'
 const { t } = useI18n()
 </script>
 <template>
   <div class="host-page">
-    <RouterLink to="/more">{{ t('navMore') }}</RouterLink
+    <AppBackLink to="/more">{{ t('navMore') }}</AppBackLink
     ><HostOverviewPanel />
   </div>
 </template>

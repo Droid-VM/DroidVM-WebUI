@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { useI18n } from 'vue-i18n'
 import { WebServicePanel } from '../modules/webService'
 const { t } = useI18n()
 </script>
 <template>
   <div class="service-page">
-    <RouterLink to="/more">{{ t('navMore') }}</RouterLink
+    <AppBackLink to="/more">{{ t('navMore') }}</AppBackLink
     ><WebServicePanel />
   </div>
 </template>

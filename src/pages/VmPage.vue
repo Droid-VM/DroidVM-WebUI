@@ -10,7 +10,6 @@ import OperationTrackingNotice from '../shared/ui/OperationTrackingNotice.vue'
 import { HostSummary } from '../modules/host'
 import { useConfigurationEditor } from '../modules/configuration'
 import { usePackageExport, usePackageImport } from '../modules/packages'
-import { useLinuxVmWizard } from '../modules/linuxVm'
 import { useVisiblePolling } from '../shared/model/visiblePolling'
 import AppButton from '../shared/ui/AppButton.vue'
 import AppIcon from '../shared/ui/AppIcon.vue'
@@ -28,7 +27,6 @@ const actions = useVmActions()
 const configuration = useConfigurationEditor()
 const packageExport = usePackageExport()
 const packageImport = usePackageImport()
-const linuxVm = useLinuxVmWizard()
 useVisiblePolling(
   () => mode === 'http',
   async () => {
@@ -45,6 +43,10 @@ const route = useRoute()
 const router = useRouter()
 const searchVisible = ref(Boolean(query.value))
 const hostExpanded = ref(false)
+const creationOpen = ref(false)
+const canChooseCreation = computed(
+  () => configuration.canCreate.value || packageImport.supported.value,
+)
 const searchInput = ref<InstanceType<typeof SearchField>>()
 const selected = computed(() => items.value.find((vm) => vm.id === route.params.id))
 const session = computed(() => String(route.params.session || ''))
@@ -75,6 +77,10 @@ async function toggleSearch() {
 function closeDetails() {
   void router.replace('/vms')
 }
+function chooseCreation(path: '/vms/new' | '/packages/import') {
+  creationOpen.value = false
+  void router.push(path)
+}
 </script>
 
 <template>
@@ -90,23 +96,22 @@ function closeDetails() {
     </div>
     <AppButton
       tone="primary"
-      :disabled="!configuration.canCreate.value"
-      :title="configuration.canCreate.value ? t('createVm') : t('createUnavailable')"
-      @click="router.push('/vms/new')"
+      :disabled="!canChooseCreation"
+      :title="canChooseCreation ? t('createVm') : t('createUnavailable')"
+      aria-haspopup="dialog"
+      @click="creationOpen = true"
       ><AppIcon name="plus" />{{ t('createVm') }}</AppButton
     >
   </div>
   <AppButton
-    v-if="configuration.canCreate.value"
+    v-if="canChooseCreation"
     class="mobile-only create-mobile"
     tone="primary"
-    @click="router.push('/vms/new')"
+    aria-haspopup="dialog"
+    @click="creationOpen = true"
   >
     <AppIcon name="plus" />{{ t('createVm') }}
   </AppButton>
-  <RouterLink v-if="linuxVm.supported.value" class="create-linux" to="/vms/new/linux">{{
-    t('linuxVmTitle')
-  }}</RouterLink>
   <details class="overview" @toggle="hostExpanded = ($event.target as HTMLDetailsElement).open">
     <summary>
       <span
@@ -122,12 +127,6 @@ function closeDetails() {
     </summary>
     <HostSummary variant="metrics" :active="hostExpanded" />
   </details>
-  <p v-if="packageExport.supported.value">
-    <RouterLink to="/packages/export">{{ t('packageExportTitle') }}</RouterLink>
-  </p>
-  <p v-if="packageImport.supported.value">
-    <RouterLink to="/packages/import">{{ t('packageImportTitle') }}</RouterLink>
-  </p>
   <div class="vm-layout">
     <section class="instances" :aria-label="t('management')" :aria-busy="status === 'loading'">
       <div class="list-tools">
@@ -221,6 +220,22 @@ function closeDetails() {
       </section>
     </aside>
   </div>
+  <AppDialog :open="creationOpen" :title="t('createVm')" @close="creationOpen = false">
+    <div class="creation-options">
+      <AppButton
+        tone="tonal"
+        :disabled="!configuration.canCreate.value"
+        @click="chooseCreation('/vms/new')"
+        ><AppIcon name="settings" />{{ t('createVmCustom') }}</AppButton
+      >
+      <AppButton
+        tone="tonal"
+        :disabled="!packageImport.supported.value"
+        @click="chooseCreation('/packages/import')"
+        ><AppIcon name="disk" />{{ t('createVmImport') }}</AppButton
+      >
+    </div>
+  </AppDialog>
   <AppDialog
     :open="Boolean(route.params.id)"
     :title="
@@ -270,7 +285,7 @@ function closeDetails() {
     <template v-else>
       <VmDetails :vm="selected" />
       <p v-if="packageExport.supported.value">
-        <RouterLink :to="`/packages/export/${encodeURIComponent(selected.id)}`">{{
+        <RouterLink class="btn tonal" :to="`/packages/export/${encodeURIComponent(selected.id)}`">{{
           t('packageExportTitle')
         }}</RouterLink>
       </p>
@@ -279,11 +294,15 @@ function closeDetails() {
 </template>
 
 <style scoped>
-.create-linux {
-  display: flex;
-  align-items: center;
-  min-height: 48px;
-  margin-bottom: var(--space-3);
+.creation-options {
+  display: grid;
+  gap: var(--space-3);
+}
+.creation-options .btn {
+  justify-content: flex-start;
+  min-height: 56px;
+  white-space: normal;
+  text-align: start;
 }
 .create-mobile {
   margin-bottom: var(--space-4);

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppBackLink from '../shared/ui/AppBackLink.vue'
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useHostPreferences, preferenceKeys } from '../modules/hostPreferences'
@@ -22,7 +23,7 @@ onBeforeUnmount(model.deactivate)
 </script>
 <template>
   <div class="host-preferences-page" data-testid="host-preferences-page">
-    <RouterLink to="/more">{{ t('navMore') }}</RouterLink>
+    <AppBackLink to="/more">{{ t('navMore') }}</AppBackLink>
     <header>
       <h1>{{ t('hostPreferencesTitle') }}</h1>
       <p>{{ t('hostPreferencesScope') }}</p>
