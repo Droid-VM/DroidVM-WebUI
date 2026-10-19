@@ -1,5 +1,5 @@
 import type { components } from '../../../generated/api'
-import type { OperationGateway } from '../../tasks'
+import type { OperationGateway, OperationTracking } from '../../tasks'
 
 type Schemas = components['schemas']
 export type UsbRule = Schemas['UsbRule']
@@ -16,6 +16,7 @@ export interface RulesCommit {
   requestId: string
 }
 export interface UsbRulesGateway extends OperationGateway<RulesCommit> {
+  tracking?: OperationTracking<RulesCommit>
   previewSupported(): boolean
   preview(revision: string, signal: AbortSignal): Promise<UsbRulesPreview>
   read(signal: AbortSignal): Promise<RulesSnapshot>

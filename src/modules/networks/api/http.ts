@@ -4,11 +4,13 @@ import { ApiError } from '../../../shared/api/errors'
 import type { HttpClient } from '../../../shared/api/httpClient'
 import { stageConfiguration } from '../../../shared/api/stagedUpload'
 import { readConfigurationSnapshot } from '../../../shared/api/configurationSnapshot'
-import { checkTask, type Task } from '../../tasks'
+import { recoverLookup, checkTask, type Task } from '../../tasks'
+import { createCommitTracking } from '../../../shared/model/commitTracking'
 import type { NetworkConfigurationGateway } from './gateway'
 
 type Schemas = components['schemas']
 interface Access {
+  hostId?: string
   context: Schemas['ServerContext']
   csrfToken: string
   capabilities: readonly string[]
@@ -77,6 +79,12 @@ export function createNetworkConfigurationGateway(
     return value
   }
   return {
+    tracking: createCommitTracking(
+      'network-configuration',
+      'network-configuration',
+      ['networkId'],
+      ['uploadId'],
+    ),
     supported: () => permits(access()),
     async read(signal) {
       const current = requireAccess()
@@ -104,7 +112,16 @@ export function createNetworkConfigurationGateway(
     },
     async submit(input, signal) {
       return task(
-        (await request(requireAccess(), 'commit', input, signal, taskValid, 202)).task,
+        (
+          await request(
+            requireAccess(),
+            'commit',
+            { uploadId: input.uploadId, requestId: input.requestId },
+            signal,
+            taskValid,
+            202,
+          )
+        ).task,
         input.requestId,
       )
     },
@@ -116,8 +133,10 @@ export function createNetworkConfigurationGateway(
         signal,
         statusValid,
       )
-      if ((result.task?.state === 'succeeded') !== !!result.version) throw invalid()
-      return result.task ? task(result.task, input.requestId) : null
+      const recovered = await recoverLookup(client, access(), input.requestId, result, signal)
+      if (!statusValid(recovered)) throw invalid()
+      if ((recovered.task?.state === 'succeeded') !== !!recovered.version) throw invalid()
+      return recovered.task ? task(recovered.task, input.requestId) : null
     },
   }
 }

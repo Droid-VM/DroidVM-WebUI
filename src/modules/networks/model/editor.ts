@@ -37,7 +37,7 @@ export function createNetworkEditor(gateway?: NetworkConfigurationGateway, newId
     identity: string | null = null
   const reads = new Set<AbortController>(),
     key = 'network-configuration'
-  const operations = createOperations<NetworkCommit>(gateway, observe)
+  const operations = createOperations<NetworkCommit>(gateway, observe, gateway?.tracking)
   const entry = computed(() => operations.entries.value[key] ?? null)
   const pending = computed(() => !!entry.value && entry.value.state !== 'done')
   const busy = computed(() => loading.value || staging.value || pending.value)
@@ -58,7 +58,12 @@ export function createNetworkEditor(gateway?: NetworkConfigurationGateway, newId
       : [],
   )
   const editable = computed(
-    () => operations.supported.value && !!draft.value && !busy.value && !blocked.value,
+    () =>
+      operations.supported.value &&
+      !operations.recoveryProblem.value &&
+      !!draft.value &&
+      !busy.value &&
+      !blocked.value,
   )
   const canSave = computed(() => editable.value && dirty.value && !issues.value.length)
   const protectedDraft = computed(() => dirty.value || staging.value || pending.value)
@@ -134,7 +139,7 @@ export function createNetworkEditor(gateway?: NetworkConfigurationGateway, newId
     try {
       uploadId = await gateway.stage(json, controller.signal)
       if (epoch !== generation) return
-      const request = { uploadId, requestId: newId() }
+      const request = { uploadId, requestId: newId(), networkId: String(draft.value.id) }
       submitted = true
       await operations.submit(key, request)
     } catch (cause) {
@@ -169,9 +174,9 @@ export function createNetworkEditor(gateway?: NetworkConfigurationGateway, newId
     loading.value = staging.value = false
     operations.pause()
   }
-  function reset() {
+  function reset(preserveTracking = false) {
     pause()
-    operations.reset()
+    operations.reset(preserveTracking)
     baseline.value = draft.value = null
     observed.value = []
     buffers.value = {}
@@ -201,10 +206,18 @@ export function createNetworkEditor(gateway?: NetworkConfigurationGateway, newId
     canSave,
     protectedDraft,
     checking: operations.checking,
+    recoveryProblem: operations.recoveryProblem,
+    clearTracking: operations.clearTracking,
     reconcile: operations.reconcile,
     reload,
     save,
     async open(id: string) {
+      if (entry.value?.restored) {
+        target.value = entry.value.request.networkId ?? id
+        await operations.reconcile()
+        if (pending.value) return target.value === id
+        if (target.value === id) return true
+      }
       if (target.value === id && draft.value) return true
       if (protectedDraft.value) return false
       const previousIdentity = identity
@@ -263,12 +276,13 @@ export function createNetworkEditor(gateway?: NetworkConfigurationGateway, newId
     pause,
     reset,
     bind(value: string) {
-      if (identity !== value) reset()
+      if (identity !== value) reset(true)
       identity = value
       operations.bind(value)
+      if (entry.value?.restored) target.value = entry.value.request.networkId ?? null
     },
     dispose() {
-      reset()
+      reset(true)
       operations.dispose()
     },
   }

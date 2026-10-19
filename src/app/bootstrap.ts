@@ -97,8 +97,6 @@ import PackageTransfersPage from '../pages/PackageTransfersPage.vue'
 import ConfigurationBackupPage from '../pages/ConfigurationBackupPage.vue'
 import WebServicePage from '../pages/WebServicePage.vue'
 import ImageImportPage from '../pages/ImageImportPage.vue'
-import LinuxVmCreatePage from '../pages/LinuxVmCreatePage.vue'
-import { createLinuxVmWizard, linuxVmWizardKey } from '../modules/linuxVm'
 import { createImageImport, imageImportKey, type ImageImportGateway } from '../modules/images'
 import {
   createImageTransfers,
@@ -181,16 +179,6 @@ export function mountApp(
   const logs = createLogViewer(logGateway)
   const configuration = createConfigurationEditor(configurationGateway)
   const resources = createResourceCatalog(resourceGateway)
-  const linuxVm = createLinuxVmWizard({
-    loadDefaultCpus: diskDefaults.loadSavedCpus,
-    disk: diskActionGateway,
-    agent: agentGateway,
-    configuration: configurationGateway,
-    refresh: async () => {
-      const results = await Promise.all([inventory.refresh(), resources.disks.refresh()])
-      return results.every(Boolean)
-    },
-  })
   const imageImport = createImageImport(
     imageImportGateway,
     async () => {
@@ -276,7 +264,6 @@ export function mountApp(
     routes: [
       { path: '/', redirect: '/vms' },
       { path: '/vms/new', component: VmEditPage, meta: { title: 'createVm', create: true } },
-      { path: '/vms/new/linux', component: LinuxVmCreatePage, meta: { title: 'linuxVmTitle' } },
       { path: '/vms/:id/edit', component: VmEditPage, meta: { title: 'configEdit' } },
       { path: '/vms/:id/copy', component: VmEditPage, meta: { title: 'configCopy', copy: true } },
       {
@@ -394,8 +381,6 @@ export function mountApp(
   app.provide(imageImportKey, imageImport)
   app.provide(imageTransfersKey, imageTransfers)
   app.onUnmount(imageTransfers.dispose)
-  app.provide(linuxVmWizardKey, linuxVm)
-  app.onUnmount(linuxVm.dispose)
   app.onUnmount(imageImport.dispose)
   app.onUnmount(webService.dispose)
   app.onUnmount(configurationBackup.dispose)
@@ -462,7 +447,6 @@ export function mountApp(
       hugepages.dirty.value ||
       imageImport.pending.value ||
       imageTransfers.pending.value ||
-      linuxVm.hasWork.value ||
       webService.dirty.value ||
       configurationBackup.hasFile.value ||
       diskActions.resizeGrow.pending.value
@@ -479,7 +463,7 @@ export function mountApp(
   app.onUnmount(usbActions.dispose)
   app.onUnmount(diskActions.dispose)
   app.onUnmount(resources.reset)
-  app.onUnmount(configuration.reset)
+  app.onUnmount(() => configuration.reset(true))
   app.onUnmount(logs.dispose)
   app.onUnmount(vmActions.dispose)
   app.provide(taskMonitorKey, tasks)
@@ -492,25 +476,25 @@ export function mountApp(
         inventory.reset()
         tasks.reset()
         logs.reset()
-        configuration.reset()
+        configuration.reset(true)
         resources.reset()
         hostNetwork.reset()
         if (status === 'authenticated' && session.current.value) {
+          const recoveryIdentity =
+            session.current.value.server.hostId ??
+            `${session.current.value.server.daemonEpoch}:${session.current.value.id}`
+          configuration.bind(recoveryIdentity)
           imageTransfers.bind(
             session.current.value.server.daemonEpoch + ':' + session.current.value.id,
+            recoveryIdentity,
           )
-          linuxVm.bind(session.current.value.server.daemonEpoch + ':' + session.current.value.id)
-          imageImport.bind(
-            session.current.value.server.daemonEpoch + ':' + session.current.value.id,
-          )
+          imageImport.bind(recoveryIdentity)
           webService.bind(session.current.value.server.daemonEpoch + ':' + session.current.value.id)
-          configurationBackup.bind(
-            session.current.value.server.daemonEpoch + ':' + session.current.value.id,
-          )
+          configurationBackup.bind(recoveryIdentity)
           packageTransfers.bind(
             session.current.value.server.daemonEpoch + ':' + session.current.value.id,
           )
-          agent.bind(session.current.value.server.daemonEpoch + ':' + session.current.value.id)
+          agent.bind(recoveryIdentity)
           packageImport.bind(
             session.current.value.server.daemonEpoch + ':' + session.current.value.id,
           )
@@ -536,19 +520,13 @@ export function mountApp(
           )
           vmActions.bind(`${session.current.value.server.daemonEpoch}:${session.current.value.id}`)
           usbActions.bind(`${session.current.value.server.daemonEpoch}:${session.current.value.id}`)
-          diskActions.bind(
-            `${session.current.value.server.daemonEpoch}:${session.current.value.id}`,
-          )
-          usbRules.bind(`${session.current.value.server.daemonEpoch}:${session.current.value.id}`)
+          diskActions.bind(recoveryIdentity)
+          usbRules.bind(recoveryIdentity)
           networkRuntime.bind(
             `${session.current.value.server.daemonEpoch}:${session.current.value.id}`,
           )
-          networkEditor.bind(
-            `${session.current.value.server.daemonEpoch}:${session.current.value.id}`,
-          )
-          networkDeletion.bind(
-            `${session.current.value.server.daemonEpoch}:${session.current.value.id}`,
-          )
+          networkEditor.bind(recoveryIdentity)
+          networkDeletion.bind(recoveryIdentity)
         } else if (
           status === 'anonymous' ||
           status === 'signing-out' ||
@@ -556,11 +534,11 @@ export function mountApp(
         ) {
           vmActions.reset()
           usbActions.reset()
-          diskActions.reset()
-          usbRules.reset()
-          networkEditor.reset()
+          diskActions.reset(true)
+          usbRules.reset(true)
+          networkEditor.reset(true)
           networkRuntime.reset()
-          networkDeletion.reset()
+          networkDeletion.reset(true)
           terminal.reset()
           graphics.reset()
           hostOverview.reset()
@@ -575,15 +553,14 @@ export function mountApp(
           hostPreferences.pause()
           usbAcm.pause()
           diskDefaults.pause()
-          agent.reset()
+          agent.reset(true)
           packageExport.reset()
           packageImport.reset()
           packageTransfers.reset()
-          configurationBackup.reset()
+          configurationBackup.reset(true)
           webService.reset()
-          imageImport.reset()
-          imageTransfers.reset()
-          linuxVm.reset()
+          imageImport.reset(true)
+          imageTransfers.reset(true)
           rescue.reset()
         } else {
           vmActions.pause()
@@ -609,7 +586,6 @@ export function mountApp(
           webService.pause()
           imageImport.pause()
           imageTransfers.pause()
-          linuxVm.pause()
           rescue.pause()
         }
         positions.clear()

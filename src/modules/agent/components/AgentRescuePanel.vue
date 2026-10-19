@@ -51,6 +51,7 @@ useVisiblePolling(() => rescue.supported.value, rescue.refresh, ['tasks', 'disks
           <div class="buttons">
             <RouterLink
               v-if="!session.closing && !session.expired && session.remainingMs > 0"
+              class="btn tonal"
               :to="`/agent/rescue/${session.id}`"
               >{{ t('agentRescueOpen') }}</RouterLink
             >

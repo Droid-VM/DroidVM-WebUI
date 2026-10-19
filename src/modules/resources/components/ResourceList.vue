@@ -96,7 +96,9 @@ useVisiblePolling(() => source.value.supported.value, refresh, ['disks', 'networ
       <AppButton @click="refresh">{{ t('refreshList') }}</AppButton>
       <template v-if="kind === 'network'">
         <AppButton
-          v-if="deletion.pending.value || deletion.uncertain.value"
+          v-if="
+            deletion.entry.value || deletion.recoveryEntry.value || deletion.recoveryProblem.value
+          "
           @click="deletion.resume"
           >{{ t('networkDeletionResume') }}</AppButton
         >
@@ -124,9 +126,12 @@ useVisiblePolling(() => source.value.supported.value, refresh, ['disks', 'networ
         }}</AppButton>
       </template>
       <template v-if="kind === 'disk'">
-        <RouterLink v-if="imageImport.supported.value" to="/resources/disk/import">{{
-          t('imageImportTitle')
-        }}</RouterLink>
+        <RouterLink
+          v-if="imageImport.supported.value"
+          class="btn tonal"
+          to="/resources/disk/import"
+          >{{ t('imageImportTitle') }}</RouterLink
+        >
         <AppButton
           v-if="actions.supported.value"
           :disabled="!actions.allowed.value"
@@ -137,7 +142,7 @@ useVisiblePolling(() => source.value.supported.value, refresh, ['disks', 'networ
         <DiskRecovery />
         <AgentOperationStatus />
         <AgentRecovery />
-        <RouterLink v-if="agent.rescueSupported.value" to="/agent/rescue">{{
+        <RouterLink v-if="agent.rescueSupported.value" class="btn tonal" to="/agent/rescue">{{
           t('agentRescueTitle')
         }}</RouterLink>
       </template>

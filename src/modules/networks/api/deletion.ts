@@ -3,7 +3,14 @@ import { compileContract } from '../../../shared/api/contract'
 import { ApiError } from '../../../shared/api/errors'
 import type { HttpClient } from '../../../shared/api/httpClient'
 import { stageConfiguration } from '../../../shared/api/stagedUpload'
-import { checkTask, type OperationGateway, type Task } from '../../tasks'
+import { createCommitTracking } from '../../../shared/model/commitTracking'
+import {
+  recoverLookup,
+  checkTask,
+  type OperationGateway,
+  type OperationTracking,
+  type Task,
+} from '../../tasks'
 
 type Schemas = components['schemas']
 export interface NetworkDeletionCommit {
@@ -12,14 +19,19 @@ export interface NetworkDeletionCommit {
   requestId: string
 }
 export interface NetworkDeletionGateway extends OperationGateway<NetworkDeletionCommit> {
+  tracking?: OperationTracking<NetworkDeletionCommit>
   stage(json: string, revision: string, signal: AbortSignal): Promise<string>
   abort(uploadId: string, signal: AbortSignal): Promise<void>
 }
 export interface ConfigurationRecoveryRequest {
   requestId: string
 }
-export type ConfigurationRecoveryGateway = OperationGateway<ConfigurationRecoveryRequest>
+export interface ConfigurationRecoveryGateway
+  extends OperationGateway<ConfigurationRecoveryRequest> {
+  tracking?: OperationTracking<ConfigurationRecoveryRequest>
+}
 interface Access {
+  hostId?: string
   context: Schemas['ServerContext']
   csrfToken: string
   capabilities: readonly string[]
@@ -101,6 +113,7 @@ export function createNetworkDeletionGateway(
   }
   return {
     supported: api.supported,
+    tracking: createCommitTracking('network-deletion', 'deletion', ['networkId'], ['uploadId']),
     async stage(json, revision, signal) {
       return stageConfiguration(json, 9 * 1024 * 1024, {
         begin: (bytes) => api.post(`${base}/begin`, { revision, bytes }, signal, uploadValid),
@@ -133,12 +146,14 @@ export function createNetworkDeletionGateway(
         signal,
         statusValid,
       )
+      const recovered = await recoverLookup(client, access(), input.requestId, result, signal)
+      if (!statusValid(recovered)) throw invalid()
       if (
-        (result.task?.state === 'succeeded') !== !!result.version ||
-        (result.version && result.version.networkId !== input.networkId)
+        (recovered.task?.state === 'succeeded') !== !!recovered.version ||
+        (recovered.version && recovered.version.networkId !== input.networkId)
       )
         throw invalid()
-      return result.task ? task(result.task, input.requestId, 'network_deletion') : null
+      return recovered.task ? task(recovered.task, input.requestId, 'network_deletion') : null
     },
   }
 }
@@ -149,6 +164,7 @@ export function createConfigurationRecoveryGateway(
   const api = boundary(client, access, 'configuration.recovery.v1'),
     base = '/api/v1/configuration-recovery'
   return {
+    tracking: createCommitTracking('configuration-recovery', 'recovery'),
     supported: api.supported,
     async submit(input, signal) {
       const result = await api.post(base, input, signal, taskValid, 202)
@@ -157,7 +173,8 @@ export function createConfigurationRecoveryGateway(
     async find(input, signal) {
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(input.requestId)) throw invalid()
       const result = await api.get(`${base}/${input.requestId}`, signal, lookupValid)
-      return result.task ? task(result.task, input.requestId, 'configuration_recovery') : null
+      const recovered = await recoverLookup(client, access(), input.requestId, result, signal)
+      return recovered.task ? task(recovered.task, input.requestId, 'configuration_recovery') : null
     },
   }
 }

@@ -62,6 +62,7 @@ import {
 import { cloneConfiguration, fieldText, getPath, object, setPath } from '../model/document'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
 import FilterGroup from '../../../shared/ui/FilterGroup.vue'
 import { useVisiblePolling } from '../../../shared/model/visiblePolling'
@@ -535,6 +536,11 @@ async function confirmed() {
 
 <template>
   <section class="configuration" :aria-busy="['loading', 'staging', 'pending'].includes(state)">
+    <OperationTrackingNotice
+      :problem="editor.recoveryProblem.value"
+      @clear="editor.clearTracking"
+    />
+    <p v-if="editor.restored.value" role="status">{{ t('configurationRestoredReceipt') }}</p>
     <AppNotice v-if="editor.creating.value && draft" tone="info" :title="t('createVm')">
       <p>{{ t('configNewHint') }}</p>
     </AppNotice>
@@ -559,7 +565,8 @@ async function confirmed() {
       tone="warning"
       :title="t(state === 'unknown' ? 'configUnknown' : 'configBlocked')"
     >
-      <p>{{ t('configKeepDraft') }}</p>
+      <p v-if="draft">{{ t('configKeepDraft') }}</p>
+      <p v-if="state === 'unknown'">{{ t('configurationMissingReceipt') }}</p>
       <p v-if="task?.errorCode">{{ task.errorCode }}</p>
       <AppButton v-if="state === 'unknown'" @click="editor.reconcile">{{
         t('queryStatus')
@@ -569,6 +576,11 @@ async function confirmed() {
       {{ t('processing') }}
     </p>
     <AppButton v-if="state === 'error'" @click="editor.reload">{{ t('configReload') }}</AppButton>
+    <AppButton
+      v-if="state === 'blocked' && !draft && task && ['failed', 'cancelled'].includes(task.state)"
+      @click="editor.reload"
+      >{{ t('configReload') }}</AppButton
+    >
     <div v-if="draft" class="config-toolbar">
       <AppButton tone="primary" :disabled="disabled || !dirty || rawOpen" @click="requestSave">{{
         t('configSave')

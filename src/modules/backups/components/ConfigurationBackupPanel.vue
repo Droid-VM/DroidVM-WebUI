@@ -10,6 +10,7 @@ import {
 import { taskPercent, taskStateKeys } from '../../tasks'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 import AppProgress from '../../../shared/ui/AppProgress.vue'
 const model = useConfigurationBackup(),
   { t, locale } = useI18n(),
@@ -30,6 +31,7 @@ onBeforeUnmount(model.leave)
 </script>
 <template>
   <div class="backup-panel">
+    <OperationTrackingNotice :problem="model.recoveryProblem.value" @clear="model.clearTracking" />
     <h1>{{ t('backupTitle') }}</h1>
     <p>{{ t('backupScope') }}</p>
     <AppNotice v-if="!model.supported.value" tone="warning" :title="t('backupUnavailable')" />
@@ -38,7 +40,7 @@ onBeforeUnmount(model.leave)
         <h2>{{ t('backupExportTitle') }}</h2>
         <p>{{ t('backupExportHint') }}</p>
         <a
-          class="download"
+          class="btn tonal download"
           :href="configurationBackupDownloadHref"
           download="DroidVM_backup.json"
           @click="handedOff = true"
@@ -105,9 +107,11 @@ onBeforeUnmount(model.leave)
         </div>
       </section>
       <section v-if="model.entry.value" class="status" aria-live="polite">
+        <p v-if="model.entry.value.restored">{{ t('configurationRestoredReceipt') }}</p>
         <h2>{{ t('backupImportStatus') }}</h2>
         <p v-if="model.entry.value.state === 'posting'">{{ t('processing') }}</p>
         <p v-if="model.entry.value.state === 'unknown'">{{ t('backupUnknown') }}</p>
+        <p v-if="model.entry.value.state === 'unknown'">{{ t('configurationMissingReceipt') }}</p>
         <p v-if="model.entry.value.task">{{ t(taskStateKeys[model.entry.value.task.state]) }}</p>
         <AppProgress
           v-if="model.entry.value.task && model.pending.value"
@@ -154,15 +158,15 @@ onBeforeUnmount(model.leave)
             :disabled="model.checking.value || model.entry.value.state === 'posting'"
             @click="model.reconcile"
             >{{ t('queryStatus') }}</AppButton
-          ><RouterLink to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+          ><RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
         </div>
         <div v-if="model.recoveryRequired.value" class="recovery">
           <p v-if="!model.result.value">{{ t('backupUnknownResult') }}</p>
           <p>{{ t('backupPartialHint') }}</p>
           <div class="buttons">
-            <RouterLink to="/vms">{{ t('navVms') }}</RouterLink
-            ><RouterLink to="/resources/network">{{ t('navNetwork') }}</RouterLink
-            ><RouterLink to="/resources/disk">{{ t('navDisk') }}</RouterLink>
+            <RouterLink class="btn tonal" to="/vms">{{ t('navVms') }}</RouterLink
+            ><RouterLink class="btn tonal" to="/resources/network">{{ t('navNetwork') }}</RouterLink
+            ><RouterLink class="btn tonal" to="/resources/disk">{{ t('navDisk') }}</RouterLink>
           </div>
           <label class="check"
             ><input
@@ -242,9 +246,6 @@ input::file-selector-button {
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
-}
-a {
-  padding-block: 10px;
 }
 @media (max-width: 480px) {
   .buttons > *,

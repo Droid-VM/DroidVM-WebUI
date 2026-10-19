@@ -9,6 +9,7 @@ import UsbRuleCard from './UsbRuleCard.vue'
 import UsbRulesPreview from './UsbRulesPreview.vue'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
 
 const editor = useUsbRulesEditor(),
@@ -87,6 +88,12 @@ function download() {
 
 <template>
   <div class="rules-editor">
+    <OperationTrackingNotice
+      :problem="editor.recoveryProblem.value"
+      @clear="editor.clearTracking"
+    />
+    <p v-if="editor.entry.value?.restored" role="status">{{ t('configurationRestoredReceipt') }}</p>
+    <p v-if="editor.entry.value?.state === 'unknown'">{{ t('configurationMissingReceipt') }}</p>
     <details class="rules-help">
       <summary>{{ t('usbRulesHelp') }}</summary>
       <p>{{ t('usbRulesIntro') }}</p>

@@ -327,13 +327,17 @@ export function createDiskActions(
         }
       : null
     resizeGrow.reset()
-    if (grow && operation.action === 'resize')
-      resizeGrow.begin(request.requestId, {
+    if (
+      grow &&
+      operation.action === 'resize' &&
+      !resizeGrow.begin(request.requestId, {
         diskId: operation.diskId,
         revision: request.revision,
         vmRevision: request.vmRevision,
         size: operation.size,
       })
+    )
+      return
     close()
     await operations.submit('disk', request)
     await resizeGrow.advance(operations.entries.value.disk)
@@ -381,10 +385,11 @@ export function createDiskActions(
     close,
     submit,
     canGrow,
+    resumeGrow: () => resizeGrow.resume(operations.entries.value.disk),
     reconcile,
     bind(identity: string) {
       close()
-      resizeGrow.stop()
+      resizeGrow.bind(identity)
       operations.bind(identity)
       recovery.bind(identity)
     },
@@ -394,16 +399,16 @@ export function createDiskActions(
       operations.pause()
       recovery.pause()
     },
-    reset() {
+    reset(preserveTracking = false) {
       close()
-      resizeGrow.reset()
-      operations.reset()
-      recovery.reset()
+      resizeGrow.reset(preserveTracking)
+      operations.reset(preserveTracking)
+      recovery.reset(preserveTracking)
       submittedOptimization = null
     },
     dispose() {
       close()
-      resizeGrow.reset()
+      resizeGrow.dispose()
       operations.dispose()
       recovery.dispose()
     },

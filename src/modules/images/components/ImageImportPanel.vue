@@ -6,6 +6,7 @@ import { taskPercent, taskStateKeys } from '../../tasks'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 import AppProgress from '../../../shared/ui/AppProgress.vue'
+import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 const model = useImageImport(),
   { t } = useI18n()
 const entries = computed(() =>
@@ -19,6 +20,14 @@ onBeforeUnmount(model.leave)
     <p>{{ t('imageImportIntro') }}</p>
     <AppNotice v-if="!model.supported.value" tone="warning" :title="t('imageImportUnavailable')" />
     <template v-else>
+      <OperationTrackingNotice
+        :problem="model.recoveryProblem.value"
+        @clear="model.clearTracking"
+      />
+      <OperationTrackingNotice
+        :problem="model.previewRecoveryProblem.value"
+        @clear="model.clearPreviewTracking"
+      />
       <form @submit.prevent="model.readPreview">
         <label
           >{{ t('imageImportSource')
@@ -117,13 +126,16 @@ onBeforeUnmount(model.leave)
           >
         </article>
         <div class="buttons">
+          <AppButton v-if="model.canRefreshPreview.value" @click="model.refreshPreview">{{
+            t('imageImportRefreshPreview')
+          }}</AppButton>
           <AppButton
             data-testid="image-import-reconcile"
             :disabled="model.checking.value || entries.some((row) => row.state === 'posting')"
             @click="model.reconcile"
             >{{ t('queryStatus') }}</AppButton
           >
-          <RouterLink to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+          <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
         </div>
       </section>
       <section v-if="model.entry.value" data-testid="image-import-result" aria-live="polite">
@@ -161,25 +173,19 @@ onBeforeUnmount(model.leave)
           </template>
           <div class="buttons">
             <RouterLink
+              class="btn tonal"
               :to="{
                 path: '/resources/disk',
                 query: { disk: model.result.value?.diskId ?? undefined },
               }"
               >{{ t('diskViewResult') }}</RouterLink
             >
-            <RouterLink to="/vms/new">{{ t('createVm') }}</RouterLink>
-            <RouterLink
-              :to="{
-                path: '/vms/new/linux',
-                query: { disk: model.result.value?.diskId ?? undefined },
-              }"
-              >{{ t('linuxVmTitle') }}</RouterLink
-            >
+            <RouterLink class="btn tonal" to="/vms/new">{{ t('createVm') }}</RouterLink>
           </div>
         </template>
         <template v-if="model.entry.value.state === 'done'">
           <p>{{ t('imageImportRestartHint') }}</p>
-          <RouterLink to="/resources/disk">{{ t('navDisk') }}</RouterLink>
+          <RouterLink class="btn tonal" to="/resources/disk">{{ t('navDisk') }}</RouterLink>
           <label class="check"
             ><input v-model="model.outcomeAcknowledged.value" type="checkbox" /><span>{{
               t('imageImportOutcomeConfirm')
@@ -275,9 +281,6 @@ dl {
 }
 dd {
   margin: 0;
-}
-a {
-  padding-block: 10px;
 }
 @media (max-width: 480px) {
   .buttons > *,

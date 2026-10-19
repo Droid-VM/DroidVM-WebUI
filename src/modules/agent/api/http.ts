@@ -2,16 +2,19 @@ import type { components } from '../../../generated/api'
 import { compileContract } from '../../../shared/api/contract'
 import { ApiError } from '../../../shared/api/errors'
 import type { HttpClient } from '../../../shared/api/httpClient'
-import { checkTask } from '../../tasks'
+import { recoverLookup, checkTask } from '../../tasks'
 import {
   clearAgentPassword,
   validAgentPassword,
+  validAgentReference,
+  validAgentRecoveryReference,
   type AgentGateway,
   type AgentReference,
   type AgentPreparation,
 } from './gateway'
 
 interface Access {
+  hostId?: string
   context: components['schemas']['ServerContext']
   capabilities: readonly string[]
   csrfToken: string
@@ -110,6 +113,7 @@ export function createAgentGateway(
     return task
   }
   return {
+    tracking: { namespace: 'agent', durable: true, valid: validAgentReference, key: () => 'agent' },
     supported,
     rescueSupported: () => supported() && permits('agent.rescue.v1'),
     async prepare(id, signal) {
@@ -163,9 +167,19 @@ export function createAgentGateway(
         signal,
       )
       if (!lookupValid(value)) throw new ApiError('invalid-response', 'Invalid agent lookup')
-      return verify(value, current, reference)
+      return verify(
+        await recoverLookup(client, current, reference.requestId, value, signal),
+        current,
+        reference,
+      )
     },
     recovery: {
+      tracking: {
+        namespace: 'agent-recovery',
+        durable: true,
+        valid: validAgentRecoveryReference,
+        key: () => 'agent',
+      },
       supported: recoverySupported,
       async status(signal) {
         const current = scope(true)
@@ -177,7 +191,7 @@ export function createAgentGateway(
       },
       async submit(request, signal) {
         const current = scope(true)
-        const body = { ...request, context: current.context }
+        const body = { requestId: request.requestId, context: current.context }
         if (!recoveryRequestValid(body)) throw new ApiError('conflict', 'Invalid recovery request')
         const value = await client.postJson('/api/v1/agent-recovery', body, signal, {
           csrf: current.csrfToken,
@@ -195,7 +209,11 @@ export function createAgentGateway(
           signal,
         )
         if (!lookupValid(value)) throw new ApiError('invalid-response', 'Invalid recovery lookup')
-        return verify(value, current, request)
+        return verify(
+          await recoverLookup(client, current, request.requestId, value, signal),
+          current,
+          request,
+        )
       },
     },
   }

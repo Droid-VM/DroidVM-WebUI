@@ -75,6 +75,7 @@ export function mountHttpApp() {
     return current
       ? {
           context: { daemonEpoch: current.server.daemonEpoch, sessionId: current.id },
+          hostId: current.server.hostId,
           capabilities: current.server.capabilities,
           csrfToken: current.csrfToken,
           manageTasks: current.permissions.manageTasks,
@@ -165,6 +166,7 @@ export function mountHttpApp() {
     },
   )
   const configuration: ConfigurationGateway = {
+    tracking: configSource.tracking,
     supported: configSource.supported,
     defaultsSupported: configSource.defaultsSupported,
     defaults: (signal) => inSession(signal, () => configSource.defaults(signal)),
@@ -194,6 +196,7 @@ export function mountHttpApp() {
     find: (operation, signal) => inSession(signal, () => usbSource.find(operation, signal)),
   }
   const usbRules: UsbRulesGateway = {
+    tracking: rulesSource.tracking,
     supported: rulesSource.supported,
     previewSupported: rulesSource.previewSupported,
     preview: (revision, signal) => inSession(signal, () => rulesSource.preview(revision, signal)),
@@ -211,6 +214,7 @@ export function mountHttpApp() {
     compressionSupported: diskSource.compressionSupported,
     compression: (id, signal) => inSession(signal, () => diskSource.compression!(id, signal)),
     recovery: diskSource.recovery && {
+      tracking: diskSource.recovery.tracking,
       supported: diskSource.recovery.supported,
       status: (signal) => inSession(signal, () => diskSource.recovery!.status(signal)),
       submit: (request, signal) =>
@@ -225,6 +229,7 @@ export function mountHttpApp() {
     find: (request, signal) => inSession(signal, () => diskSource.find(request, signal)),
   }
   const networkConfiguration: NetworkConfigurationGateway = {
+    tracking: networkSource.tracking,
     supported: networkSource.supported,
     read: (signal) => inSession(signal, () => networkSource.read(signal)),
     stage: (json, signal) => inSession(signal, () => networkSource.stage(json, signal)),
@@ -246,6 +251,7 @@ export function mountHttpApp() {
     read: (signal) => inSession(signal, () => hostNetworkSource.read(signal)),
   }
   const networkDeletion: NetworkDeletionGateway = {
+    tracking: deletionSource.tracking,
     supported: deletionSource.supported,
     stage: (json, revision, signal) =>
       inSession(signal, () => deletionSource.stage(json, revision, signal)),
@@ -254,6 +260,7 @@ export function mountHttpApp() {
     find: (request, signal) => inSession(signal, () => deletionSource.find(request, signal)),
   }
   const configurationRecovery: ConfigurationRecoveryGateway = {
+    tracking: recoverySource.tracking,
     supported: recoverySource.supported,
     submit: (request, signal) => inSession(signal, () => recoverySource.submit(request, signal)),
     find: (request, signal) => inSession(signal, () => recoverySource.find(request, signal)),
@@ -282,12 +289,14 @@ export function mountHttpApp() {
     find: (request, signal) => inSession(signal, () => rescueSource.find(request, signal)),
   }
   const agent: AgentGateway = {
+    tracking: agentSource.tracking,
     supported: agentSource.supported,
     rescueSupported: agentSource.rescueSupported,
     prepare: (id, signal) => inSession(signal, () => agentSource.prepare(id, signal)),
     submit: (request, signal) => inSession(signal, () => agentSource.submit(request, signal)),
     find: (reference, signal) => inSession(signal, () => agentSource.find(reference, signal)),
     recovery: {
+      tracking: agentSource.recovery.tracking,
       supported: agentSource.recovery.supported,
       status: (signal) => inSession(signal, () => agentSource.recovery.status(signal)),
       submit: (request, signal) =>
@@ -336,6 +345,7 @@ export function mountHttpApp() {
     remove: (kind, id, signal) => inSession(signal, () => transferSource.remove(kind, id, signal)),
   }
   const configurationBackup: ConfigurationBackupGateway = {
+    tracking: backupSource.tracking,
     supported: backupSource.supported,
     stage: (raw, signal) => inSession(signal, () => backupSource.stage(raw, signal)),
     preview: (id, signal) => inSession(signal, () => backupSource.preview(id, signal)),
@@ -350,10 +360,12 @@ export function mountHttpApp() {
     find: (request, signal) => inSession(signal, () => webServiceSource.find(request, signal)),
   }
   const imageImport: ImageImportGateway = {
+    tracking: imageImportSource.tracking,
     supported: imageImportSource.supported,
     submit: (request, signal) => inSession(signal, () => imageImportSource.submit(request, signal)),
     find: (request, signal) => inSession(signal, () => imageImportSource.find(request, signal)),
     preview: {
+      tracking: imageImportSource.preview.tracking,
       supported: imageImportSource.preview.supported,
       submit: (request, signal) =>
         inSession(signal, () => imageImportSource.preview.submit(request, signal)),

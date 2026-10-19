@@ -19,22 +19,26 @@ export function createDiskRecovery(
     identity: string | null = null,
     recoveringRequest: string | null = null
   let generation = 0
-  const operations = createOperations(gateway, async () => {
-    const entry = operations.entries.value.recovery,
-      request = recoveringRequest,
-      epoch = generation
-    const fresh = await refresh()
-    const task = entry?.task
-    if (
-      fresh &&
-      epoch === generation &&
-      operations.entries.value.recovery === entry &&
-      task?.state === 'succeeded' &&
-      task.pendingRecords === 0
-    )
-      recoveredRequest.value = request
-    return fresh
-  })
+  const operations = createOperations(
+    gateway,
+    async () => {
+      const entry = operations.entries.value.recovery,
+        request = entry?.request.diskRequestId ?? recoveringRequest,
+        epoch = generation
+      const fresh = await refresh()
+      const task = entry?.task
+      if (
+        fresh &&
+        epoch === generation &&
+        operations.entries.value.recovery === entry &&
+        task?.state === 'succeeded' &&
+        task.pendingRecords === 0
+      )
+        recoveredRequest.value = request
+      return fresh
+    },
+    gateway?.tracking,
+  )
   const allowed = computed(
     () => operations.supported.value && operations.allowed('recovery') && !loading.value && idle(),
   )
@@ -64,7 +68,7 @@ export function createDiskRecovery(
     if (!allowed.value || pending.value === null) return
     recoveringRequest = diskRequest()
     const epoch = generation
-    await operations.submit('recovery', { requestId: newId() })
+    await operations.submit('recovery', { requestId: newId(), diskRequestId: recoveringRequest })
     if (epoch === generation) await readStatus()
   }
   async function reconcile() {
@@ -78,9 +82,9 @@ export function createDiskRecovery(
     loading.value = false
     operations.pause()
   }
-  function reset() {
+  function reset(preserveTracking = false) {
     pause()
-    operations.reset()
+    operations.reset(preserveTracking)
     pending.value = null
     problem.value = null
     recoveredRequest.value = null
@@ -101,12 +105,17 @@ export function createDiskRecovery(
     pause,
     reset,
     bind(value: string) {
-      if (identity !== value) reset()
+      if (identity === value) return
+      pause()
+      pending.value = null
+      problem.value = null
+      recoveredRequest.value = null
+      recoveringRequest = null
       identity = value
       operations.bind(value)
     },
     dispose() {
-      reset()
+      pause()
       operations.dispose()
     },
   }

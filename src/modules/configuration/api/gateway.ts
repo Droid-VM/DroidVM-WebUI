@@ -1,5 +1,5 @@
 import type { components } from '../../../generated/api'
-import type { Task } from '../../tasks'
+import type { OperationTracking, Task } from '../../tasks'
 
 export type ConfigVersion = components['schemas']['ConfigVersion']
 export interface ConfigDocument {
@@ -10,7 +10,13 @@ export interface ConfigResult {
   task: Task | null
   version: ConfigVersion | null
 }
+export interface ConfigurationCommitTracking {
+  requestId: string
+  vmId: string
+  action: 'save' | 'create' | 'delete'
+}
 export interface ConfigurationGateway {
+  tracking?: OperationTracking<ConfigurationCommitTracking>
   supported(): boolean
   defaultsSupported(): boolean
   defaults(signal: AbortSignal): Promise<string>

@@ -17,6 +17,22 @@ import type { DiskDetail } from '../../src/modules/resources/api/gateway'
 import type { Task } from '../../src/modules/tasks'
 
 const context = { daemonEpoch: 'epoch', sessionId: 'a'.repeat(64) }
+it('keeps ordinary clone defaults and preserves createFolder when retrying existing requests', () => {
+  const diskId = '11111111-1111-4111-8111-111111111111'
+  const form = diskForm('/images/template.img')
+  form.name = 'root.img'
+  const ordinary = buildDiskOperation('clone', diskId, form)
+  expect(ordinary).toMatchObject({ action: 'clone', folder: '/images', name: 'root.img' })
+  expect(ordinary).not.toHaveProperty('createFolder')
+  form.folder = '/images/existing-request'
+  form.createFolder = true
+  const previous = buildDiskOperation('clone', diskId, form)
+  expect(previous).toMatchObject({ folder: '/images/existing-request', createFolder: true })
+  expect(buildDiskOperation('clone', diskId, diskForm('/images/template.img', previous))).toEqual(
+    previous,
+  )
+  expect(buildDiskOperation('create', null, form)).not.toHaveProperty('createFolder')
+})
 const disk = (id: string, parentId: string | null = null) => ({
   id,
   name: id,

@@ -4,7 +4,6 @@ import { validDiskOperation } from '../api/diskOperations'
 import { compactCpuSet, cpuSet } from '../../../shared/lib/cpuSet'
 import type { MessageKey } from '../../../shared/i18n'
 import { validUploadName } from '../../../shared/lib/uploadFiles'
-import { validHostPath } from '../../../shared/lib/hostPath'
 
 export const diskActionKeys: Record<DiskAction, MessageKey> = {
   create: 'diskCreate',
@@ -88,16 +87,7 @@ export function buildDiskOperation(
   action: DiskAction,
   id: string | null,
   form: DiskForm,
-  directoryName?: string,
 ): DiskOperation | null {
-  if (
-    directoryName !== undefined &&
-    (action !== 'clone' ||
-      !validHostPath(form.folder, true) ||
-      !validUploadName(directoryName) ||
-      directoryName.startsWith('.dvm-'))
-  )
-    return null
   const op: Record<string, unknown> = { action }
   if (action === 'create' && id) {
     op.backingId = id
@@ -107,13 +97,10 @@ export function buildDiskOperation(
     op.diskId = id
   }
   if (action === 'create' || action === 'clone' || (action === 'convert' && form.relocate)) {
-    op.folder =
-      directoryName === undefined
-        ? form.folder
-        : `${form.folder === '/' ? '' : form.folder}/${directoryName}`
+    op.folder = form.folder
     op.name = form.name
   }
-  if (action === 'clone' && (directoryName !== undefined || form.createFolder)) {
+  if (action === 'clone' && form.createFolder) {
     if (
       !validUploadName(form.name) ||
       new TextEncoder().encode(`${op.folder}/${form.name}`).length > 4096

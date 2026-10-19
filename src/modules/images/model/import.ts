@@ -14,8 +14,8 @@ export function createImageImport(
   newId = requestId,
   openOptimize?: ImageOptimizeOpener,
 ) {
-  const previews = createOperations(gateway?.preview, async () => true)
-  const operations = createOperations(gateway, refresh)
+  const previews = createOperations(gateway?.preview, async () => true, gateway?.preview.tracking)
+  const operations = createOperations(gateway, refresh, gateway?.tracking)
   const source = ref(''),
     acknowledged = ref(false),
     outcomeAcknowledged = ref(false)
@@ -27,15 +27,24 @@ export function createImageImport(
   const previewEntry = computed(() => previews.entries.value.preview ?? null)
   const entry = computed(() => operations.entries.value.import ?? null)
   const pending = computed(() =>
-    [previewEntry.value, entry.value].some((row) => row && row.state !== 'done'),
+    entry.value
+      ? entry.value.state !== 'done'
+      : !!previewEntry.value && previewEntry.value.state !== 'done',
   )
   const checking = computed(() => previews.checking.value || operations.checking.value)
   const canPreview = computed(
-    () => previews.supported.value && !pending.value && !entry.value && validHostPath(source.value),
+    () =>
+      previews.allowed('preview') &&
+      !operations.recoveryProblem.value &&
+      !pending.value &&
+      !entry.value &&
+      validHostPath(source.value),
   )
   const canSubmit = computed(
     () =>
       operations.supported.value &&
+      operations.allowed('import') &&
+      !previews.recoveryProblem.value &&
       !pending.value &&
       !entry.value &&
       !!plan.value &&
@@ -119,6 +128,24 @@ export function createImageImport(
     await previews.submit('preview', request)
     applyPreview()
   }
+  const canRefreshPreview = computed(
+    () =>
+      !entry.value &&
+      previewEntry.value?.state === 'unknown' &&
+      !checking.value &&
+      !previews.recoveryProblem.value &&
+      !operations.recoveryProblem.value &&
+      validHostPath(source.value),
+  )
+  async function refreshPreview() {
+    if (!canRefreshPreview.value) return
+    // A preview is read-only. Its lease may disappear on restart; deliberately
+    // request a fresh one, without recovering old import authorization.
+    previews.reset()
+    if (identity) previews.bind(identity)
+    clearPlan()
+    await readPreview()
+  }
   async function submit() {
     if (!canSubmit.value || !planRequestId.value) return
     const request = { requestId: newId(), planRequestId: planRequestId.value }
@@ -143,6 +170,10 @@ export function createImageImport(
       if (!fresh) throw new ApiError('unavailable', 'Cannot refresh registration state')
       operations.reset()
       previews.reset()
+      if (identity) {
+        operations.bind(identity)
+        previews.bind(identity)
+      }
       clearPlan()
       outcomeAcknowledged.value = false
       optimizeProblem.value = null
@@ -163,10 +194,10 @@ export function createImageImport(
     previews.pause()
     operations.pause()
   }
-  function reset() {
+  function reset(preserveTracking = false) {
     pause()
-    previews.reset()
-    operations.reset()
+    previews.reset(preserveTracking)
+    operations.reset(preserveTracking)
     clearPlan()
     source.value = ''
     identity = null
@@ -180,6 +211,10 @@ export function createImageImport(
       return true
     },
     supported: operations.supported,
+    recoveryProblem: operations.recoveryProblem,
+    previewRecoveryProblem: previews.recoveryProblem,
+    clearTracking: operations.clearTracking,
+    clearPreviewTracking: previews.clearTracking,
     source,
     acknowledged,
     outcomeAcknowledged,
@@ -189,6 +224,8 @@ export function createImageImport(
     pending,
     checking,
     canPreview,
+    canRefreshPreview,
+    refreshPreview,
     canSubmit,
     result,
     succeeded,
@@ -213,13 +250,22 @@ export function createImageImport(
     },
     bind(value: string) {
       if (identity === value) return
-      if (identity !== value) reset()
+      pause()
+      clearPlan()
+      source.value = ''
       identity = value
       previews.bind(value)
       operations.bind(value)
+      const recovered = previewEntry.value
+      if (recovered) {
+        source.value = recovered.request.source
+        if (entry.value?.request.planRequestId !== recovered.request.requestId)
+          activePlanRequest = recovered.request.requestId
+      }
     },
     dispose() {
-      reset()
+      pause()
+      clearPlan()
       stopSource()
       previews.dispose()
       operations.dispose()

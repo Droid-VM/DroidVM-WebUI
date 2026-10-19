@@ -1,8 +1,17 @@
 import { computed, inject, readonly, shallowRef, ref, type InjectionKey } from 'vue'
 import { ApiError, describeApiError, type ApiProblem } from '../../../shared/api/errors'
 import { requestId } from '../../../shared/api/requestId'
+import {
+  createOperationJournal,
+  JournalError,
+  type RecoveryProblem,
+} from '../../../shared/model/operationJournal'
 import type { Task } from '../../tasks'
-import type { ConfigurationGateway, ConfigDocument } from '../api/gateway'
+import type {
+  ConfigurationGateway,
+  ConfigDocument,
+  ConfigurationCommitTracking,
+} from '../api/gateway'
 import {
   cloneConfiguration,
   encodeDocument,
@@ -12,14 +21,12 @@ import {
 } from './document'
 import { copyConfiguration, uniqueVmName } from './copy'
 import { collectLeaseOccupancy, type LeaseOccupancy } from './leases'
-import {
-  createLinuxSeed,
-  seedLinuxConfiguration,
-  type LinuxSeed,
-  type LinuxSeedOptions,
-} from './linuxSeed'
 
 export function createConfigurationEditor(gateway?: ConfigurationGateway) {
+  const journal = gateway?.tracking ? createOperationJournal(gateway.tracking) : undefined
+  const recoveryProblem = ref<RecoveryProblem | null>(null),
+    restored = ref(false)
+  let identity: string | null = null
   const draft = shallowRef<ConfigObject | null>(null)
   const peerLeases = shallowRef<LeaseOccupancy>(new Map())
   const copying = ref(false)
@@ -48,7 +55,6 @@ export function createConfigurationEditor(gateway?: ConfigurationGateway) {
   let sourceId = ''
   let copyName: ((name: string) => string) | undefined
   let newName: string | undefined
-  let linuxSeed: LinuxSeed | undefined
   function pause() {
     generation++
     controller?.abort()
@@ -57,8 +63,17 @@ export function createConfigurationEditor(gateway?: ConfigurationGateway) {
     if (state.value === 'pending') state.value = 'unknown'
     else if (state.value === 'staging' || state.value === 'loading') state.value = 'blocked'
   }
-  function reset() {
+  function reset(preserveTracking = false) {
     pause()
+    if (!preserveTracking) {
+      try {
+        journal?.clear(identity, true)
+      } catch (cause) {
+        trackingFailed(cause)
+      }
+    }
+    if (!preserveTracking) identity = null
+    restored.value = false
     baseline = null
     peerLeases.value = new Map()
     pendingId = ''
@@ -73,18 +88,51 @@ export function createConfigurationEditor(gateway?: ConfigurationGateway) {
     sourceId = ''
     copyName = undefined
     newName = undefined
-    linuxSeed = undefined
+  }
+  function trackingFailed(cause: unknown) {
+    recoveryProblem.value = cause instanceof JournalError ? cause.problem : 'invalid'
+  }
+  function bind(value: string) {
+    if (identity === value && state.value !== 'idle') return
+    reset(true)
+    identity = value
+    recoveryProblem.value = null
+    if (!journal) return
+    try {
+      const records = journal.load(value)
+      if (records.length > 1) throw new JournalError('invalid')
+      const summary = records[0]?.request
+      if (summary) {
+        pendingId = summary.requestId
+        target.value = summary.vmId
+        sourceId = summary.vmId
+        restored.value = true
+        state.value = 'unknown'
+      }
+    } catch (cause) {
+      trackingFailed(cause)
+    }
   }
   async function load(
     id: string,
     options: {
       copyName?: (name: string) => string
       newName?: string
-      linuxSeed?: LinuxSeed
     } = {},
   ) {
+    if (!gateway?.supported() || (journal && !identity)) return
+    if (state.value === 'idle' && identity) bind(identity)
+    if (recoveryProblem.value) {
+      state.value = 'blocked'
+      return
+    }
+    if (pendingId) {
+      await reconcile()
+      return
+    }
+    const previousIdentity = identity
     reset()
-    if (!gateway?.supported()) return
+    identity = previousIdentity
     if (options.newName && !gateway.defaultsSupported()) return
     const epoch = generation,
       current = new AbortController()
@@ -93,7 +141,6 @@ export function createConfigurationEditor(gateway?: ConfigurationGateway) {
     sourceId = id
     copyName = options.copyName
     newName = options.newName
-    linuxSeed = options.linuxSeed
     copying.value = !!copyName
     creating.value = !!newName
     state.value = 'loading'
@@ -103,13 +150,11 @@ export function createConfigurationEditor(gateway?: ConfigurationGateway) {
         options.newName ? gateway.defaults(current.signal) : Promise.resolve(null),
       ])
       const document = parseDocument(loaded.json)
-      let row =
+      const row =
         defaults === null
           ? document.vms.find((value) => value.id === id)
           : parseConfiguration(defaults)
       if (!row) throw new Error('VM is not configured')
-      if (defaults !== null && options.linuxSeed)
-        row = seedLinuxConfiguration(row, options.linuxSeed)
       if (defaults !== null) {
         if (document.vms.some((vm) => vm.id === row.id)) throw new Error('VM already exists')
         row.name = uniqueVmName(document.vms, options.newName!)
@@ -161,11 +206,19 @@ export function createConfigurationEditor(gateway?: ConfigurationGateway) {
         }
         // A new successful read is required before declaring the editor settled.
         const fresh = await gateway.read(current.signal)
-        parseDocument(fresh.json)
+        const document = parseDocument(fresh.json)
         if (epoch !== generation || current.signal.aborted) return
         if (!fresh.version.persisted || fresh.version.durabilityUncertain) {
           state.value = 'blocked'
           return
+        }
+        // Restored commits contain no draft. Show the freshly observed configuration,
+        // never reconstruct a write or infer success from its mere existence.
+        if (restored.value) {
+          const row = document.vms.find((value) => value.id === target.value)
+          baseline = fresh
+          draft.value = row ? cloneConfiguration(row) : null
+          peerLeases.value = collectLeaseOccupancy(document.vms, target.value)
         }
         state.value = 'saved'
         copying.value = false
@@ -173,7 +226,6 @@ export function createConfigurationEditor(gateway?: ConfigurationGateway) {
         sourceId = target.value
         copyName = undefined
         newName = undefined
-        linuxSeed = undefined
         pendingId = ''
         dirty.value = false
         problem.value = null
@@ -190,7 +242,8 @@ export function createConfigurationEditor(gateway?: ConfigurationGateway) {
     }
   }
   async function save(remove = false) {
-    if (!gateway || !baseline || !draft.value || state.value !== 'editing') return
+    if (!gateway || recoveryProblem.value || !baseline || !draft.value || state.value !== 'editing')
+      return
     const epoch = generation,
       current = new AbortController()
     controller = current
@@ -215,6 +268,20 @@ export function createConfigurationEditor(gateway?: ConfigurationGateway) {
         void gateway.abort(upload, new AbortController().signal).catch(() => undefined)
         return
       }
+      const summary: ConfigurationCommitTracking = {
+        requestId: id,
+        vmId: target.value,
+        action: remove ? 'delete' : newDraft.value ? 'create' : 'save',
+      }
+      if (journal) {
+        try {
+          if (!identity) throw new JournalError('unavailable')
+          journal.save(identity, [{ key: 'vm-configuration', request: summary }])
+        } catch (cause) {
+          trackingFailed(cause)
+          throw cause
+        }
+      }
       pendingId = id
       posted = true
       state.value = 'pending'
@@ -235,6 +302,18 @@ export function createConfigurationEditor(gateway?: ConfigurationGateway) {
     if (epoch === generation && posted) await reconcile()
   }
   return {
+    recoveryProblem: readonly(recoveryProblem),
+    restored: readonly(restored),
+    bind,
+    clearTracking() {
+      if (pendingId || !recoveryProblem.value) return
+      try {
+        journal?.clear(identity, true)
+        recoveryProblem.value = null
+      } catch (cause) {
+        trackingFailed(cause)
+      }
+    },
     draft: readonly(draft),
     peerLeases: readonly(peerLeases),
     target: readonly(target),
@@ -251,12 +330,10 @@ export function createConfigurationEditor(gateway?: ConfigurationGateway) {
     open: (id: string, nameForCopy?: (name: string) => string) =>
       load(id, { copyName: nameForCopy }),
     create: (name: string) => load('', { newName: name }),
-    createLinux: (name: string, options: LinuxSeedOptions) =>
-      load('', { newName: name, linuxSeed: createLinuxSeed(options) }),
     reload: () => {
       if (pendingId) return reconcile()
       if (state.value === 'staging') return Promise.resolve()
-      return load(sourceId, { copyName, newName, linuxSeed })
+      return load(sourceId, { copyName, newName })
     },
     pause,
     reset,

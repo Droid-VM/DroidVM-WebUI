@@ -35,7 +35,7 @@ export function createUsbRulesEditor(gateway?: UsbRulesGateway, newId = requestI
   let generation = 0,
     identity: string | null = null
   const reads = new Set<AbortController>()
-  const operations = createOperations<RulesCommit>(gateway, observe)
+  const operations = createOperations<RulesCommit>(gateway, observe, gateway?.tracking)
   const entry = computed(() => operations.entries.value[key] ?? null)
   const pending = computed(() => !!entry.value && entry.value.state !== 'done')
   const busy = computed(() => loading.value || staging.value || pending.value)
@@ -44,7 +44,12 @@ export function createUsbRulesEditor(gateway?: UsbRulesGateway, newId = requestI
   )
   const issues = computed(() => (draft.value ? documentIssues(draft.value) : []))
   const editable = computed(
-    () => operations.supported.value && !!draft.value && !busy.value && !blocked.value,
+    () =>
+      operations.supported.value &&
+      !operations.recoveryProblem.value &&
+      !!draft.value &&
+      !busy.value &&
+      !blocked.value,
   )
   const canSave = computed(
     () =>
@@ -145,6 +150,10 @@ export function createUsbRulesEditor(gateway?: UsbRulesGateway, newId = requestI
     // A failed/uncertain write must never replace the user's draft or rebase it.
     if (!success) blocked.value = true
     const fresh = await read(success)
+    if (fresh && success && observed.value?.persistence !== 'persisted') {
+      blocked.value = true
+      return false
+    }
     if (fresh && success) saved.value = true
     return fresh
   }
@@ -230,9 +239,9 @@ export function createUsbRulesEditor(gateway?: UsbRulesGateway, newId = requestI
     loading.value = staging.value = targetLoading.value = false
     operations.pause()
   }
-  function reset() {
+  function reset(preserveTracking = false) {
     pause()
-    operations.reset()
+    operations.reset(preserveTracking)
     baseline.value = observed.value = draft.value = null
     targets.value = []
     problem.value = targetProblem.value = null
@@ -267,11 +276,17 @@ export function createUsbRulesEditor(gateway?: UsbRulesGateway, newId = requestI
     canSave,
     protectedDraft,
     checking: operations.checking,
+    recoveryProblem: operations.recoveryProblem,
+    clearTracking: operations.clearTracking,
     reconcile: operations.reconcile,
     reload,
     save,
     refreshTargets,
     async open() {
+      if (entry.value?.restored) {
+        await operations.reconcile()
+        return refreshTargets()
+      }
       const results = await Promise.all([
         draft.value ? Promise.resolve(true) : reload(),
         refreshTargets(),
@@ -314,12 +329,12 @@ export function createUsbRulesEditor(gateway?: UsbRulesGateway, newId = requestI
     pause,
     reset,
     bind(value: string) {
-      if (identity !== value) reset()
+      if (identity !== value) reset(true)
       identity = value
       operations.bind(value)
     },
     dispose() {
-      reset()
+      reset(true)
       operations.dispose()
     },
   }

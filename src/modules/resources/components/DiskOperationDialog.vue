@@ -11,7 +11,6 @@ import AppDialog from '../../../shared/ui/AppDialog.vue'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 
-const props = defineProps<{ linuxPreparation?: boolean; cloneDirectoryName?: string }>()
 const { t, locale } = useI18n(),
   actions = useDiskActions()
 const form = reactive(diskForm()),
@@ -54,17 +53,6 @@ watch(
       form,
       diskForm(value.detail?.disk.path, actions.initial.value, actions.defaultCpus.value),
     )
-    if (props.linuxPreparation) {
-      form.format = 'qcow2'
-      form.compression = 'none'
-      form.shrink = false
-      form.relocate = false
-      if (action.value === 'clone') {
-        if (actions.initial.value?.action === 'clone' && actions.initial.value.createFolder)
-          form.folder = form.folder.slice(0, form.folder.lastIndexOf('/')) || '/'
-        if (!form.name) form.name = value.detail?.disk.path.split('/').pop() || 'disk.img'
-      }
-    }
     if (
       !actions.initial.value &&
       action.value === 'resize' &&
@@ -95,15 +83,8 @@ const optionsVisible = computed(
     !actions.optimizing.value && ['create', 'clone', 'convert', 'flatten'].includes(action.value),
 )
 const impact = computed(() => (prepared.value ? diskImpact(prepared.value, action.value) : null))
-const cloneDirectory = computed(() => props.linuxPreparation && action.value === 'clone')
 const operation = computed(() => {
-  if (cloneDirectory.value && !props.cloneDirectoryName) return null
-  const op = buildDiskOperation(
-    action.value,
-    actions.selected.value,
-    form,
-    cloneDirectory.value ? props.cloneDirectoryName : undefined,
-  )
+  const op = buildDiskOperation(action.value, actions.selected.value, form)
   if (!op || !prepared.value) return null
   if (
     actions.optimizing.value &&
@@ -111,19 +92,6 @@ const operation = computed(() => {
   )
     return null
   const detail = prepared.value.detail
-  if (props.linuxPreparation) {
-    if (!['clone', 'convert', 'flatten', 'resize'].includes(op.action)) return null
-    if ('compress' in op && op.compress !== 'none') return null
-    if ((op.action === 'flatten' || op.action === 'convert') && op.format !== 'qcow2') return null
-    if (op.action === 'convert' && ('folder' in op || 'name' in op)) return null
-    if (
-      op.action === 'resize' &&
-      (op.shrink ||
-        !detail?.inspection.virtualBytes ||
-        BigInt(op.size) <= BigInt(detail.inspection.virtualBytes))
-    )
-      return null
-  }
   if (detail && !detail.disk.selectable) return null
   if (['resize', 'convert', 'reset'].includes(action.value) && detail?.children.length) return null
   if (['flatten', 'commit', 'reset'].includes(action.value) && !detail?.disk.parentId) return null
@@ -147,13 +115,7 @@ const operation = computed(() => {
     return null
   return op
 })
-const targetPath = computed(() => {
-  const op = candidate.value ?? operation.value
-  return op && 'folder' in op && 'name' in op
-    ? `${op.folder === '/' ? '' : op.folder}/${op.name}`
-    : ''
-})
-const growAvailable = computed(() => !props.linuxPreparation && actions.canGrow(operation.value))
+const growAvailable = computed(() => actions.canGrow(operation.value))
 watch(growAvailable, (available) => {
   if (!available) grow.value = false
 })
@@ -166,7 +128,6 @@ function review() {
   }
 }
 function submit() {
-  if (props.linuxPreparation && (!operation.value || confirmedGrow.value)) return
   if (candidate.value && acknowledged.value && actions.allowed.value)
     void actions.submit(candidate.value, confirmedGrow.value, confirmedRemember.value)
 }
@@ -288,39 +249,23 @@ onBeforeUnmount(actions.close)
           ><br />{{ prepared.detail.disk.path }}
         </p>
         <p>{{ t(actions.optimizing.value ? 'diskOptimizeEffect' : effectKeys[action]) }}</p>
-        <p v-if="linuxPreparation">{{ t('linuxVmDiskConstraints') }}</p>
         <form v-if="!candidate" @submit.prevent="review">
-          <label
-            v-if="action === 'convert' && !linuxPreparation && !actions.optimizing.value"
-            class="check"
+          <label v-if="action === 'convert' && !actions.optimizing.value" class="check"
             ><input v-model="form.relocate" type="checkbox" />{{ t('diskRelocate') }}</label
           >
           <template v-if="needsPath">
             <label
-              >{{ t(cloneDirectory ? 'linuxVmParentFolder' : 'diskHostFolder')
+              >{{ t('diskHostFolder')
               }}<input
                 v-model="form.folder"
-                :data-testid="cloneDirectory ? 'linux-vm-parent-folder' : undefined"
                 required
                 autocomplete="off"
                 placeholder="/storage/emulated/0/DroidVM"
             /></label>
-            <small>{{ t(cloneDirectory ? 'linuxVmDirectoryHint' : 'diskHostPathHint') }}</small>
-            <label v-if="cloneDirectory"
-              >{{ t('linuxVmDirectoryName')
-              }}<input data-testid="linux-vm-directory-name" :value="cloneDirectoryName" readonly
-            /></label>
+            <small>{{ t('diskHostPathHint') }}</small>
             <label
-              >{{ t(cloneDirectory ? 'linuxVmCopyFile' : 'diskFileName')
-              }}<input
-                v-model="form.name"
-                :data-testid="cloneDirectory ? 'linux-vm-copy-file' : undefined"
-                required
-                autocomplete="off"
+              >{{ t('diskFileName') }}<input v-model="form.name" required autocomplete="off"
             /></label>
-            <p v-if="cloneDirectory && targetPath" data-testid="linux-vm-target-path">
-              {{ t('linuxVmTargetPath') }}<br /><code>{{ targetPath }}</code>
-            </p>
           </template>
           <template v-if="action === 'create' && actions.selected.value">
             <label class="check"
@@ -349,7 +294,7 @@ onBeforeUnmount(actions.close)
           </template>
           <label v-if="formatVisible"
             >{{ t('diskActualFormat')
-            }}<select v-model="form.format" :disabled="linuxPreparation">
+            }}<select v-model="form.format">
               <option>qcow2</option>
               <option>raw</option>
               <template v-if="action === 'create'"
@@ -362,7 +307,7 @@ onBeforeUnmount(actions.close)
           <template v-if="optionsVisible">
             <label
               >{{ t('diskCompression')
-              }}<select v-model="form.compression" :disabled="linuxPreparation">
+              }}<select v-model="form.compression">
                 <option value="none">{{ t('diskNoCompression') }}</option>
                 <option value="deflate">Deflate</option>
                 <option value="zstd">Zstd</option>
@@ -372,13 +317,13 @@ onBeforeUnmount(actions.close)
               ><input v-model="form.preallocate" type="checkbox" />{{ t('diskPreallocate') }}</label
             >
           </template>
-          <label v-if="action === 'resize' && !linuxPreparation" class="check"
+          <label v-if="action === 'resize'" class="check"
             ><input v-model="form.shrink" type="checkbox" />{{ t('diskAllowShrink') }}</label
           >
           <p v-if="action === 'resize' && form.shrink" class="warning">
             {{ t('diskShrinkWarning') }}
           </p>
-          <template v-if="action === 'resize' && !linuxPreparation">
+          <template v-if="action === 'resize'">
             <label class="check"
               ><input v-model="grow" type="checkbox" :disabled="!growAvailable" />{{
                 t('diskGrowAfterResize')
@@ -444,12 +389,6 @@ onBeforeUnmount(actions.close)
         </form>
         <template v-else>
           <h3>{{ t('diskReview') }}</h3>
-          <template v-if="cloneDirectory">
-            <p>{{ t('linuxVmDirectoryHint') }}</p>
-            <p data-testid="linux-vm-target-review">
-              {{ t('linuxVmTargetPath') }}<br /><code>{{ targetPath }}</code>
-            </p>
-          </template>
           <dl>
             <template v-for="[key, value] in parameters" :key="key"
               ><dt>{{ t(parameterKeys[key]!) }}</dt>

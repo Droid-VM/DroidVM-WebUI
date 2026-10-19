@@ -39,7 +39,7 @@ export function createNetworkDeletion(
   let generation = 0,
     identity: string | null = null
   const reads = new Set<AbortController>()
-  const operations = createOperations<NetworkDeletionCommit>(gateway, observe)
+  const operations = createOperations<NetworkDeletionCommit>(gateway, observe, gateway?.tracking)
   const entry = computed(() => operations.entries.value.deletion ?? null)
   const uncertain = computed(
     () =>
@@ -49,14 +49,18 @@ export function createNetworkDeletion(
       recoveredFor.value !== entry.value.request.requestId,
   )
   const deletionPending = computed(() => !!entry.value && entry.value.state !== 'done')
-  const recovery = createOperations(recoveryGateway, async () => {
-    const current = recovery.entries.value.recovery,
-      epoch = generation
-    const fresh = await observe()
-    if (fresh && epoch === generation && current?.task?.state === 'succeeded')
-      recoveredFor.value = entry.value?.request.requestId ?? null
-    return fresh
-  })
+  const recovery = createOperations(
+    recoveryGateway,
+    async () => {
+      const current = recovery.entries.value.recovery,
+        epoch = generation
+      const fresh = await observe()
+      if (fresh && epoch === generation && current?.task?.state === 'succeeded')
+        recoveredFor.value = entry.value?.request.requestId ?? null
+      return fresh
+    },
+    recoveryGateway?.tracking,
+  )
   const recoveryEntry = computed(() => recovery.entries.value.recovery ?? null)
   const recoveryPending = computed(
     () => !!recoveryEntry.value && recoveryEntry.value.state !== 'done',
@@ -68,7 +72,13 @@ export function createNetworkDeletion(
   )
   const busy = computed(() => loading.value || staging.value || pending.value)
   const canSubmit = computed(
-    () => supported.value && !!preview.value && !busy.value && !entry.value && !uncertain.value,
+    () =>
+      supported.value &&
+      !operations.recoveryProblem.value &&
+      !!preview.value &&
+      !busy.value &&
+      !entry.value &&
+      !uncertain.value,
   )
   const canRecover = computed(
     () =>
@@ -205,10 +215,10 @@ export function createNetworkDeletion(
     operations.pause()
     recovery.pause()
   }
-  function reset() {
+  function reset(preserveTracking = false) {
     pause()
-    operations.reset()
-    recovery.reset()
+    operations.reset(preserveTracking)
+    recovery.reset(preserveTracking)
     visible.value = false
     recoveryConfirmation.value = false
     target.value = null
@@ -239,6 +249,13 @@ export function createNetworkDeletion(
     canRecover,
     recoverySupported: recovery.supported,
     checking: computed(() => operations.checking.value || recovery.checking.value),
+    recoveryProblem: computed(
+      () => operations.recoveryProblem.value ?? recovery.recoveryProblem.value,
+    ),
+    clearTracking() {
+      operations.clearTracking()
+      recovery.clearTracking()
+    },
     open,
     submit,
     recover,
@@ -263,13 +280,14 @@ export function createNetworkDeletion(
     pause,
     reset,
     bind(value: string) {
-      if (identity !== value) reset()
+      if (identity !== value) reset(true)
       identity = value
       operations.bind(value)
       recovery.bind(value)
+      if (entry.value?.restored) target.value = entry.value.request.networkId
     },
     dispose() {
-      reset()
+      reset(true)
       operations.dispose()
       recovery.dispose()
     },

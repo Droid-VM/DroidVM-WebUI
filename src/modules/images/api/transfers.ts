@@ -5,7 +5,12 @@ import type { HttpClient } from '../../../shared/api/httpClient'
 import type { UploadGateway } from '../../../shared/model/chunkedUpload'
 import { validHostPath } from '../../../shared/lib/hostPath'
 import { validUploadName } from '../../../shared/lib/uploadFiles'
-import { checkTask, type OperationGateway, type OperationTracking } from '../../tasks'
+import {
+  checkTask,
+  recoverLookup,
+  type OperationGateway,
+  type OperationTracking,
+} from '../../tasks'
 type Schemas = components['schemas']
 export type ImageUpload = Schemas['ImageUpload']
 export type ImageInstallRequest = Omit<Schemas['ImageInstallRequest'], 'context'>
@@ -16,6 +21,7 @@ export interface ImageTransferGateway {
   }
 }
 interface Access {
+  hostId?: string
   context: Schemas['ServerContext']
   capabilities: readonly string[]
   csrfToken: string
@@ -197,6 +203,7 @@ export function createImageTransferGateway(
     install: {
       tracking: {
         namespace: 'image-install',
+        durable: true,
         valid: validTrackedImageInstall,
         key: () => 'install',
       },
@@ -222,7 +229,11 @@ export function createImageTransferGateway(
           signal,
         )
         if (!validLookup(value)) throw invalid()
-        return verifyTask(value, current, request)
+        return verifyTask(
+          await recoverLookup(client, current, request.requestId, value, signal),
+          current,
+          request,
+        )
       },
     },
   }

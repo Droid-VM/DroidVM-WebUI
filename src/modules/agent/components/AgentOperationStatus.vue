@@ -7,6 +7,7 @@ import type { MessageKey } from '../../../shared/i18n'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 import AppProgress from '../../../shared/ui/AppProgress.vue'
+import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 const { t } = useI18n()
 const agent = useAgentOperations(),
   entry = agent.entry
@@ -26,6 +27,7 @@ const stateKeys: Record<string, MessageKey> = {
 const label = (state: string) => t(stateKeys[state] ?? 'agentStateUncertain')
 </script>
 <template>
+  <OperationTrackingNotice :problem="agent.trackingProblem.value" @clear="agent.clearTracking" />
   <section v-if="entry" class="agent-status" aria-live="polite" :aria-label="t('agentStatusTitle')">
     <h2>
       {{ t(entry.reference.action === 'chpasswd' ? 'agentPasswordTitle' : 'agentGrowTitle') }}
@@ -46,9 +48,12 @@ const label = (state: string) => t(stateKeys[state] ?? 'agentStateUncertain')
       <strong>{{ label(result.outcome) }}</strong>
       <template v-if="result.outcome === 'rescue_ready'">
         <p>{{ t('agentRescueHandoffHint') }}</p>
-        <RouterLink v-if="result.rescueSessionId" :to="`/agent/rescue/${result.rescueSessionId}`">{{
-          t('agentRescueOpen')
-        }}</RouterLink>
+        <RouterLink
+          v-if="result.rescueSessionId"
+          class="btn tonal"
+          :to="`/agent/rescue/${result.rescueSessionId}`"
+          >{{ t('agentRescueOpen') }}</RouterLink
+        >
       </template>
       <dl>
         <dt>{{ t('agentGuestResult') }}</dt>
@@ -87,7 +92,7 @@ const label = (state: string) => t(stateKeys[state] ?? 'agentStateUncertain')
         @click="agent.reconcile"
         >{{ t('queryStatus') }}</AppButton
       >
-      <RouterLink to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+      <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
     </div>
   </section>
 </template>

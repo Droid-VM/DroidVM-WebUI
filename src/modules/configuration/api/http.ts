@@ -4,11 +4,13 @@ import { ApiError } from '../../../shared/api/errors'
 import { stageConfiguration } from '../../../shared/api/stagedUpload'
 import { readConfigurationSnapshot } from '../../../shared/api/configurationSnapshot'
 import type { HttpClient } from '../../../shared/api/httpClient'
-import { checkTask } from '../../tasks'
+import { recoverLookup, checkTask } from '../../tasks'
+import { createCommitTracking } from '../../../shared/model/commitTracking'
 import type { ConfigurationGateway } from './gateway'
 
 type Schemas = components['schemas']
 interface Access {
+  hostId?: string
   context: Schemas['ServerContext']
   csrfToken: string
   capabilities: readonly string[]
@@ -68,6 +70,7 @@ export function createConfigurationGateway(
     }
   }
   return {
+    tracking: createCommitTracking('vm-configuration', 'vm-configuration', ['vmId', 'action']),
     supported: () => permits(access()),
     defaultsSupported: () =>
       permits(access()) && !!access()?.capabilities.includes('vm.defaults.v1'),
@@ -117,7 +120,10 @@ export function createConfigurationGateway(
       return result.task
     },
     async status(requestId, signal) {
-      const result = await request(requireAccess(), 'status', { requestId }, signal, statusValid)
+      const current = requireAccess()
+      const original = await request(current, 'status', { requestId }, signal, statusValid)
+      const result = await recoverLookup(client, current, requestId, original, signal)
+      if (!statusValid(result)) throw invalid()
       if (result.task) {
         if (
           result.task.requestId !== requestId ||

@@ -6,6 +6,7 @@ import { taskStateKeys } from '../../tasks'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppDialog from '../../../shared/ui/AppDialog.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 
 const { t } = useI18n(),
   recovery = useDiskActions().recovery,
@@ -27,6 +28,10 @@ function run() {
     :aria-label="t('diskRecoveryTitle')"
   >
     <h2>{{ t('diskRecoveryTitle') }}</h2>
+    <OperationTrackingNotice
+      :problem="recovery.recoveryProblem.value"
+      @clear="recovery.clearTracking"
+    />
     <p v-if="recovery.pending.value !== null">
       {{ t('diskRecoveryCount', { count: recovery.pending.value }) }}
     </p>
@@ -60,7 +65,7 @@ function run() {
       <AppButton :disabled="!recovery.allowed.value" @click="prepare">{{
         t('diskRecover')
       }}</AppButton>
-      <RouterLink to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+      <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
     </div>
     <AppDialog :open="confirm" :title="t('diskRecoveryTitle')" @close="confirm = false">
       <p>{{ t('diskRecoveryConfirm') }}</p>

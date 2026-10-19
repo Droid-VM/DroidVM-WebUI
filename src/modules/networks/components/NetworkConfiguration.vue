@@ -8,6 +8,7 @@ import { object, encodeDocument } from '../../../shared/model/configurationDocum
 import NetworkField from './NetworkField.vue'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
 const editor = useNetworkEditor(),
   { t } = useI18n()
@@ -40,6 +41,10 @@ function download() {
 </script>
 <template>
   <div class="network-editor" :aria-busy="editor.busy.value">
+    <OperationTrackingNotice
+      :problem="editor.recoveryProblem.value"
+      @clear="editor.clearTracking"
+    />
     <p class="muted">{{ t('networkEditHint') }}</p>
     <div class="toolbar">
       <AppButton :disabled="editor.busy.value" @click="confirmation = 'reload'">{{
@@ -59,7 +64,9 @@ function download() {
     >
     <p v-if="editor.loading.value || editor.staging.value" role="status">{{ t('processing') }}</p>
     <section v-if="editor.entry.value" class="network-card" aria-live="polite">
+      <p v-if="editor.entry.value.restored">{{ t('configurationRestoredReceipt') }}</p>
       <p v-if="editor.entry.value.state === 'unknown'">{{ t('configUnknown') }}</p>
+      <p v-if="editor.entry.value.state === 'unknown'">{{ t('configurationMissingReceipt') }}</p>
       <p v-if="editor.entry.value.task">
         {{ t(taskStateKeys[editor.entry.value.task.state]) }}
         <span v-if="editor.entry.value.task.errorCode"

@@ -11,4 +11,3 @@ export {
   useConfigurationEditor,
 } from './model/editor'
 export { default as VmConfiguration } from './components/VmConfiguration.vue'
-export type { LinuxSeedOptions } from './model/linuxSeed'

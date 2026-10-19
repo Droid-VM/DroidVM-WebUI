@@ -3,16 +3,25 @@ import { compileContract } from '../../../shared/api/contract'
 import { ApiError } from '../../../shared/api/errors'
 import type { HttpClient, ApiPath } from '../../../shared/api/httpClient'
 import { validHostPath } from '../../../shared/lib/hostPath'
-import { checkTask, type OperationGateway } from '../../tasks'
+import {
+  recoverLookup,
+  checkTask,
+  type OperationGateway,
+  type OperationTracking,
+} from '../../tasks'
 
 type Schemas = components['schemas']
 export type ImageImportPlan = Schemas['ImageImportPlan']
 export type ImageImportPlanRequest = Omit<Schemas['ImageImportPlanRequest'], 'context'>
 export type ImageImportRequest = Omit<Schemas['ImageImportRequest'], 'context'>
 export interface ImageImportGateway extends OperationGateway<ImageImportRequest> {
-  preview: OperationGateway<ImageImportPlanRequest>
+  tracking?: OperationTracking<ImageImportRequest>
+  preview: OperationGateway<ImageImportPlanRequest> & {
+    tracking?: OperationTracking<ImageImportPlanRequest>
+  }
 }
 interface Access {
+  hostId?: string
   context: Schemas['ServerContext']
   capabilities: readonly string[]
   csrfToken: string
@@ -25,6 +34,28 @@ const validRequest = compileContract<Schemas['ImageImportRequest']>('ImageImport
 const validResponse = compileContract<Schemas['TaskResponse']>('TaskResponse')
 const validLookup = compileContract<Schemas['VmOperationLookup']>('VmOperationLookup')
 const invalid = () => new ApiError('invalid-response', 'Invalid image import response')
+export function validTrackedImagePreview(request: unknown): request is ImageImportPlanRequest {
+  if (
+    !request ||
+    typeof request !== 'object' ||
+    Object.keys(request).sort().join(',') !== 'requestId,source'
+  )
+    return false
+  const body = { ...request, context: { daemonEpoch: 'tracking', sessionId: '0'.repeat(64) } }
+  return validPlanRequest(body) && validHostPath(body.source)
+}
+export function validTrackedImageImport(request: unknown): request is ImageImportRequest {
+  if (
+    !request ||
+    typeof request !== 'object' ||
+    Object.keys(request).sort().join(',') !== 'planRequestId,requestId'
+  )
+    return false
+  return validRequest({
+    ...request,
+    context: { daemonEpoch: 'tracking', sessionId: '0'.repeat(64) },
+  })
+}
 export function createImageImportGateway(
   client: HttpClient,
   access: () => Access | null,
@@ -132,12 +163,31 @@ export function createImageImportGateway(
           signal,
         )
         if (!validLookup(value)) throw invalid()
-        return verify(value, current, request, preview)
+        return verify(
+          preview ? value : await recoverLookup(client, current, request.requestId, value, signal),
+          current,
+          request,
+          preview,
+        )
       },
     }
   }
   return {
     ...gateway<ImageImportRequest>('/api/v1/image-imports', false, validRequest),
-    preview: gateway<ImageImportPlanRequest>('/api/v1/image-import-plans', true, validPlanRequest),
+    tracking: {
+      namespace: 'image-import',
+      durable: true,
+      valid: validTrackedImageImport,
+      key: () => 'import',
+    },
+    preview: {
+      ...gateway<ImageImportPlanRequest>('/api/v1/image-import-plans', true, validPlanRequest),
+      tracking: {
+        namespace: 'image-preview',
+        durable: true,
+        valid: validTrackedImagePreview,
+        key: () => 'preview',
+      },
+    },
   }
 }

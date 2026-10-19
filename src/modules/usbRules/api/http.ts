@@ -3,11 +3,13 @@ import { compileContract } from '../../../shared/api/contract'
 import { ApiError } from '../../../shared/api/errors'
 import type { HttpClient } from '../../../shared/api/httpClient'
 import { stageConfiguration, configurationChunkBytes } from '../../../shared/api/stagedUpload'
-import { checkTask, type Task } from '../../tasks'
+import { recoverLookup, checkTask, type Task } from '../../tasks'
+import { createCommitTracking } from '../../../shared/model/commitTracking'
 import type { UsbRulesGateway } from './gateway'
 
 type Schemas = components['schemas']
 interface Access {
+  hostId?: string
   context: Schemas['ServerContext']
   csrfToken: string
   capabilities: readonly string[]
@@ -67,6 +69,7 @@ export function createUsbRulesGateway(
     return task
   }
   return {
+    tracking: createCommitTracking('usb-rules', 'usb-rules', [], ['uploadId']),
     supported: () => permits(access()),
     previewSupported: () =>
       permits(access()) && !!access()?.capabilities.includes('usb.rules.preview.v1'),
@@ -177,8 +180,10 @@ export function createUsbRulesGateway(
         signal,
         statusValid,
       )
-      if ((result.task?.state === 'succeeded') !== !!result.version) throw invalid()
-      return result.task ? task(result.task, input.requestId) : null
+      const recovered = await recoverLookup(client, access(), input.requestId, result, signal)
+      if (!statusValid(recovered)) throw invalid()
+      if ((recovered.task?.state === 'succeeded') !== !!recovered.version) throw invalid()
+      return recovered.task ? task(recovered.task, input.requestId) : null
     },
   }
 }

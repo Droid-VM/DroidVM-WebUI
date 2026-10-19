@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDiskActions } from '../model/diskOperations'
 import { useResourceCatalog } from '../model/catalog'
@@ -22,6 +23,18 @@ const growStateKeys: Record<string, MessageKey> = {
   submitted: 'diskGrowSubmitted',
   stopped: 'diskGrowStopped',
 }
+const growConfirmed = ref(false)
+watch(
+  () => actions.resizeGrow.sequence.value,
+  () => {
+    growConfirmed.value = false
+  },
+)
+async function resumeGrow() {
+  if (!growConfirmed.value) return
+  growConfirmed.value = false
+  await actions.resumeGrow()
+}
 function retry() {
   void actions.retry()
 }
@@ -31,6 +44,12 @@ function retry() {
     :problem="actions.recoveryProblem.value"
     @clear="actions.clearTracking"
   />
+  <AppNotice
+    v-if="actions.resizeGrow.recoveryProblem.value"
+    tone="warning"
+    :title="t('operationTrackingTitle')"
+    ><p>{{ t('diskGrowTrackingUnavailable') }}</p></AppNotice
+  >
   <section
     v-if="actions.entries.value.disk"
     class="disk-status"
@@ -60,6 +79,36 @@ function retry() {
       >
         <strong>{{ t('diskGrowSequence') }}</strong>
         <p>{{ t(growStateKeys[actions.resizeGrow.sequence.value.state]!) }}</p>
+        <p>
+          {{ actions.resizeGrow.sequence.value.target.diskId }} ·
+          {{ actions.resizeGrow.sequence.value.target.size }} B
+        </p>
+        <p v-if="actions.resizeGrow.sequence.value.growRequestId">
+          {{ t('diskGrowRequest', { id: actions.resizeGrow.sequence.value.growRequestId }) }}
+        </p>
+        <template
+          v-if="
+            actions.resizeGrow.sequence.value.state === 'stopped' &&
+            !actions.resizeGrow.sequence.value.growRequestId &&
+            entry.state === 'done' &&
+            entry.task?.state === 'succeeded'
+          "
+        >
+          <label
+            ><input v-model="growConfirmed" type="checkbox" />{{
+              t('diskGrowResumeConfirm')
+            }}</label
+          >
+          <AppButton
+            :disabled="
+              !growConfirmed ||
+              !actions.resizeGrow.available.value ||
+              !!actions.resizeGrow.recoveryProblem.value
+            "
+            @click="resumeGrow"
+            >{{ t('diskGrowResume') }}</AppButton
+          >
+        </template>
         <p v-if="actions.resizeGrow.sequence.value.problem">
           {{ t(actions.resizeGrow.sequence.value.problem.descriptionKey) }}
         </p>
@@ -97,7 +146,7 @@ function retry() {
         @click="resources.diskDetail.open(entry.task.diskId!)"
         >{{ t('diskViewResult') }}</AppButton
       >
-      <RouterLink to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+      <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
     </template>
   </section>
 </template>

@@ -10,7 +10,8 @@ export function createImageTransfers(
   acceptSource: (path: string) => boolean,
   newId = requestId,
 ) {
-  let identity: string | null = null
+  let identity: string | null = null,
+    receiptIdentity: string | null = null
   const uploader = createChunkedUpload(gateway?.upload, {
     newId,
     files(files) {
@@ -119,7 +120,7 @@ export function createImageTransfers(
     uploader.reset()
     if (identity) {
       uploader.bind(identity)
-      operations.bind(identity)
+      operations.bind(receiptIdentity ?? identity)
     }
     acknowledged.value = false
     outcomeAcknowledged.value = false
@@ -136,15 +137,16 @@ export function createImageTransfers(
   function clearState() {
     pause()
     identity = null
+    receiptIdentity = null
     draft.folder = ''
     draft.name = ''
     handedOff.value = false
     handoffBlocked.value = false
   }
-  function reset() {
+  function reset(preserveTracking = false) {
     clearState()
     uploader.reset()
-    operations.reset()
+    operations.reset(preserveTracking)
   }
   return {
     uploader,
@@ -186,12 +188,13 @@ export function createImageTransfers(
       await operations.reconcile()
       return !entry.value?.problem
     },
-    bind(value: string) {
-      if (identity === value) return
+    bind(value: string, receipts = value) {
+      if (identity === value && receiptIdentity === receipts) return
       clearState()
       identity = value
+      receiptIdentity = receipts
       uploader.bind(value)
-      operations.bind(value)
+      operations.bind(receipts)
     },
     leave() {
       uploader.pause()

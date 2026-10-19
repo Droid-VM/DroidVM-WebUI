@@ -34,7 +34,7 @@ function clear() {
         {{ t(problem === 'invalid' ? 'operationTrackingInvalid' : 'operationTrackingUnavailable') }}
       </p>
       <p>{{ t('operationTrackingHint') }}</p>
-      <RouterLink to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+      <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
       <label>
         <input v-model="confirmed" type="checkbox" data-testid="operation-tracking-confirm" />
         {{ t('operationTrackingConfirm') }}

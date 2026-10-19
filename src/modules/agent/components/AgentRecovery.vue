@@ -6,6 +6,7 @@ import { taskStateKeys } from '../../tasks'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppDialog from '../../../shared/ui/AppDialog.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 const { t } = useI18n(),
   agent = useAgentOperations(),
   confirm = ref(false)
@@ -25,6 +26,10 @@ function run() {
     :aria-label="t('agentRecoveryTitle')"
   >
     <h2>{{ t('agentRecoveryTitle') }}</h2>
+    <OperationTrackingNotice
+      :problem="agent.recovery.recoveryProblem.value"
+      @clear="agent.recovery.clearTracking"
+    />
     <p>{{ t('agentRecoveryHint') }}</p>
     <p v-if="agent.pendingRecords.value !== null">
       {{ t('agentRecoveryCount', { count: agent.pendingRecords.value }) }}

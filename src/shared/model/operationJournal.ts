@@ -2,6 +2,9 @@ export interface OperationTracking<R> {
   namespace: string
   valid(request: unknown): request is R
   key(request: R): string
+  /** Store only a non-secret lookup reference when the submitted request carries leases. */
+  snapshot?(request: R): R
+  durable?: boolean
   storage?: Storage
   byteLimit?: number
 }
@@ -40,7 +43,9 @@ export function createOperationJournal<R>(tracking: OperationTracking<R>) {
   let expectedRaw: string | null | undefined
   function storage() {
     try {
-      return tracking.storage ?? globalThis.sessionStorage
+      return (
+        tracking.storage ?? (tracking.durable ? globalThis.localStorage : globalThis.sessionStorage)
+      )
     } catch {
       throw new JournalError('unavailable')
     }
@@ -110,7 +115,14 @@ export function createOperationJournal<R>(tracking: OperationTracking<R>) {
     save(identity: string, value: TrackedOperation<R>[], replace = false) {
       let encoded: string
       try {
-        encoded = JSON.stringify({ version: 1, identity, records: value })
+        encoded = JSON.stringify({
+          version: 1,
+          identity,
+          records: value.map((row) => ({
+            key: row.key,
+            request: tracking.snapshot ? tracking.snapshot(row.request) : row.request,
+          })),
+        })
         // Validate the serialized snapshot as well as caller input, then keep it immutable.
         decode(encoded)
       } catch (error) {
@@ -141,8 +153,9 @@ export function createOperationJournal<R>(tracking: OperationTracking<R>) {
         const encoded = JSON.stringify(request)
         bounded(encoded, byteLimit)
         const value: unknown = JSON.parse(encoded)
-        if (!safe(value) || !tracking.valid(value)) throw new JournalError('invalid')
-        return value
+        const projected = tracking.snapshot ? tracking.snapshot(value as R) : value
+        if (!safe(value) || !tracking.valid(projected)) throw new JournalError('invalid')
+        return value as R
       } catch (error) {
         if (error instanceof JournalError) throw error
         throw new JournalError('invalid')

@@ -5,6 +5,7 @@ import { taskStateKeys } from '../../tasks'
 import AppDialog from '../../../shared/ui/AppDialog.vue'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
+import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 
 const deletion = useNetworkDeletion(),
   { t } = useI18n()
@@ -20,6 +21,21 @@ const deletion = useNetworkDeletion(),
       data-testid="network-delete-dialog"
       :aria-busy="deletion.loading.value || deletion.staging.value"
     >
+      <OperationTrackingNotice
+        :problem="deletion.recoveryProblem.value"
+        @clear="deletion.clearTracking"
+      />
+      <p v-if="deletion.entry.value?.restored || deletion.recoveryEntry.value?.restored">
+        {{ t('configurationRestoredReceipt') }}
+      </p>
+      <p
+        v-if="
+          deletion.entry.value?.state === 'unknown' ||
+          deletion.recoveryEntry.value?.state === 'unknown'
+        "
+      >
+        {{ t('configurationMissingReceipt') }}
+      </p>
       <template v-if="deletion.recoveryConfirmation.value">
         <p>{{ t('configurationRecoveryConfirm') }}</p>
         <p>{{ t('configurationRecoveryNotDeletion') }}</p>

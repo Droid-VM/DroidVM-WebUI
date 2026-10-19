@@ -16,7 +16,7 @@ export function createConfigurationBackup(
   refresh: () => Promise<boolean>,
   newId = requestId,
 ) {
-  const operations = createOperations(gateway, refresh)
+  const operations = createOperations(gateway, refresh, gateway?.tracking)
   const name = ref(''),
     size = ref(0),
     raw = shallowRef<string | null>(null)
@@ -66,11 +66,16 @@ export function createConfigurationBackup(
   const busy = computed(() => reading.value || staging.value || pending.value)
   const canPreview = computed(
     () =>
-      operations.supported.value && !busy.value && !recoveryRequired.value && raw.value !== null,
+      operations.supported.value &&
+      !operations.recoveryProblem.value &&
+      !busy.value &&
+      !recoveryRequired.value &&
+      raw.value !== null,
   )
   const canCommit = computed(
     () =>
       operations.supported.value &&
+      !operations.recoveryProblem.value &&
       !busy.value &&
       !recoveryRequired.value &&
       !!preview.value &&
@@ -193,9 +198,9 @@ export function createConfigurationBackup(
     cancelPreparation()
     operations.pause()
   }
-  function reset() {
+  function reset(preserveTracking = false) {
     pause()
-    operations.reset()
+    operations.reset(preserveTracking)
     identity = null
     raw.value = null
     name.value = ''
@@ -222,6 +227,8 @@ export function createConfigurationBackup(
     canCommit,
     recoveryRequired,
     checking: operations.checking,
+    recoveryProblem: operations.recoveryProblem,
+    clearTracking: operations.clearTracking,
     select,
     prepare,
     commit,
@@ -231,12 +238,12 @@ export function createConfigurationBackup(
     pause,
     reset,
     bind(value: string) {
-      if (identity !== value) reset()
+      if (identity !== value) reset(true)
       identity = value
       operations.bind(value)
     },
     dispose() {
-      reset()
+      reset(true)
       operations.dispose()
     },
   }

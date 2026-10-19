@@ -175,11 +175,11 @@ export function createOperations<R>(
     for (const entry of Object.values(entries.value))
       if (entry.state === 'posting') entry.state = 'unknown'
   }
-  function reset() {
+  function reset(preserveTracking = false) {
     pause()
     entries.value = {}
     try {
-      journal?.clear(null, true)
+      if (!preserveTracking) journal?.clear(null, true)
       recoveryProblem.value = null
     } catch (cause) {
       journalFailed(cause)

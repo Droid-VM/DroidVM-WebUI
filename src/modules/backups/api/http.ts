@@ -3,7 +3,13 @@ import { compileContract } from '../../../shared/api/contract'
 import { ApiError } from '../../../shared/api/errors'
 import type { HttpClient } from '../../../shared/api/httpClient'
 import { stageConfiguration } from '../../../shared/api/stagedUpload'
-import { checkTask, type OperationGateway } from '../../tasks'
+import { createCommitTracking } from '../../../shared/model/commitTracking'
+import {
+  recoverLookup,
+  checkTask,
+  type OperationGateway,
+  type OperationTracking,
+} from '../../tasks'
 
 type Schemas = components['schemas']
 export type ConfigurationBackupPreview = Schemas['ConfigurationBackupPreview']
@@ -12,11 +18,13 @@ export type ConfigurationBackupRequest = Omit<
   'context'
 >
 export interface ConfigurationBackupGateway extends OperationGateway<ConfigurationBackupRequest> {
+  tracking?: OperationTracking<ConfigurationBackupRequest>
   stage(raw: string, signal: AbortSignal): Promise<string>
   preview(uploadId: string, signal: AbortSignal): Promise<ConfigurationBackupPreview>
   abort(uploadId: string, signal: AbortSignal): Promise<void>
 }
 interface Access {
+  hostId?: string
   context: Schemas['ServerContext']
   capabilities: readonly string[]
   csrfToken: string
@@ -98,6 +106,12 @@ export function createConfigurationBackupGateway(
     return task
   }
   return {
+    tracking: createCommitTracking(
+      'configuration-backup',
+      'import',
+      [],
+      ['uploadId', 'previewToken'],
+    ),
     supported,
     async stage(raw, signal) {
       const current = scope()
@@ -139,7 +153,8 @@ export function createConfigurationBackupGateway(
         signal,
         validLookup,
       )
-      return verifyTask(result.task, request)
+      const recovered = await recoverLookup(client, access(), request.requestId, result, signal)
+      return verifyTask(recovered.task, request)
     },
   }
 }

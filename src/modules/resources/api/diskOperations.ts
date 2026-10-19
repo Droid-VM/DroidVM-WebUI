@@ -2,15 +2,23 @@ import type { components } from '../../../generated/api'
 import { compileContract } from '../../../shared/api/contract'
 import { ApiError } from '../../../shared/api/errors'
 import type { HttpClient } from '../../../shared/api/httpClient'
-import { checkTask, type OperationGateway, type OperationTracking } from '../../tasks'
+import {
+  recoverLookup,
+  checkTask,
+  type OperationGateway,
+  type OperationTracking,
+} from '../../tasks'
 import { createResourceGateway } from './http'
 import type { DiskBaseline, DiskDetail } from './gateway'
 
 export type DiskOperation = components['schemas']['DiskOperation']
 export type DiskAction = DiskOperation['action']
 export type DiskRequest = Omit<components['schemas']['DiskOperationRequest'], 'context'>
-export type DiskRecoveryRequest = Omit<components['schemas']['DiskRecoveryRequest'], 'context'>
+export type DiskRecoveryRequest = Omit<components['schemas']['DiskRecoveryRequest'], 'context'> & {
+  diskRequestId?: string | null
+}
 export interface DiskRecoveryGateway extends OperationGateway<DiskRecoveryRequest> {
+  tracking?: OperationTracking<DiskRecoveryRequest>
   status(signal: AbortSignal): Promise<number>
 }
 export interface DiskPreparation {
@@ -27,6 +35,7 @@ export interface DiskActionGateway extends OperationGateway<DiskRequest> {
   prepare(id: string | null, action: DiskAction, signal: AbortSignal): Promise<DiskPreparation>
 }
 interface Access {
+  hostId?: string
   context: components['schemas']['ServerContext']
   capabilities: readonly string[]
   csrfToken: string
@@ -43,6 +52,22 @@ const recoveryStatusValid =
   compileContract<components['schemas']['DiskRecoveryStatus']>('DiskRecoveryStatus')
 const recoveryRequestValid =
   compileContract<components['schemas']['DiskRecoveryRequest']>('DiskRecoveryRequest')
+export function validTrackedDiskRecovery(request: unknown): request is DiskRecoveryRequest {
+  if (!request || typeof request !== 'object' || Array.isArray(request)) return false
+  const value = request as Record<string, unknown>
+  if (!['requestId', 'diskRequestId,requestId'].includes(Object.keys(value).sort().join(',')))
+    return false
+  if (
+    value.diskRequestId !== undefined &&
+    value.diskRequestId !== null &&
+    (typeof value.diskRequestId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(value.diskRequestId))
+  )
+    return false
+  return recoveryRequestValid({
+    requestId: value.requestId,
+    context: { daemonEpoch: 'tracking', sessionId: '0'.repeat(64) },
+  })
+}
 export function validDiskOperation(operation: unknown): operation is DiskOperation {
   if (!operationValid(operation)) return false
   const op = operation
@@ -175,7 +200,12 @@ export function createDiskActionGateway(
     return value.task
   }
   return {
-    tracking: { namespace: 'disk', valid: validTrackedDiskRequest, key: () => 'disk' },
+    tracking: {
+      namespace: 'disk',
+      durable: true,
+      valid: validTrackedDiskRequest,
+      key: () => 'disk',
+    },
     supported,
     cloneDirectorySupported: () =>
       supported() && !!access()?.capabilities.includes('disks.clone-directory.v1'),
@@ -200,6 +230,12 @@ export function createDiskActionGateway(
       return value
     },
     recovery: {
+      tracking: {
+        namespace: 'disk-recovery',
+        durable: true,
+        valid: validTrackedDiskRecovery,
+        key: () => 'recovery',
+      },
       supported: recoverySupported,
       async status(signal) {
         const scope = recoveryScope(),
@@ -215,7 +251,7 @@ export function createDiskActionGateway(
       },
       async submit(request, signal) {
         const scope = recoveryScope(),
-          body = { ...request, context: scope.context }
+          body = { requestId: request.requestId, context: scope.context }
         if (!recoveryRequestValid(body))
           throw new ApiError('conflict', 'Invalid disk recovery request')
         const value = await client.postJson('/api/v1/disk-recovery', body, signal, {
@@ -234,7 +270,11 @@ export function createDiskActionGateway(
             signal,
           )
         if (!lookupValid(value)) throw new ApiError('invalid-response', 'Invalid recovery lookup')
-        return recoveryTask(value, scope, request)
+        return recoveryTask(
+          await recoverLookup(client, scope, request.requestId, value, signal),
+          scope,
+          request,
+        )
       },
     },
     async prepare(id, action, signal) {
@@ -288,7 +328,11 @@ export function createDiskActionGateway(
           signal,
         )
       if (!lookupValid(value)) throw new ApiError('invalid-response', 'Invalid disk task lookup')
-      return verify(value, scope, request)
+      return verify(
+        await recoverLookup(client, scope, request.requestId, value, signal),
+        scope,
+        request,
+      )
     },
   }
 }

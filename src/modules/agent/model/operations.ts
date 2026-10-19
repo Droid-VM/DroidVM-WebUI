@@ -11,6 +11,11 @@ import { ApiError, describeApiError, type ApiProblem } from '../../../shared/api
 import { requestId } from '../../../shared/api/requestId'
 import { createOperations, type Task } from '../../tasks'
 import {
+  createOperationJournal,
+  JournalError,
+  type RecoveryProblem,
+} from '../../../shared/model/operationJournal'
+import {
   clearAgentPassword,
   validAgentPassword,
   type AgentAction,
@@ -40,6 +45,16 @@ export function createAgentOperations(
   newId = requestId,
 ) {
   const entry = shallowRef<Entry | null>(null)
+  const journal = gateway?.tracking ? createOperationJournal(gateway.tracking) : undefined
+  const trackingProblem = shallowRef<RecoveryProblem | null>(null)
+  const contextBound = ref(false)
+  function trackingFailed(cause: unknown) {
+    trackingProblem.value = cause instanceof JournalError ? cause.problem : 'invalid'
+  }
+  function persist(reference: AgentReference | null, replace = false) {
+    if (!journal || identity === null) return
+    journal.save(identity, reference ? [{ key: 'agent', request: reference }] : [], replace)
+  }
   const preparation = shallowRef<AgentPreparation | null>(null)
   const problem = shallowRef<ApiProblem | null>(null)
   const open = ref(false),
@@ -59,13 +74,14 @@ export function createAgentOperations(
   let preparationRead: AbortController | undefined
   const supported = computed(() => !disposed && !!gateway?.supported())
   const busy = computed(() => !!entry.value && entry.value.state !== 'done')
-  const recovery = createOperations(gateway?.recovery, refresh)
+  const recovery = createOperations(gateway?.recovery, refresh, gateway?.recovery.tracking)
   const recoveryBusy = computed(() =>
     Object.values(recovery.entries.value).some((row) => row.state !== 'done'),
   )
   const recoveryAllowed = computed(
     () =>
       recovery.supported.value &&
+      !trackingProblem.value &&
       recovery.allowed('agent') &&
       !busy.value &&
       !open.value &&
@@ -75,6 +91,9 @@ export function createAgentOperations(
   const allowed = computed(
     () =>
       supported.value &&
+      !trackingProblem.value &&
+      (!journal || contextBound.value) &&
+      !recovery.recoveryProblem.value &&
       !busy.value &&
       !recoveryBusy.value &&
       (!recovery.supported.value || (pendingRecords.value !== null && !recoveryProblem.value)) &&
@@ -165,6 +184,13 @@ export function createAgentOperations(
       action: operation.action,
       ...(rescue ? { rescue: true } : {}),
     }
+    try {
+      persist(reference)
+    } catch (cause) {
+      trackingFailed(cause)
+      clearAgentPassword(operation)
+      return
+    }
     const epoch = generation,
       controller = new AbortController()
     entry.value = { reference, state: 'posting', task: null, problem: null }
@@ -193,8 +219,14 @@ export function createAgentOperations(
         ['conflict', 'unauthenticated', 'permission-denied', 'unsupported'].includes(cause.code) &&
         (await refresh()) &&
         epoch === generation
-      )
+      ) {
         entry.value = { ...entry.value!, state: 'done' }
+        try {
+          persist(null)
+        } catch (failure) {
+          trackingFailed(failure)
+        }
+      }
     } finally {
       clearAgentPassword(operation)
       reads.delete(controller)
@@ -302,14 +334,15 @@ export function createAgentOperations(
       task?.state === 'succeeded' &&
       task.pendingRecords === 0
     )
-      recoveredRequest.value = recoveryForRequest
+      recoveredRequest.value =
+        recovery.entries.value.agent?.request.agentRequestId ?? recoveryForRequest
     await readRecovery()
   }
   async function recover() {
     if (!recoveryAllowed.value || pendingRecords.value === null) return
     const epoch = generation
     recoveryForRequest = entry.value?.reference.requestId ?? null
-    await recovery.submit('agent', { requestId: newId() })
+    await recovery.submit('agent', { requestId: newId(), agentRequestId: recoveryForRequest })
     if (epoch === generation) await reconcileRecovery()
   }
   function pause() {
@@ -321,18 +354,46 @@ export function createAgentOperations(
     if (entry.value?.state === 'posting') entry.value = { ...entry.value, state: 'unknown' }
     recovery.pause()
   }
-  function reset() {
+  function reset(preserveTracking = false) {
     pause()
+    if (!preserveTracking) {
+      try {
+        journal?.clear(identity)
+        trackingProblem.value = null
+      } catch (cause) {
+        trackingFailed(cause)
+      }
+    }
     entry.value = null
     pendingRecords.value = null
     recoveredRequest.value = null
     recoveryForRequest = null
     recoveryProblem.value = null
     identity = null
-    recovery.reset()
+    contextBound.value = false
+    recovery.reset(preserveTracking)
   }
   return {
     supported,
+    trackingProblem: readonly(trackingProblem),
+    clearTracking() {
+      if (!trackingProblem.value || !journal) return
+      try {
+        // Cleanup cannot release an unknown write or an uncertain guest outcome.
+        const current = entry.value
+        const retained =
+          current &&
+          (current.state !== 'done' ||
+            current.task?.agentResult?.outcome === 'uncertain' ||
+            current.task?.agentResult?.recoveryRequired)
+        if (identity) persist(retained ? current.reference : null, true)
+        else journal.clear(null, true)
+        if (!retained) entry.value = null
+        trackingProblem.value = null
+      } catch (cause) {
+        trackingFailed(cause)
+      }
+    },
     rescueSupported: computed(() => supported.value && !!gateway?.rescueSupported?.()),
     allowed: computed(() => allowed.value && !autoChecking.value),
     writable,
@@ -360,13 +421,22 @@ export function createAgentOperations(
     pause,
     reset,
     bind(value: string) {
-      if (identity !== value) reset()
+      if (identity === value) return
+      reset(true)
       identity = value
+      contextBound.value = true
+      trackingProblem.value = null
+      try {
+        const reference = journal?.load(value)[0]?.request
+        if (reference) entry.value = { reference, state: 'unknown', task: null, problem: null }
+      } catch (cause) {
+        trackingFailed(cause)
+      }
       recovery.bind(value)
     },
     dispose() {
       disposed = true
-      reset()
+      reset(true)
       recovery.dispose()
     },
   }

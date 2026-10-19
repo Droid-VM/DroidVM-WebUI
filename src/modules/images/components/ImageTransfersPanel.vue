@@ -186,6 +186,7 @@ onBeforeUnmount(model.leave)
       >
         <h3>{{ t('imageUploadInstallTitle') }}</h3>
         <p>{{ t('imageUploadInstallHint') }}</p>
+        <p>{{ t('imageUploadDirectoryHint') }}</p>
         <label
           >{{ t('diskHostFolder')
           }}<input
@@ -278,7 +279,7 @@ onBeforeUnmount(model.leave)
             @click="handoff"
             >{{ t('imageUploadImport') }}</AppButton
           >
-          <RouterLink to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
+          <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
         </div>
       </section>
       <div
@@ -364,9 +365,6 @@ input:not([type='checkbox']) {
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
-}
-a {
-  padding-block: 10px;
 }
 ul {
   margin: 0;
