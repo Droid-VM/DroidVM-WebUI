@@ -1,0 +1,214 @@
+<script setup lang="ts">
+import { onMounted, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useHostPreferences, preferenceKeys } from '../modules/hostPreferences'
+import { taskStateKeys } from '../modules/tasks'
+import AppButton from '../shared/ui/AppButton.vue'
+import AppNotice from '../shared/ui/AppNotice.vue'
+import AppDialog from '../shared/ui/AppDialog.vue'
+import OperationTrackingNotice from '../shared/ui/OperationTrackingNotice.vue'
+const model = useHostPreferences(),
+  { t } = useI18n()
+const labels = {
+  vm_hugepage_auto_reserve: {
+    title: 'hostPreferencesHugepages',
+    hint: 'hostPreferencesHugepagesHint',
+  },
+  optimize_sdcard: { title: 'hostPreferencesSdcard', hint: 'hostPreferencesSdcardHint' },
+  vm_clear_logs_before_start: { title: 'hostPreferencesLogs', hint: 'hostPreferencesLogsHint' },
+} as const
+onMounted(model.activate)
+onBeforeUnmount(model.deactivate)
+</script>
+<template>
+  <div class="host-preferences-page" data-testid="host-preferences-page">
+    <RouterLink to="/more">{{ t('navMore') }}</RouterLink>
+    <header>
+      <h1>{{ t('hostPreferencesTitle') }}</h1>
+      <p>{{ t('hostPreferencesScope') }}</p>
+    </header>
+    <fieldset
+      v-if="model.recoveryProblem.value"
+      class="tracking-guard"
+      :disabled="model.unresolved.value || model.status.value?.uncertain"
+    >
+      <OperationTrackingNotice
+        :problem="model.recoveryProblem.value"
+        @clear="model.clearTracking"
+      />
+    </fieldset>
+    <AppNotice
+      v-if="!model.supported.value"
+      tone="warning"
+      :title="t('settingsCapabilityUnavailable')"
+    />
+    <template v-else>
+      <div class="actions">
+        <AppButton
+          data-testid="host-preferences-refresh"
+          :disabled="model.loading.value"
+          @click="model.refresh"
+          >{{ t('hugepagesRefresh') }}</AppButton
+        >
+      </div>
+      <p v-if="model.loading.value" role="status">{{ t('loading') }}</p>
+      <AppNotice v-if="model.problem.value" tone="error" :title="t(model.problem.value.titleKey)"
+        ><p>{{ t(model.problem.value.descriptionKey) }}</p></AppNotice
+      >
+      <p v-if="model.status.value && !model.fresh.value" role="status">
+        {{ t('hostPreferencesStale') }}
+      </p>
+      <template v-if="model.status.value">
+        <p v-if="!model.status.value.initialized">{{ t('hostPreferencesDefaults') }}</p>
+        <AppNotice
+          v-if="model.status.value.uncertain || model.unresolved.value"
+          tone="warning"
+          :title="t('hostPreferencesUncertain')"
+        />
+        <section class="menu" :aria-label="t('settingsCategoryVm')">
+          <label v-for="key in preferenceKeys" :key="key" class="menu-row">
+            <span class="grow"
+              ><strong>{{ t(labels[key].title) }}</strong
+              ><small>{{ t(labels[key].hint) }}</small></span
+            >
+            <input
+              v-model="model.draft[key]"
+              type="checkbox"
+              :data-testid="`host-preference-${key}`"
+              :disabled="!model.editable.value"
+              @change="model.cancelReview"
+            />
+          </label>
+        </section>
+        <AppNotice
+          v-if="model.conflict.value"
+          tone="warning"
+          :title="t('hostPreferencesConflict')"
+          data-testid="host-preferences-conflict"
+        >
+          <p>{{ t('hostPreferencesConflictHint') }}</p>
+          <AppButton
+            data-testid="host-preferences-rebase"
+            :disabled="!model.editable.value"
+            @click="model.rebase"
+            >{{ t('hostPreferencesRebase') }}</AppButton
+          >
+        </AppNotice>
+        <div class="actions">
+          <AppButton
+            data-testid="host-preferences-review"
+            tone="primary"
+            :disabled="!model.canSave.value"
+            @click="model.prepare"
+            >{{ t('hostPreferencesReview') }}</AppButton
+          >
+          <AppButton :disabled="!model.dirty.value || model.pending.value" @click="model.discard">{{
+            t('hostPreferencesDiscard')
+          }}</AppButton>
+        </div>
+      </template>
+      <section
+        v-if="model.entry.value"
+        class="receipt"
+        aria-live="polite"
+        data-testid="host-preferences-receipt"
+      >
+        <p v-if="model.entry.value.restored">{{ t('preferenceRecoveryHint') }}</p>
+        <p v-if="model.entry.value.state === 'unknown'">{{ t('hostPreferencesUnknown') }}</p>
+        <p v-else-if="model.entry.value.task">
+          {{ t(taskStateKeys[model.entry.value.task.state]) }}
+        </p>
+        <p v-else>{{ t('processing') }}</p>
+        <p v-if="model.entry.value.problem">{{ t(model.entry.value.problem.descriptionKey) }}</p>
+        <p v-if="model.entry.value.task?.errorCode">{{ model.entry.value.task.errorCode }}</p>
+        <p v-if="model.receipt.value?.saved && !model.receipt.value.uncertain">
+          {{ t('hostPreferencesSaved') }}
+        </p>
+        <AppButton
+          v-if="model.pending.value"
+          data-testid="host-preferences-query"
+          :disabled="model.checking.value || model.entry.value.state === 'posting'"
+          @click="model.reconcile"
+          >{{ t('queryStatus') }}</AppButton
+        >
+      </section>
+    </template>
+    <AppDialog
+      :open="!!model.review.value"
+      :title="t('hostPreferencesReview')"
+      @close="model.cancelReview"
+    >
+      <p>{{ t('hostPreferencesScope') }}</p>
+      <ul v-if="model.review.value">
+        <template v-for="key in preferenceKeys" :key="key"
+          ><li v-if="model.review.value.changes[key] !== undefined">
+            {{ t(labels[key].title) }}:
+            {{ t(model.review.value.changes[key] ? 'hostPreferencesOn' : 'hostPreferencesOff') }}
+          </li></template
+        >
+      </ul>
+      <div class="actions">
+        <AppButton @click="model.cancelReview">{{ t('cancel') }}</AppButton
+        ><AppButton
+          data-testid="host-preferences-confirm"
+          tone="primary"
+          :disabled="!model.canSave.value"
+          @click="model.submit"
+          >{{ t('confirm') }}</AppButton
+        >
+      </div>
+    </AppDialog>
+  </div>
+</template>
+<style scoped>
+.tracking-guard {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.host-preferences-page {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+header h1 {
+  margin-block: 0 var(--space-2);
+}
+p {
+  margin-block: var(--space-2);
+  overflow-wrap: anywhere;
+}
+.menu {
+  margin: 0;
+}
+.menu-row {
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+.grow {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.menu-row input {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin-block: 10px;
+  accent-color: var(--accent);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.receipt {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+li {
+  margin-block: var(--space-3);
+  overflow-wrap: anywhere;
+}
+</style>
