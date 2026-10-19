@@ -23,9 +23,6 @@ declare module '@novnc/novnc' {
     protected _handleWheel(event: WheelEvent): void
     protected _handleGesture(event: Event): void
     protected _sendEncodings(): void
-    protected _clipboardServerCapabilitiesFormats: Record<number, boolean>
-    protected _clipboardServerCapabilitiesActions: Record<number, boolean>
-    protected _handleServerCutText(): boolean
     viewOnly: boolean
     scaleViewport: boolean
     resizeSession: boolean
@@ -36,7 +33,6 @@ declare module '@novnc/novnc' {
     disconnect(): void
     sendKey(keysym: number, code?: string, down?: boolean): void
     sendCtrlAltDel(): void
-    clipboardPasteFrom(text: string): void
     focus(options?: FocusOptions): void
     blur(): void
   }

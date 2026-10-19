@@ -1,6 +1,5 @@
 import { expect, it, vi } from 'vitest'
 import { createVmGraphics, type GraphicsConsumer } from '../../src/modules/graphics/model/graphics'
-import { CLIPBOARD_LIMIT, validateClipboard } from '../../src/modules/graphics/lib/clipboard'
 import type {
   DisplayMetadata,
   DisplayObserver,
@@ -87,135 +86,6 @@ it('refuses a new instance during explicit reconnect and never replays a connect
   model.dispose()
 })
 
-it('bounds clipboard text by UTF-8 bytes and requires a connected compatible receiver', async () => {
-  expect(validateClipboard('', 'latin1')).toBeNull()
-  expect(validateClipboard('é'.repeat(CLIPBOARD_LIMIT / 2), 'latin1')).toBeNull()
-  expect(validateClipboard('é'.repeat(CLIPBOARD_LIMIT / 2 + 1), 'latin1')).toBe('too-large')
-  expect(validateClipboard('😀'.repeat(CLIPBOARD_LIMIT / 4), 'utf8')).toBeNull()
-  for (const text of ['a\0b', '\ud800', '\udc00', '\ud800x'])
-    expect(validateClipboard(text, 'utf8')).toBe('invalid')
-  const { model, consumer, observers } = setup()
-  const send = vi.fn<NonNullable<GraphicsConsumer['sendClipboard']>>(() => 'sent')
-  consumer.sendClipboard = send
-  model.attach(consumer)
-  await model.open('vm')
-  await model.connect()
-  observers[0]!.ready({ close: vi.fn() } as unknown as WebSocket, '')
-  const events = vi.mocked(consumer.start).mock.calls[0]![3]
-  events.clipboardMode('latin1')
-  model.clipboardDraft.value = 'draft'
-  expect(model.sendClipboard()).toBe('unavailable')
-  expect(send).not.toHaveBeenCalled()
-  events.ready()
-  model.clipboardDraft.value = '中文'
-  expect(model.sendClipboard()).toBe('encoding')
-  model.clipboardDraft.value = 'x'.repeat(CLIPBOARD_LIMIT + 1)
-  expect(model.sendClipboard()).toBe('too-large')
-  model.clipboardDraft.value = '\ud800'
-  expect(model.sendClipboard()).toBe('invalid')
-  expect(send).not.toHaveBeenCalled()
-  events.clipboardMode('utf8')
-  model.clipboardDraft.value = '中文😀'
-  expect(model.sendClipboard()).toBe('sent')
-  expect(send).toHaveBeenLastCalledWith('中文😀')
-  model.clipboardDraft.value = ''
-  expect(model.sendClipboard()).toBe('sent')
-  expect(send).toHaveBeenLastCalledWith('')
-  send.mockReturnValueOnce('unavailable')
-  expect(model.sendClipboard()).toBe('unavailable')
-  expect(model.clipboardSendState.value).toBe('unavailable')
-  model.dispose()
-})
-
-it('keeps received text separate and clears clipboard across screen and VM generations', async () => {
-  const { model, consumer, observers } = setup()
-  model.attach(consumer)
-  await model.open('vm')
-  await model.connect()
-  const socket = { close: vi.fn() } as unknown as WebSocket
-  observers[0]!.ready(socket, '')
-  const old = vi.mocked(consumer.start).mock.calls[0]![3]
-  old.clipboardMode('utf8')
-  old.clipboard('before handshake')
-  expect(model.clipboardReceived.value).toBeNull()
-  old.ready()
-  model.clipboardDraft.value = 'unsent draft'
-  old.clipboard('客机文本')
-  expect(model.clipboardReceived.value).toBe('客机文本')
-  expect(model.clipboardDraft.value).toBe('unsent draft')
-  old.clipboard('中'.repeat(Math.floor(CLIPBOARD_LIMIT / 3) + 1))
-  expect(model.clipboardReceived.value).toBe('客机文本')
-  expect(model.clipboardReceiveProblem.value).toBe('too-large')
-  old.clipboard('\0')
-  expect(model.clipboardReceiveProblem.value).toBe('invalid')
-  expect(model.clipboardReceived.value).toBe('客机文本')
-  old.clipboard('')
-  expect(model.clipboardReceived.value).toBe('')
-  expect(model.clipboardReceiveProblem.value).toBeNull()
-  model.clearClipboard()
-  expect(model.clipboardDraft.value).toBe('')
-  expect(model.clipboardReceived.value).toBeNull()
-  expect(model.clipboardMode.value).toBe('utf8')
-  model.clipboardDraft.value = 'private draft'
-  old.clipboard('private received')
-  model.select('simplefb')
-  old.clipboardMode('utf8')
-  old.ready()
-  old.clipboard('late old screen')
-  expect(model.clipboardDraft.value).toBe('')
-  expect(model.clipboardReceived.value).toBeNull()
-  expect(model.clipboardMode.value).toBe('unavailable')
-  expect(model.clipboardSendState.value).toBe('idle')
-  await model.connect()
-  observers[1]!.ready(socket, '')
-  const current = vi.mocked(consumer.start).mock.calls[1]![3]
-  current.clipboardMode('latin1')
-  current.ready()
-  model.clipboardDraft.value = 'next VM must not inherit'
-  current.clipboard('second screen')
-  await model.open('other-vm')
-  current.clipboardMode('utf8')
-  current.clipboard('late old VM')
-  expect(model.clipboardDraft.value).toBe('')
-  expect(model.clipboardReceived.value).toBeNull()
-  expect(model.clipboardMode.value).toBe('unavailable')
-  model.dispose()
-})
-
-it('blocks clipboard in view-only mode and ignores late callbacks after disconnect', async () => {
-  const { model, gateway, consumer, observers } = setup()
-  vi.mocked(gateway.read).mockImplementation(async () => ({
-    ...metadata(),
-    screens: metadata().screens.map((screen) => ({ ...screen, inputEnabled: false })),
-  }))
-  const send = vi.fn<NonNullable<GraphicsConsumer['sendClipboard']>>(() => 'sent')
-  consumer.sendClipboard = send
-  model.attach(consumer)
-  await model.open('vm')
-  await model.connect()
-  observers[0]!.ready({ close: vi.fn() } as unknown as WebSocket, '')
-  const events = vi.mocked(consumer.start).mock.calls[0]![3]
-  events.clipboardMode('utf8')
-  events.ready()
-  model.clipboardDraft.value = 'local only'
-  events.clipboard('do not receive')
-  expect(model.clipboardMode.value).toBe('unavailable')
-  expect(model.clipboardReceived.value).toBeNull()
-  expect(model.sendClipboard()).toBe('unavailable')
-  expect(send).not.toHaveBeenCalled()
-  model.disconnect()
-  events.clipboardMode('utf8')
-  events.clipboard('late')
-  expect(model.clipboardDraft.value).toBe('')
-  expect(model.clipboardReceived.value).toBeNull()
-  expect(model.clipboardMode.value).toBe('unavailable')
-  expect(model.clipboardSendState.value).toBe('idle')
-  expect(model.clipboardReceiveProblem.value).toBeNull()
-  model.reset()
-  expect(model.status.value).toBe('idle')
-  model.dispose()
-})
-
 it('prepares two distinct screens without auto-connecting and keeps their sessions independent', async () => {
   const { model, gateway, consumer, observers } = setup()
   const connections: { close: ReturnType<typeof vi.fn> }[] = []
@@ -249,19 +119,12 @@ it('prepares two distinct screens without auto-connecting and keeps their sessio
   const secondaryEvents = vi.mocked(secondConsumer.start).mock.calls[0]![3]
   primaryEvents.ready()
   secondaryEvents.ready()
-  primaryEvents.clipboard('primary clipboard')
-  secondaryEvents.clipboard('secondary clipboard')
-  expect(model.clipboardReceived.value).toBe('primary clipboard')
-  expect(secondary.clipboardReceived.value).toBe('secondary clipboard')
   secondary.disconnect()
   expect(model.connected.value).toBe(true)
   expect(connections[0]!.close).not.toHaveBeenCalled()
   expect(connections[1]!.close).toHaveBeenCalledOnce()
   model.removeSecondary()
-  secondaryEvents.clipboard('late removed pane')
   expect(model.secondary.value).toBeNull()
-  expect(secondary.clipboardReceived.value).toBeNull()
-  expect(model.clipboardReceived.value).toBe('primary clipboard')
   model.dispose()
 })
 
@@ -320,7 +183,6 @@ it('cancels pending secondary initialization across all global lifecycle transit
     const { model, gateway, consumer } = setup()
     model.attach(consumer)
     await model.open('vm')
-    model.clipboardDraft.value = 'primary private text'
     let resolve!: (value: DisplayMetadata) => void
     vi.mocked(gateway.read).mockImplementationOnce(
       () =>
@@ -330,15 +192,12 @@ it('cancels pending secondary initialization across all global lifecycle transit
     )
     const pending = model.addSecondary()
     const previous = model.secondary.value!
-    previous.clipboardDraft.value = 'secondary private text'
     const signal = vi.mocked(gateway.read).mock.calls[1]![1]
     if (transition === 'bind') model.bind('new-session')
     else if (transition === 'open') await model.open('next-vm')
     else model[transition]()
     expect(signal.aborted).toBe(true)
     expect(model.secondary.value).toBeNull()
-    expect(model.clipboardDraft.value).toBe('')
-    expect(previous.clipboardDraft.value).toBe('')
     resolve(metadata())
     await pending
     expect(model.secondary.value).toBeNull()

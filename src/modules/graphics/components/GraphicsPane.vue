@@ -3,7 +3,6 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { SingleVmGraphics } from '../model/graphics'
 import { createGraphicsViewer } from '../lib/viewer'
-import type { MessageKey } from '../../../shared/i18n'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 
@@ -20,8 +19,7 @@ const model = props.model,
   { t } = useI18n()
 const root = ref<HTMLElement>(),
   target = ref<HTMLElement>(),
-  input = ref<HTMLTextAreaElement>(),
-  received = ref<HTMLTextAreaElement>()
+  input = ref<HTMLTextAreaElement>()
 const keyboard = ref(false),
   fit = ref(true),
   control = ref(false),
@@ -33,9 +31,6 @@ const height = ref<number>(),
 const inputActive = ref(props.active)
 const inputAllowed = computed(() => model.connected.value && model.selected.value?.inputEnabled)
 const inputEnabled = computed(() => inputActive.value && inputAllowed.value)
-const clipboardEnabled = computed(
-  () => inputAllowed.value && model.clipboardMode.value !== 'unavailable',
-)
 function setInputActive(value: boolean) {
   if (!value) {
     clearModifiers()
@@ -54,26 +49,6 @@ function focusScreen() {
 }
 defineExpose({ setInputActive })
 watch(() => props.active, setInputActive, { flush: 'sync' })
-const clipboardSendKeys: Record<
-  Exclude<typeof model.clipboardSendState.value, 'idle'>,
-  MessageKey
-> = {
-  sent: 'graphicClipboardSend_sent',
-  unavailable: 'graphicClipboardSend_unavailable',
-  'too-large': 'graphicClipboardSend_too_large',
-  encoding: 'graphicClipboardSend_encoding',
-  invalid: 'graphicClipboardSend_invalid',
-}
-function selectClipboard() {
-  if (!inputEnabled.value || model.clipboardReceived.value === null) return
-  clearModifiers()
-  received.value?.focus({ preventScroll: true })
-  received.value?.select()
-}
-function sendClipboard() {
-  clearModifiers()
-  model.sendClipboard()
-}
 let viewer: ReturnType<typeof createGraphicsViewer> | undefined, detach: (() => void) | undefined
 let resizeObserver: ResizeObserver | undefined,
   mutationObserver: MutationObserver | undefined,
@@ -213,8 +188,6 @@ onMounted(() => {
           layout()
         },
         closed: events.closed,
-        clipboard: events.clipboard,
-        clipboardMode: events.clipboardMode,
       })
       viewer.setInputActive(inputActive.value)
       viewer.start(socket, password, enabled)
@@ -224,9 +197,6 @@ onMounted(() => {
       viewer?.stop()
       viewer = undefined
       size.value = ''
-    },
-    sendClipboard(text) {
-      return viewer?.clipboard(text) ?? 'unavailable'
     },
   })
   resizeObserver = new ResizeObserver(layout)
@@ -341,7 +311,7 @@ onUnmounted(() => {
       class="muted"
     >
       {{ t('graphicUnavailable') }}
-      <RouterLink :to="`/vms/${encodeURIComponent(vmId)}/edit`">{{
+      <RouterLink class="btn tonal" :to="`/vms/${encodeURIComponent(vmId)}/edit`">{{
         t('graphicConfigure')
       }}</RouterLink>
     </p>
@@ -399,100 +369,6 @@ onUnmounted(() => {
       @paste="paste"
     />
     <p class="graphics-hint muted">{{ t('graphicInputHint') }}</p>
-    <details class="graphics-clipboard" data-testid="graphic-clipboard">
-      <summary>{{ t('graphicClipboardTitle') }}</summary>
-      <div class="clipboard-content">
-        <p>{{ t('graphicClipboardHint') }}</p>
-        <p
-          data-testid="graphic-clipboard-mode"
-          :data-mode="model.clipboardMode.value"
-          role="status"
-        >
-          {{ t(`graphicClipboardMode_${model.clipboardMode.value}`) }}
-        </p>
-        <small>{{ t('graphicClipboardLimit') }}</small>
-        <label>
-          {{ t('graphicClipboardDraft') }}
-          <textarea
-            v-model="model.clipboardDraft.value"
-            class="graphics-input"
-            data-testid="graphic-clipboard-draft"
-            data-guest-input="true"
-            :disabled="!inputAllowed"
-            rows="3"
-            autocapitalize="off"
-            autocomplete="off"
-            autocorrect="off"
-            :spellcheck="false"
-            @focus="clearModifiers"
-          />
-        </label>
-        <div class="graphics-tools">
-          <AppButton
-            data-testid="graphic-clipboard-send"
-            :disabled="!clipboardEnabled"
-            @click="sendClipboard"
-          >
-            {{ t('graphicClipboardSend') }}
-          </AppButton>
-          <AppButton
-            data-testid="graphic-clipboard-clear"
-            :disabled="!inputAllowed"
-            @click="model.clearClipboard"
-          >
-            {{ t('graphicClipboardClear') }}
-          </AppButton>
-        </div>
-        <p
-          data-testid="graphic-clipboard-send-state"
-          :data-state="model.clipboardSendState.value"
-          role="status"
-        >
-          {{
-            model.clipboardSendState.value === 'idle'
-              ? ''
-              : t(clipboardSendKeys[model.clipboardSendState.value])
-          }}
-        </p>
-        <label>
-          {{ t('graphicClipboardReceived') }}
-          <textarea
-            ref="received"
-            class="graphics-input"
-            data-testid="graphic-clipboard-received"
-            data-guest-input="true"
-            :value="model.clipboardReceived.value ?? ''"
-            :placeholder="t('graphicClipboardNoReceived')"
-            :disabled="!inputAllowed"
-            readonly
-            rows="3"
-            :spellcheck="false"
-            @focus="clearModifiers"
-          />
-        </label>
-        <p
-          v-if="model.clipboardReceiveProblem.value"
-          data-testid="graphic-clipboard-receive-problem"
-          :data-state="model.clipboardReceiveProblem.value"
-          role="status"
-        >
-          {{
-            t(
-              model.clipboardReceiveProblem.value === 'too-large'
-                ? 'graphicClipboardReceive_too_large'
-                : 'graphicClipboardReceive_invalid',
-            )
-          }}
-        </p>
-        <AppButton
-          data-testid="graphic-clipboard-select"
-          :disabled="!inputAllowed || model.clipboardReceived.value === null"
-          @click="selectClipboard"
-        >
-          {{ t('graphicClipboardSelect') }}
-        </AppButton>
-      </div>
-    </details>
   </section>
 </template>
 
@@ -580,30 +456,6 @@ onUnmounted(() => {
   border-radius: 10px;
   padding: 10px;
   resize: none;
-}
-.graphics-clipboard {
-  flex-shrink: 0;
-  min-width: 0;
-}
-.graphics-clipboard summary {
-  cursor: pointer;
-  min-height: var(--touch-target);
-  display: flex;
-  align-items: center;
-}
-.clipboard-content,
-.clipboard-content label {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.clipboard-content p {
-  margin: 0;
-}
-.clipboard-content .graphics-input {
-  box-sizing: border-box;
-  resize: vertical;
 }
 @media (max-width: 650px) {
   .graphics-keys {

@@ -1,13 +1,11 @@
 import RFB from '@novnc/novnc'
-import { validateClipboard, type ClipboardMode, type ClipboardSendResult } from './clipboard'
 
 /** Pinned noVNC 1.7.0 adapter. Keep private API usage confined to this class.
  * Both noVNC and the Android server use encoding 50, with different extensions.
- * Mirror the pinned upstream list except encoding 50; keep all other extensions.
+ * Mirror the pinned upstream list except encoding 50 and clipboard negotiation.
  */
 class StandardRfb extends RFB {
   private inputActive = true
-  onClipboardMode?: (mode: ClipboardMode) => void
   setInputActive(value: boolean) {
     if (!value && this.inputActive) this.releaseInput()
     this.inputActive = value
@@ -34,21 +32,6 @@ class StandardRfb extends RFB {
   protected override _handleGesture(event: Event) {
     if (this.inputActive) super._handleGesture(event)
   }
-  get clipboardMode(): ClipboardMode {
-    if (this._rfbConnectionState !== 'connected' || this.viewOnly) return 'unavailable'
-    const formats = this._clipboardServerCapabilitiesFormats
-    const actions = this._clipboardServerCapabilitiesActions
-    // Match noVNC's Notify branch and only promise UTF-8 when its full text
-    // exchange is negotiated. An incomplete extension cannot safely fall back.
-    if (formats[1] && actions[1 << 27])
-      return actions[1 << 25] && actions[1 << 28] ? 'utf8' : 'unavailable'
-    return 'latin1'
-  }
-  protected override _handleServerCutText() {
-    const handled = super._handleServerCutText()
-    if (handled) this.onClipboardMode?.(this.clipboardMode)
-    return handled
-  }
   protected override _sendEncodings() {
     const encodings = this._fbDepth === 24 ? [1, 7, -260, 16, 21, 5, 2, 6, 0] : [1, 0]
     encodings.push(
@@ -63,7 +46,6 @@ class StandardRfb extends RFB {
       -312,
       -313,
       -307,
-      0xc0a1e5ce,
       -316,
     )
     if (this._fbDepth === 24) encodings.push(0x574d5664, -239)
@@ -86,8 +68,6 @@ export function createGraphicsViewer(
   events: {
     ready(): void
     closed(): void
-    clipboard(text: string): void
-    clipboardMode(mode: ClipboardMode): void
   },
 ) {
   let rfb: StandardRfb | undefined,
@@ -106,7 +86,6 @@ export function createGraphicsViewer(
     generation++
     const previous = rfb
     rfb = undefined
-    if (previous) previous.onClipboardMode = undefined
     previous?.disconnect()
     target.replaceChildren()
   }
@@ -158,9 +137,6 @@ export function createGraphicsViewer(
       rfb = new StandardRfb(target, channel, { credentials: { password }, shared: true })
       const instance = rfb
       const currentInstance = () => current() && rfb === instance
-      instance.onClipboardMode = (mode) => {
-        if (currentInstance()) events.clipboardMode(mode)
-      }
       rfb.viewOnly = !inputEnabled
       rfb.setInputActive(inputActive)
       rfb.scaleViewport = true
@@ -175,12 +151,6 @@ export function createGraphicsViewer(
         }
         events.ready()
         if (currentInstance()) instance.setInputActive(inputActive)
-        if (currentInstance()) events.clipboardMode(instance.clipboardMode)
-      })
-      rfb.addEventListener('clipboard', (event) => {
-        if (!currentInstance() || instance.viewOnly) return
-        const text: unknown = (event as CustomEvent<{ text?: unknown }>).detail?.text
-        if (typeof text === 'string') events.clipboard(text)
       })
       rfb.addEventListener('disconnect', () => {
         if (currentInstance()) events.closed()
@@ -198,13 +168,6 @@ export function createGraphicsViewer(
       if (!value && inputActive) release()
       inputActive = value
       rfb?.setInputActive(value)
-    },
-    clipboard(text: string): ClipboardSendResult {
-      if (!active || !rfb) return 'unavailable'
-      const failure = validateClipboard(text, rfb.clipboardMode)
-      if (failure) return failure
-      rfb.clipboardPasteFrom(text)
-      return 'sent'
     },
     focus() {
       rfb?.focus({ preventScroll: true })

@@ -9,7 +9,6 @@ import {
 } from 'vue'
 import { ApiError, describeApiError, type ApiProblem } from '../../../shared/api/errors'
 import type { DisplayConnection, DisplayMetadata, VmGraphicsGateway } from '../api/gateway'
-import { validateClipboard, type ClipboardMode, type ClipboardSendResult } from '../lib/clipboard'
 
 export interface GraphicsConsumer {
   start(
@@ -19,12 +18,9 @@ export interface GraphicsConsumer {
     events: {
       ready(): void
       closed(): void
-      clipboard(text: string): void
-      clipboardMode(mode: ClipboardMode): void
     },
   ): void
   stop(): void
-  sendClipboard?(text: string): ClipboardSendResult
 }
 interface GraphicsCoordination {
   reservedScreen(): string | undefined
@@ -41,11 +37,6 @@ function createSingleVmGraphics(gateway?: VmGraphicsGateway, coordination?: Grap
     connected = computed(() => status.value === 'connected')
   const busy = computed(() => status.value === 'loading' || status.value === 'connecting')
   const selected = computed(() => metadata.value?.screens.find((item) => item.id === screen.value))
-  const clipboardDraft = ref('')
-  const clipboardReceived = ref<string | null>(null)
-  const clipboardMode = ref<ClipboardMode>('unavailable')
-  const clipboardSendState = ref<'idle' | ClipboardSendResult>('idle')
-  const clipboardReceiveProblem = ref<'too-large' | 'invalid' | null>(null)
   let generation = 0,
     identity = '',
     expectedInstance: string | undefined
@@ -53,37 +44,8 @@ function createSingleVmGraphics(gateway?: VmGraphicsGateway, coordination?: Grap
     connection: DisplayConnection | undefined,
     consumer: GraphicsConsumer | undefined
   let deadline: ReturnType<typeof setTimeout> | undefined
-  function clearClipboard() {
-    clipboardDraft.value = ''
-    clipboardReceived.value = null
-    clipboardSendState.value = 'idle'
-    clipboardReceiveProblem.value = null
-  }
-  function sendClipboard(): ClipboardSendResult {
-    if (!connected.value || !selected.value?.inputEnabled || !consumer?.sendClipboard) {
-      clipboardSendState.value = 'unavailable'
-      return 'unavailable'
-    }
-    const invalid = validateClipboard(clipboardDraft.value, clipboardMode.value)
-    if (invalid) {
-      clipboardSendState.value = invalid
-      return invalid
-    }
-    const epoch = generation
-    let result: ClipboardSendResult
-    try {
-      result = consumer.sendClipboard(clipboardDraft.value)
-    } catch {
-      result = 'unavailable'
-    }
-    // A synchronous socket failure can disconnect while the adapter is sending.
-    if (epoch === generation) clipboardSendState.value = result
-    return result
-  }
   function disconnect(cause?: unknown) {
     generation++
-    clearClipboard()
-    clipboardMode.value = 'unavailable'
     read?.abort()
     read = undefined
     clearTimeout(deadline)
@@ -141,19 +103,6 @@ function createSingleVmGraphics(gateway?: VmGraphicsGateway, coordination?: Grap
             closed() {
               if (epoch === generation) disconnect(new ApiError('offline', 'Display disconnected'))
             },
-            clipboardMode(mode) {
-              if (epoch === generation) clipboardMode.value = inputEnabled ? mode : 'unavailable'
-            },
-            clipboard(text) {
-              if (epoch !== generation || !connected.value || !selected.value?.inputEnabled) return
-              const invalid = validateClipboard(text, 'utf8')
-              if (invalid) {
-                clipboardReceiveProblem.value = invalid === 'too-large' ? 'too-large' : 'invalid'
-                return
-              }
-              clipboardReceived.value = text
-              clipboardReceiveProblem.value = null
-            },
           })
         },
         closed(cause) {
@@ -180,13 +129,6 @@ function createSingleVmGraphics(gateway?: VmGraphicsGateway, coordination?: Grap
     connected,
     busy,
     selected,
-    clipboardDraft,
-    clipboardReceived: readonly(clipboardReceived),
-    clipboardMode: readonly(clipboardMode),
-    clipboardSendState: readonly(clipboardSendState),
-    clipboardReceiveProblem: readonly(clipboardReceiveProblem),
-    sendClipboard,
-    clearClipboard,
     metadata: readonly(metadata),
     problem: readonly(problem),
     screen: readonly(screen),
