@@ -15,13 +15,7 @@ import { createEventFeed, type EventGateway } from '../modules/events'
 import { createVmTerminal, vmTerminalKey, type VmTerminalGateway } from '../modules/terminal'
 import { createVmGraphics, vmGraphicsKey, type VmGraphicsGateway } from '../modules/graphics'
 import { createHostOverview, hostOverviewKey, type HostOverviewGateway } from '../modules/host'
-import HostPage from '../pages/HostPage.vue'
-import HugepagesPage from '../pages/HugepagesPage.vue'
 import { createHugepages, hugepagesKey, type HugepageGateway } from '../modules/hugepages'
-import HugepageProcessesPage from '../pages/HugepageProcessesPage.vue'
-import HostPreferencesPage from '../pages/HostPreferencesPage.vue'
-import UsbAcmPage from '../pages/UsbAcmPage.vue'
-import DiskDefaultsPage from '../pages/DiskDefaultsPage.vue'
 import {
   createDiskDefaults,
   diskDefaultsKey,
@@ -53,9 +47,6 @@ import {
   configurationEditorKey,
   type ConfigurationGateway,
 } from '../modules/configuration'
-import VmEditPage from '../pages/VmEditPage.vue'
-import UsbRulesPage from '../pages/UsbRulesPage.vue'
-import NetworkEditPage from '../pages/NetworkEditPage.vue'
 import {
   createNetworkEditor,
   networkEditorKey,
@@ -86,17 +77,6 @@ import {
 import App from './App.vue'
 import { createLocalization, localizationKey } from '../shared/i18n'
 import VmPage from '../pages/VmPage.vue'
-import ResourcesPage from '../pages/ResourcesPage.vue'
-import TasksPage from '../pages/TasksPage.vue'
-import MorePage from '../pages/MorePage.vue'
-import NotFoundPage from '../pages/NotFoundPage.vue'
-import AgentRescuePage from '../pages/AgentRescuePage.vue'
-import PackageExportPage from '../pages/PackageExportPage.vue'
-import PackageImportPage from '../pages/PackageImportPage.vue'
-import PackageTransfersPage from '../pages/PackageTransfersPage.vue'
-import ConfigurationBackupPage from '../pages/ConfigurationBackupPage.vue'
-import WebServicePage from '../pages/WebServicePage.vue'
-import ImageImportPage from '../pages/ImageImportPage.vue'
 import { createImageImport, imageImportKey, type ImageImportGateway } from '../modules/images'
 import {
   createImageTransfers,
@@ -120,8 +100,32 @@ import {
   packageTransfersKey,
   type PackageTransferGateway,
 } from '../modules/packages'
+import '../shared/styles/colors.css'
 import '../shared/styles/tokens.css'
 import '../shared/styles/base.css'
+
+// Pages load on demand so no single bundle outgrows the native per-asset limit; the
+// landing page stays in the entry bundle for the first paint.
+const HostPage = () => import('../pages/HostPage.vue')
+const HugepagesPage = () => import('../pages/HugepagesPage.vue')
+const HugepageProcessesPage = () => import('../pages/HugepageProcessesPage.vue')
+const HostPreferencesPage = () => import('../pages/HostPreferencesPage.vue')
+const UsbAcmPage = () => import('../pages/UsbAcmPage.vue')
+const DiskDefaultsPage = () => import('../pages/DiskDefaultsPage.vue')
+const VmEditPage = () => import('../pages/VmEditPage.vue')
+const UsbRulesPage = () => import('../pages/UsbRulesPage.vue')
+const NetworkEditPage = () => import('../pages/NetworkEditPage.vue')
+const ResourcesPage = () => import('../pages/ResourcesPage.vue')
+const TasksPage = () => import('../pages/TasksPage.vue')
+const MorePage = () => import('../pages/MorePage.vue')
+const NotFoundPage = () => import('../pages/NotFoundPage.vue')
+const AgentRescuePage = () => import('../pages/AgentRescuePage.vue')
+const PackageExportPage = () => import('../pages/PackageExportPage.vue')
+const PackageImportPage = () => import('../pages/PackageImportPage.vue')
+const PackageTransfersPage = () => import('../pages/PackageTransfersPage.vue')
+const ConfigurationBackupPage = () => import('../pages/ConfigurationBackupPage.vue')
+const WebServicePage = () => import('../pages/WebServicePage.vue')
+const ImageImportPage = () => import('../pages/ImageImportPage.vue')
 
 export function mountApp(
   gateway: VmGateway,
@@ -345,6 +349,26 @@ export function mountApp(
       if (to.path.startsWith('/vms') && from.path.startsWith('/vms')) return false
       return saved ?? positions.get(group(to.path)) ?? { top: 0 }
     },
+  })
+  // After an app upgrade the open page still references old page bundles, which now 404.
+  // Reload once into the target route so the new index.html is used; never loop.
+  router.onError((error, to) => {
+    if (!/dynamically imported module|Importing a module script failed/i.test(String(error))) return
+    try {
+      if (sessionStorage.getItem('droidvm.chunkReload') === to.fullPath) return
+      sessionStorage.setItem('droidvm.chunkReload', to.fullPath)
+    } catch {
+      return
+    }
+    location.hash = to.fullPath
+    location.reload()
+  })
+  router.afterEach(() => {
+    try {
+      sessionStorage.removeItem('droidvm.chunkReload')
+    } catch {
+      /* Storage can be unavailable; the guard above then never reloads. */
+    }
   })
   router.beforeEach((to, from) => {
     if (group(to.path) !== group(from.path))
