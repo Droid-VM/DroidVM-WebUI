@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import AppLinkButton from './AppLinkButton.vue'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppNotice from './AppNotice.vue'
 import AppButton from './AppButton.vue'
+import AppCheckbox from './AppCheckbox.vue'
 
 const props = defineProps<{ problem: 'invalid' | 'unavailable' | null }>()
 const emit = defineEmits<{ clear: [] }>()
@@ -34,11 +36,10 @@ function clear() {
         {{ t(problem === 'invalid' ? 'operationTrackingInvalid' : 'operationTrackingUnavailable') }}
       </p>
       <p>{{ t('operationTrackingHint') }}</p>
-      <RouterLink class="btn tonal" to="/tasks">{{ t('diskTaskLink') }}</RouterLink>
-      <label>
-        <input v-model="confirmed" type="checkbox" data-testid="operation-tracking-confirm" />
-        {{ t('operationTrackingConfirm') }}
-      </label>
+      <AppLinkButton tone="tonal" to="/tasks">{{ t('diskTaskLink') }}</AppLinkButton>
+      <AppCheckbox v-model="confirmed" data-testid="operation-tracking-confirm">{{
+        t('operationTrackingConfirm')
+      }}</AppCheckbox>
       <AppButton data-testid="operation-tracking-clear" :disabled="!confirmed" @click="clear">
         {{ t('operationTrackingClear') }}
       </AppButton>
@@ -55,15 +56,6 @@ function clear() {
 }
 p {
   margin: 0;
-}
-label {
-  display: flex;
-  align-items: start;
-  gap: var(--space-2);
-}
-input {
-  flex: none;
-  margin-block-start: 4px;
 }
 .btn {
   justify-self: start;

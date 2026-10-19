@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@material/web/progress/linear-progress.js'
 import { useI18n } from 'vue-i18n'
 const { n } = useI18n()
 import { computed } from 'vue'
@@ -18,7 +19,12 @@ const progress = computed(() =>
         n(progress / 100, { style: 'percent', maximumFractionDigits: 0 })
       }}</span>
     </div>
-    <progress max="100" :value="progress" :aria-label="label" />
+    <md-linear-progress
+      :max="100"
+      :value="progress ?? 0"
+      :indeterminate="progress === undefined"
+      :aria-label="label"
+    />
   </div>
 </template>
 
@@ -31,14 +37,15 @@ const progress = computed(() =>
   display: flex;
   justify-content: space-between;
   gap: var(--space-3);
-  font-size: var(--font-sm);
-  color: var(--muted);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  color: var(--md-sys-color-on-surface-variant);
   margin-bottom: var(--space-2);
 }
-progress {
+md-linear-progress {
   width: 100%;
-  height: 8px;
-  accent-color: var(--accent);
   display: block;
+  --md-linear-progress-track-height: 4px;
+  --md-linear-progress-active-indicator-height: 4px;
+  --md-linear-progress-track-shape: var(--md-sys-shape-corner-full);
 }
 </style>

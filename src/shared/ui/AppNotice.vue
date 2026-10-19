@@ -16,7 +16,11 @@ defineEmits<{ dismiss: [] }>()
       <h2>{{ title }}</h2>
       <div class="notice-body"><slot /></div>
     </div>
-    <AppButton v-if="dismissible" :aria-label="t('dismissNotice')" @click="$emit('dismiss')"
+    <AppButton
+      v-if="dismissible"
+      tone="icon"
+      :aria-label="t('dismissNotice')"
+      @click="$emit('dismiss')"
       ><AppIcon name="close"
     /></AppButton>
   </section>
@@ -27,27 +31,27 @@ defineEmits<{ dismiss: [] }>()
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--md-sys-shape-corner-large);
   padding: var(--space-4);
-  background: var(--tint);
-  color: var(--on-tint);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
   margin-bottom: var(--space-4);
   overflow-wrap: anywhere;
 }
 .warning {
-  background: var(--warn-bg);
-  color: var(--warn);
+  background: var(--app-color-warning-container);
+  color: var(--app-color-warning);
 }
 .error {
-  background: var(--danger-bg);
-  color: var(--danger);
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-error);
 }
 h2 {
-  font-size: var(--font-body);
+  font-size: var(--md-sys-typescale-body-medium-size);
   margin: 0 0 var(--space-2);
 }
 .notice-body {
-  font-size: var(--font-sm);
+  font-size: var(--md-sys-typescale-body-medium-size);
   line-height: 1.6;
 }
 .notice-body :deep(p) {

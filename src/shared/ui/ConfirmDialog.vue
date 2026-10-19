@@ -52,6 +52,6 @@ function confirm() {
   flex-wrap: wrap;
 }
 .confirmation-error {
-  color: var(--danger);
+  color: var(--md-sys-color-error);
 }
 </style>

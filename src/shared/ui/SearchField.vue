@@ -19,38 +19,39 @@ defineExpose({ focus: () => input.value?.focus() })
 </template>
 
 <style scoped>
+/* M3 search bar, 48px tall so it lines up with the filter chips in toolbars. */
 .search-field {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-3);
   align-items: center;
-  background: var(--soft);
-  border-radius: var(--radius-pill);
-  padding: 0 var(--space-3);
-  min-height: var(--touch-target);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+  padding: 0 var(--space-4);
+  min-height: 48px;
   min-width: 0;
 }
 input {
   width: 100%;
   min-width: 0;
-  min-height: var(--touch-target);
+  min-height: 48px;
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--ink);
+  color: var(--md-sys-color-on-surface);
   font: inherit;
-  font-size: var(--font-body);
+  font-size: var(--md-sys-typescale-title-medium-size);
+}
+input::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
 }
 .search-field:focus-within {
   outline: var(--focus-ring);
   outline-offset: 3px;
 }
 .icon {
-  width: 18px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
-}
-@media (max-width: 650px) {
-  input {
-    font-size: max(16px, 1rem);
-  }
 }
 </style>

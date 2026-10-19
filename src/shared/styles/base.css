@@ -14,23 +14,21 @@
 }
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--ink);
+  background: var(--app-color-background);
+  color: var(--md-sys-color-on-surface);
 }
 button,
 input,
-select {
+textarea {
   font: inherit;
 }
 button,
 a,
-summary,
-select {
+summary {
   -webkit-tap-highlight-color: transparent;
 }
 button,
-summary,
-select {
+summary {
   cursor: pointer;
 }
 button:disabled {
@@ -38,12 +36,11 @@ button:disabled {
   opacity: 0.55;
 }
 a {
-  color: var(--accent);
+  color: var(--md-sys-color-primary);
 }
 button:focus-visible,
 a:focus-visible,
 summary:focus-visible,
-select:focus-visible,
 [tabindex]:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 3px;
@@ -54,34 +51,37 @@ h3,
 p {
   margin-top: 0;
 }
+/* Page titles use M3 headline-medium everywhere; section titles title-medium. */
 h1 {
-  font-size: var(--font-title);
-  font-weight: 500;
+  font-size: var(--md-sys-typescale-headline-medium-size);
+  font-weight: 400;
+  line-height: 1.3;
   margin-bottom: var(--space-2);
 }
+/* CJK system fonts have no 500 weight, so titles use 600 to stay distinct from body text. */
 h2 {
-  font-size: var(--font-heading);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: 600;
+}
+h3 {
+  font-size: var(--md-sys-typescale-title-small-size);
   font-weight: 600;
 }
 p {
   line-height: 1.6;
 }
 small {
-  font-size: var(--font-xs);
+  font-size: var(--md-sys-typescale-body-small-size);
 }
 .icon {
   width: 22px;
   height: 22px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.7;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  fill: currentColor;
   flex-shrink: 0;
 }
 .muted {
-  font-size: var(--font-sm);
-  color: var(--muted);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  color: var(--md-sys-color-on-surface-variant);
   margin: var(--space-3) 0;
 }
 .grow {
@@ -91,133 +91,325 @@ small {
 .mobile-only {
   display: none !important;
 }
-.btn {
+/* AppLinkButton: a real link drawn as an M3 button (ripple and focus ring come from md-*). */
+a.btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-xl);
-  min-height: var(--touch-target);
-  padding: 9px 15px;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 10px var(--space-6);
+  border-radius: var(--md-sys-shape-corner-full);
   text-decoration: none;
-  font-size: var(--font-sm);
-  color: var(--accent);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+  color: var(--md-sys-color-primary);
   background: transparent;
   min-width: 0;
   max-width: 100%;
   white-space: normal;
   overflow-wrap: anywhere;
   text-align: center;
-}
-a.btn {
   justify-self: start;
   align-self: start;
+  outline: none;
 }
-.btn.back-link {
+/* Extend the touch target to 48px without changing the visual height. */
+a.btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+a.btn.quiet {
+  padding-inline: var(--space-3);
+}
+a.btn.back-link {
   justify-content: flex-start;
   text-align: start;
 }
-.btn.primary {
-  color: var(--primary-text);
-  background: var(--accent);
+a.btn.primary {
+  color: var(--md-sys-color-on-primary);
+  background: var(--md-sys-color-primary);
 }
-.btn.tonal {
-  color: var(--on-tint);
-  background: var(--tint);
+a.btn.tonal {
+  color: var(--md-sys-color-on-secondary-container);
+  background: var(--md-sys-color-secondary-container);
 }
-.btn:hover:not(:disabled) {
-  filter: brightness(0.95);
+/* Material buttons: allow long labels to wrap instead of overflowing. */
+.btn:not(a) {
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  min-height: 40px;
+  --md-filled-button-container-height: 40px;
+  --md-filled-tonal-button-container-height: 40px;
+  --md-text-button-container-height: 40px;
 }
+/* Destructive actions: a text or tonal button tinted with the error role. */
+.btn.danger {
+  --md-text-button-label-text-color: var(--md-sys-color-error);
+  --md-text-button-hover-label-text-color: var(--md-sys-color-error);
+  --md-text-button-focus-label-text-color: var(--md-sys-color-error);
+  --md-text-button-pressed-label-text-color: var(--md-sys-color-error);
+  --md-text-button-hover-state-layer-color: var(--md-sys-color-error);
+  --md-text-button-pressed-state-layer-color: var(--md-sys-color-error);
+}
+/* Buttons keep their natural width inside grid and flex column layouts. */
+.btn {
+  justify-self: start;
+  align-self: start;
+}
+.btn > .icon {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+}
+/* Links space icons with flex gap; Material buttons render slot content inline. */
+.btn:not(a, .icon-button) > .icon {
+  margin-inline-end: var(--space-2);
+}
+.btn.icon-button > .icon {
+  width: 24px;
+  height: 24px;
+}
+/* M3 secondary tabs for in-page sections (role="tablist" with role="tab" buttons). */
+.tabs {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  scrollbar-width: none;
+}
+.tabs > [role='tab'] {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  border: 0;
+  background: none;
+  color: var(--md-sys-color-on-surface-variant);
+  font: inherit;
+  font-size: var(--md-sys-typescale-title-small-size);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.tabs > [role='tab']:hover {
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+.tabs > [role='tab'][aria-selected='true'] {
+  color: var(--md-sys-color-primary);
+}
+.tabs > [role='tab'][aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: var(--md-sys-color-primary);
+}
+.tabs > [role='tab']:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -3px;
+}
+/* Grouped form sections: an outlined card whose legend is a section title, not a notch. */
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--app-color-card);
+}
+legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin: 0 0 var(--space-3);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: 600;
+}
+legend + * {
+  clear: both;
+}
+/* Native file pickers stay native (no material equivalent) but match a tonal button. */
+input[type='file'] {
+  max-width: 100%;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
+}
+input[type='file']::file-selector-button {
+  margin-inline-end: var(--space-3);
+  min-height: 40px;
+  padding: 0 var(--space-6);
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+input[type='file']:disabled::file-selector-button {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+/* Disclosure sections: a title-small row with the marker, content indented below. */
+details > summary {
+  min-height: var(--touch-target);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details:not(.overview) > summary::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin-inline: 2px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--md-sys-motion-duration-short) var(--md-sys-motion-easing-standard);
+}
+details[open]:not(.overview) > summary::before {
+  transform: rotate(45deg);
+}
+/* M3 cards: outlined (.card), filled and elevated (.panel is an elevated card). */
+.card,
+.card-filled,
+.card-elevated,
 .panel {
-  background: var(--surface);
-  border-radius: var(--radius-xl);
-  padding: 22px;
+  min-width: 0;
+  padding: var(--space-4);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface);
+}
+.card {
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+.card-filled {
+  background: var(--md-sys-color-surface-container-highest);
+}
+.card-elevated,
+.panel {
+  background: var(--md-sys-color-surface-container-low);
+  box-shadow: var(--md-sys-elevation-level1);
 }
 .empty-state {
   text-align: center;
   padding: 44px var(--space-5);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  background: var(--app-color-card);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
 }
 .empty-state > .icon {
   width: 38px;
   height: 38px;
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
   margin-bottom: 15px;
 }
 .empty-state h2 {
   margin-bottom: var(--space-2);
 }
 .empty-state p {
-  font-size: var(--font-body);
-  color: var(--muted);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  color: var(--md-sys-color-on-surface-variant);
   max-width: 480px;
   margin: 0 auto var(--space-4);
 }
+/* App shell: M3 navigation rail (>= 600px) or navigation bar (compact) plus a top app bar. */
 .app-shell {
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
+  grid-template-columns: 80px minmax(0, 1fr);
   min-height: 100dvh;
 }
 .rail {
   position: sticky;
   top: 0;
   height: 100dvh;
-  background: var(--soft);
-  padding: 23px var(--space-2) var(--space-4);
+  padding: var(--space-3) 0 var(--space-4);
   display: flex;
   align-items: center;
   flex-direction: column;
-  gap: 30px;
+  gap: var(--space-6);
 }
 .logo {
   display: grid;
   place-items: center;
-  width: 50px;
-  height: 50px;
-  border-radius: 17px;
-  background: var(--tint);
-  color: var(--accent);
-}
-.logo > .icon {
-  width: 26px;
-  height: 26px;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
 }
 .rail nav {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-3);
   width: 100%;
 }
 .rail nav a {
   display: flex;
   align-items: center;
   flex-direction: column;
-  gap: 5px;
-  font-size: var(--font-xs);
+  gap: var(--space-1);
   min-height: 56px;
+  font-size: var(--md-sys-typescale-body-small-size);
+  font-weight: 500;
+  letter-spacing: 0.5px;
   text-decoration: none;
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
+  outline: none;
 }
 .nav-icon {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 33px;
-  border-radius: var(--radius-lg);
+  width: 56px;
+  height: 32px;
+  border-radius: var(--md-sys-shape-corner-full);
+  transition: background-color var(--md-sys-motion-duration-short)
+    var(--md-sys-motion-easing-standard);
+}
+.nav-icon > .icon {
+  width: 24px;
+  height: 24px;
 }
 .rail nav a.active {
-  color: var(--on-tint);
-  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+  font-weight: 700;
 }
 .rail nav a.active .nav-icon {
-  background: var(--tint);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+.rail nav a:focus-visible .nav-icon {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.rail md-fab {
+  flex-shrink: 0;
+}
+md-fab > .icon {
+  width: 24px;
+  height: 24px;
+}
+.fab-compact {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--bottom-nav-height) + var(--space-4) + env(safe-area-inset-bottom));
+  z-index: 6;
 }
 .rail-note {
   margin-top: auto;
-  font-size: var(--font-caption);
-  color: var(--muted);
+  font-size: var(--md-sys-typescale-label-small-size);
+  color: var(--md-sys-color-on-surface-variant);
 }
 .app-body {
   min-width: 0;
@@ -225,64 +417,57 @@ a.btn {
 .topbar {
   display: flex;
   align-items: center;
-  gap: var(--space-5);
-  padding: var(--space-4) var(--space-9);
-  min-height: 86px;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-6);
+  min-height: 64px;
 }
 .wordmark {
   display: flex;
   align-items: center;
-  gap: 18px;
-  font-size: var(--font-mobile-title);
-  font-weight: 650;
-  letter-spacing: -0.7px;
+  gap: var(--space-4);
+  font-size: var(--md-sys-typescale-title-large-size);
+  font-weight: 500;
 }
 .wordmark small {
-  border-left: 1px solid var(--line);
-  padding-left: 18px;
+  border-left: 1px solid var(--md-sys-color-outline-variant);
+  padding-left: var(--space-4);
+  font-size: var(--md-sys-typescale-body-medium-size);
   font-weight: 400;
-  letter-spacing: 0;
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
 }
 .wordmark h1 {
   font-size: inherit;
-  font-weight: inherit;
+  font-weight: 400;
   margin: 0;
 }
 .connection {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: var(--font-xs);
-  color: var(--muted);
+  gap: var(--space-2);
+  font-size: var(--md-sys-typescale-body-small-size);
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
   margin-left: auto;
 }
 .dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--muted);
+  background: var(--md-sys-color-outline);
 }
-.theme-control {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-xs);
-  color: var(--muted);
+.dot[data-state='snapshotLoaded'] {
+  background: var(--app-color-success);
 }
-select {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink);
-  min-height: var(--touch-target);
-  padding: var(--space-2);
-  max-width: 100%;
+.dot[data-state='loading'] {
+  background: var(--app-color-warning);
+}
+.dot[data-state='errorAuthTitle'] {
+  background: var(--md-sys-color-error);
 }
 .preview-banner {
-  color: var(--warn);
-  background: var(--warn-bg);
-  font-size: var(--font-xs);
+  color: var(--app-color-warning);
+  background: var(--app-color-warning-container);
+  font-size: var(--md-sys-typescale-body-small-size);
   line-height: 24px;
   padding: 0 var(--space-4);
   text-align: center;
@@ -290,7 +475,7 @@ select {
 .app-body > main {
   max-width: 1500px;
   margin: auto;
-  padding: 10px var(--space-9) var(--space-8);
+  padding: var(--space-2) var(--space-6) var(--space-8);
 }
 .app-body > main:focus {
   outline: none;
@@ -306,8 +491,8 @@ select {
   margin-bottom: 0;
 }
 .eyebrow {
-  color: var(--muted);
-  font-size: var(--font-label);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-label-small-size);
   margin-bottom: 10px;
 }
 .skip-link {
@@ -316,15 +501,15 @@ select {
   left: 10px;
   z-index: 20;
   padding: var(--space-3);
-  background: var(--surface);
+  background: var(--app-color-card);
 }
 .skip-link:focus {
   top: 10px;
 }
 .menu {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  background: var(--app-color-card);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
   overflow: hidden;
 }
 .menu-row {
@@ -332,37 +517,37 @@ select {
   align-items: center;
   gap: 13px;
   min-height: 70px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
   padding: var(--space-4);
   text-decoration: none;
-  color: var(--ink);
+  color: var(--md-sys-color-on-surface);
 }
 .menu-row:last-child {
   border: 0;
 }
 .menu-row[aria-current='page'] {
-  background: var(--tint);
+  background: var(--md-sys-color-secondary-container);
 }
 .menu-row .grow {
   overflow-wrap: anywhere;
 }
 a.menu-row:hover {
-  background: var(--soft);
+  background: var(--app-color-raised);
 }
 a.menu-row:focus-visible {
   outline-offset: -3px;
 }
 .menu-row[aria-disabled='true'] {
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
 }
 .menu-row strong {
   display: block;
-  font-size: var(--font-card);
+  font-size: var(--md-sys-typescale-title-medium-size);
   font-weight: 550;
 }
 .menu-row small {
   display: block;
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
   margin-top: var(--space-1);
   overflow-wrap: anywhere;
 }
@@ -371,8 +556,8 @@ a.menu-row:focus-visible {
   place-items: center;
   width: 42px;
   height: 42px;
-  background: var(--tint);
-  color: var(--accent);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-primary);
   border-radius: 14px;
   flex-shrink: 0;
 }
@@ -380,8 +565,8 @@ a.menu-row:focus-visible {
   display: flex;
   gap: 14px;
   align-items: center;
-  background: var(--soft);
-  border-radius: var(--radius-lg);
+  background: var(--app-color-raised);
+  border-radius: var(--md-sys-shape-corner-large);
   padding: var(--space-5);
   margin-bottom: var(--space-5);
 }
@@ -391,16 +576,16 @@ a.menu-row:focus-visible {
 }
 dialog {
   border: 0;
-  border-radius: var(--radius-dialog);
+  border-radius: var(--md-sys-shape-corner-extra-large);
   padding: 0;
-  background: var(--soft);
-  color: var(--ink);
+  background: var(--app-color-raised);
+  color: var(--md-sys-color-on-surface);
   width: min(640px, calc(100% - 32px));
   max-height: calc(100dvh - 32px);
-  box-shadow: 0 18px 80px #0003;
+  box-shadow: var(--md-sys-elevation-level3);
 }
 dialog::backdrop {
-  background: #10182880;
+  background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
 }
 .dialog-header {
   display: flex;
@@ -410,8 +595,8 @@ dialog::backdrop {
   padding: var(--space-3) var(--space-5);
   position: sticky;
   top: 0;
-  background: var(--soft);
-  border-bottom: 1px solid var(--line);
+  background: var(--app-color-raised);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 .dialog-header h2 {
   margin: 0;
@@ -421,9 +606,76 @@ dialog::backdrop {
 .dialog-body {
   padding: var(--space-5);
 }
-.fullscreen {
-  width: min(1200px, calc(100% - 32px));
-  height: 80dvh;
+/* List-detail pane: AppDialog rendered inline beside a list on wide screens. */
+.dialog-pane {
+  position: sticky;
+  top: var(--space-4);
+  min-width: 0;
+  max-height: calc(100dvh - var(--space-8));
+  overflow: auto;
+  padding: var(--space-2) var(--space-6) var(--space-6);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--app-color-card);
+}
+.dialog-pane > .dialog-header {
+  padding: var(--space-2) 0;
+  background: var(--app-color-card);
+  border-bottom: 0;
+}
+.dialog-pane > .dialog-header h2 {
+  font-size: var(--md-sys-typescale-headline-small-size);
+  font-weight: 400;
+}
+.dialog-pane > .dialog-body {
+  padding: var(--space-2) 0 0;
+}
+.pane-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 320px;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--app-color-card);
+  color: var(--md-sys-color-on-surface-variant);
+  text-align: center;
+  padding: var(--space-6);
+}
+.pane-placeholder > .icon {
+  width: 48px;
+  height: 48px;
+}
+.creation-options {
+  display: grid;
+  gap: var(--space-3);
+}
+.creation-options .btn {
+  justify-content: flex-start;
+  min-height: 56px;
+  white-space: normal;
+  text-align: start;
+}
+/* Sessions (console, terminal, logs) are immersive: the whole viewport at every size. */
+.fullscreen[open] {
+  inset: 0;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+/* M3 toolbar surface shared by the session controls. */
+.session-toolbar {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-highest);
+}
+.session-toolbar:empty {
+  display: none;
 }
 .fullscreen[open] {
   display: flex;
@@ -449,18 +701,12 @@ dialog::backdrop {
   justify-content: center;
   flex-direction: column;
 }
-@media (max-width: 900px) {
-  .topbar {
-    padding: var(--space-4) 22px;
-  }
-  .app-body > main {
-    padding: 10px 22px 28px;
-  }
+@media (width < 840px) {
   .wordmark small {
     display: none;
   }
 }
-@media (max-width: 650px) {
+@media (width < 600px) {
   .desktop-only {
     display: none !important;
   }
@@ -469,15 +715,17 @@ dialog::backdrop {
   }
   .app-shell {
     display: block;
-    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
   }
+  /* The rail becomes the M3 navigation bar. */
   .rail {
     position: fixed;
     inset: auto 0 0;
     z-index: 5;
     height: auto;
-    padding: 9px var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--line);
+    min-height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
+    padding: var(--space-3) var(--space-2) calc(var(--space-4) + env(safe-area-inset-bottom));
+    background: var(--md-sys-color-surface-container);
   }
   .rail > .logo,
   .rail-note {
@@ -488,30 +736,17 @@ dialog::backdrop {
     gap: 0;
   }
   .rail nav a {
-    min-height: 54px;
-    gap: var(--space-1);
+    min-height: 52px;
   }
   .nav-icon {
-    width: 60px;
-    height: 31px;
+    width: 64px;
   }
   .topbar {
-    padding: var(--space-3) var(--space-4);
-    min-height: 64px;
-    padding-top: calc(var(--space-3) + env(safe-area-inset-top));
-  }
-  .wordmark {
-    font-size: var(--font-mobile-title);
-  }
-  .connection {
-    font-size: var(--font-xs);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+    padding-top: calc(var(--space-2) + env(safe-area-inset-top));
   }
   .app-body > main {
-    padding: var(--space-2) 14px var(--space-4);
-  }
-  .btn {
-    font-size: var(--font-body);
-    padding: 9px var(--space-3);
+    padding: var(--space-2) var(--space-4) var(--space-4);
   }
   .empty-state {
     padding: var(--space-8) var(--space-4);
@@ -519,10 +754,6 @@ dialog::backdrop {
   .menu-row {
     padding: 14px;
     min-height: 64px;
-  }
-  .menu-row select {
-    max-width: 160px;
-    font-size: var(--font-heading);
   }
   dialog {
     width: 100%;
@@ -537,15 +768,6 @@ dialog::backdrop {
   }
   .dialog-body {
     padding: var(--space-4);
-  }
-  .fullscreen[open] {
-    inset: 0;
-    margin: 0;
-    width: 100%;
-    height: 100dvh;
-    max-height: 100dvh;
-    border-radius: 0;
-    padding-top: env(safe-area-inset-top);
   }
   .fullscreen .dialog-header {
     flex-shrink: 0;

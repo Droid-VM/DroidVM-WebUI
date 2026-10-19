@@ -2,6 +2,8 @@ import { ref, watch } from 'vue'
 
 export type ThemeMode = 'system' | 'light' | 'dark'
 export const themeMode = ref<ThemeMode>('system')
+// The theme actually shown, for code that cannot follow CSS variables (e.g. xterm).
+export const resolvedTheme = ref<'light' | 'dark'>('light')
 export function startTheme() {
   const system = matchMedia('(prefers-color-scheme: dark)')
   try {
@@ -11,8 +13,9 @@ export function startTheme() {
     /* Browser storage can be unavailable. */
   }
   function apply() {
-    document.documentElement.dataset.color =
+    resolvedTheme.value =
       themeMode.value === 'system' ? (system.matches ? 'dark' : 'light') : themeMode.value
+    document.documentElement.dataset.color = resolvedTheme.value
   }
   const stop = watch(
     themeMode,
