@@ -9,6 +9,7 @@ export const taskKindKeys: Readonly<Record<string, MessageKey>> = {
   web_service: 'webServiceOperationStatus',
   host_preferences: 'hostPreferencesTitle',
   usb_acm: 'usbAcmTitle',
+  android_display: 'androidDisplayTitle',
   disk_defaults: 'diskDefaultsTitle',
   usb_rules: 'usbRulesSave',
   usb_target: 'usbChangeTarget',

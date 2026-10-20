@@ -13,6 +13,7 @@ import { createVmGraphicsGateway, type VmGraphicsGateway } from '../modules/grap
 import { createHostOverviewGateway, type HostOverviewGateway } from '../modules/host'
 import { createHugepageGateway, type HugepageGateway } from '../modules/hugepages'
 import { createUsbAcmGateway, type UsbAcmGateway } from '../modules/usbAcm'
+import { createAndroidDisplayGateway, type AndroidDisplayGateway } from '../modules/androidDisplay'
 import { createDiskDefaultGateway, type DiskDefaultGateway } from '../modules/diskDefaults'
 import { createHostPreferenceGateway, type HostPreferenceGateway } from '../modules/hostPreferences'
 import {
@@ -112,6 +113,7 @@ export function mountHttpApp() {
   const hostPreferenceSource = createHostPreferenceGateway(client, access)
   const usbAcmSource = createUsbAcmGateway(client, access)
   const diskDefaultSource = createDiskDefaultGateway(client, access)
+  const androidDisplaySource = createAndroidDisplayGateway(client, access)
   const rescueSource = createAgentRescueGateway(client, access)
   const rescueTerminalSource = createVmTerminalGateway(client, access, { scope: 'agent-rescue' })
   const agentSource = createAgentGateway(client, access, async (id, signal) => ({
@@ -443,6 +445,15 @@ export function mountHttpApp() {
     submit: (request, signal) => inSession(signal, () => usbAcmSource.submit(request, signal)),
     find: (request, signal) => inSession(signal, () => usbAcmSource.find(request, signal)),
   }
+  const androidDisplay: AndroidDisplayGateway = {
+    tracking: androidDisplaySource.tracking,
+    supported: androidDisplaySource.supported,
+    readable: androidDisplaySource.readable,
+    read: (signal) => inSession(signal, () => androidDisplaySource.read(signal)),
+    submit: (request, signal) =>
+      inSession(signal, () => androidDisplaySource.submit(request, signal)),
+    find: (request, signal) => inSession(signal, () => androidDisplaySource.find(request, signal)),
+  }
   const diskDefaults: DiskDefaultGateway = {
     tracking: diskDefaultSource.tracking,
     rememberTracking: diskDefaultSource.rememberTracking,
@@ -488,5 +499,6 @@ export function mountHttpApp() {
     hostPreferences,
     usbAcm,
     diskDefaults,
+    androidDisplay,
   )
 }

@@ -200,6 +200,17 @@ export const UsbAcmOperationRequest: ValidateFunction<components['schemas']['Usb
 export const UsbAcmOperationResult: ValidateFunction<components['schemas']['UsbAcmOperationResult']>
 export const UsbAcmCancelledResult: ValidateFunction<components['schemas']['UsbAcmCancelledResult']>
 export const UsbAcmResult: ValidateFunction<components['schemas']['UsbAcmResult']>
+export const AndroidDisplayExpected: ValidateFunction<components['schemas']['AndroidDisplayExpected']>
+export const AndroidDisplayState: ValidateFunction<components['schemas']['AndroidDisplayState']>
+export const AndroidDisplayNetwork: ValidateFunction<components['schemas']['AndroidDisplayNetwork']>
+export const AndroidDisplayOwner: ValidateFunction<components['schemas']['AndroidDisplayOwner']>
+export const AndroidDisplayRestore: ValidateFunction<components['schemas']['AndroidDisplayRestore']>
+export const AndroidDisplayObservation: ValidateFunction<components['schemas']['AndroidDisplayObservation']>
+export const AndroidDisplayOperation: ValidateFunction<components['schemas']['AndroidDisplayOperation']>
+export const AndroidDisplayOperationRequest: ValidateFunction<components['schemas']['AndroidDisplayOperationRequest']>
+export const AndroidDisplayOperationResult: ValidateFunction<components['schemas']['AndroidDisplayOperationResult']>
+export const AndroidDisplayCancelledResult: ValidateFunction<components['schemas']['AndroidDisplayCancelledResult']>
+export const AndroidDisplayResult: ValidateFunction<components['schemas']['AndroidDisplayResult']>
 export const DiskDefaultValues: ValidateFunction<components['schemas']['DiskDefaultValues']>
 export const DiskDefaultExpected: ValidateFunction<components['schemas']['DiskDefaultExpected']>
 export const DiskDefaultChanges: ValidateFunction<components['schemas']['DiskDefaultChanges']>

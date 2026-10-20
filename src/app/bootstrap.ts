@@ -23,6 +23,11 @@ import {
 } from '../modules/diskDefaults'
 import { createUsbAcm, usbAcmKey, type UsbAcmGateway } from '../modules/usbAcm'
 import {
+  createAndroidDisplay,
+  androidDisplayKey,
+  type AndroidDisplayGateway,
+} from '../modules/androidDisplay'
+import {
   createHostPreferences,
   hostPreferencesKey,
   type HostPreferenceGateway,
@@ -111,6 +116,7 @@ const HugepagesPage = () => import('../pages/HugepagesPage.vue')
 const HugepageProcessesPage = () => import('../pages/HugepageProcessesPage.vue')
 const HostPreferencesPage = () => import('../pages/HostPreferencesPage.vue')
 const UsbAcmPage = () => import('../pages/UsbAcmPage.vue')
+const AndroidDisplayPage = () => import('../pages/AndroidDisplayPage.vue')
 const DiskDefaultsPage = () => import('../pages/DiskDefaultsPage.vue')
 const VmEditPage = () => import('../pages/VmEditPage.vue')
 const UsbRulesPage = () => import('../pages/UsbRulesPage.vue')
@@ -163,6 +169,7 @@ export function mountApp(
   hostPreferenceGateway?: HostPreferenceGateway,
   usbAcmGateway?: UsbAcmGateway,
   diskDefaultGateway?: DiskDefaultGateway,
+  androidDisplayGateway?: AndroidDisplayGateway,
 ) {
   const inventory = createInventory(gateway)
   const hostOverview = createHostOverview(hostOverviewGateway)
@@ -170,6 +177,7 @@ export function mountApp(
   const hostPreferences = createHostPreferences(hostPreferenceGateway)
   const usbAcm = createUsbAcm(usbAcmGateway)
   const diskDefaults = createDiskDefaults(diskDefaultGateway)
+  const androidDisplay = createAndroidDisplay(androidDisplayGateway)
   const hugepageProcesses = createHugepageProcesses(
     hugepageProcessGateway,
     undefined,
@@ -331,6 +339,11 @@ export function mountApp(
       { path: '/more', component: MorePage, meta: { title: 'navMore' } },
       { path: '/settings/usb-acm', component: UsbAcmPage, meta: { title: 'usbAcmTitle' } },
       {
+        path: '/settings/android-display',
+        component: AndroidDisplayPage,
+        meta: { title: 'androidDisplayTitle' },
+      },
+      {
         path: '/settings/disks',
         component: DiskDefaultsPage,
         meta: { title: 'diskDefaultsTitle' },
@@ -432,6 +445,8 @@ export function mountApp(
   app.onUnmount(hostPreferences.dispose)
   app.provide(usbAcmKey, usbAcm)
   app.onUnmount(usbAcm.dispose)
+  app.provide(androidDisplayKey, androidDisplay)
+  app.onUnmount(androidDisplay.dispose)
   app.provide(diskDefaultsKey, diskDefaults)
   app.onUnmount(diskDefaults.dispose)
   app.provide(hostOverviewKey, hostOverview)
@@ -466,6 +481,7 @@ export function mountApp(
       hostPreferences.dirty.value ||
       usbAcm.pending.value ||
       usbAcm.dirty.value ||
+      androidDisplay.pending.value ||
       diskDefaults.pending.value ||
       diskDefaults.dirty.value ||
       hugepages.dirty.value ||
@@ -536,6 +552,9 @@ export function mountApp(
             `${session.current.value.server.daemonEpoch}:${session.current.value.id}`,
           )
           usbAcm.bind(`${session.current.value.server.daemonEpoch}:${session.current.value.id}`)
+          androidDisplay.bind(
+            `${session.current.value.server.daemonEpoch}:${session.current.value.id}`,
+          )
           diskDefaults.bind(
             `${session.current.value.server.daemonEpoch}:${session.current.value.id}`,
           )
@@ -570,12 +589,14 @@ export function mountApp(
           hugepageProcesses.reset()
           hostPreferences.reset()
           usbAcm.reset()
+          androidDisplay.reset()
           diskDefaults.reset()
           hostOverview.pause()
           hugepages.pause()
           hugepageProcesses.pause()
           hostPreferences.pause()
           usbAcm.pause()
+          androidDisplay.pause()
           diskDefaults.pause()
           agent.reset(true)
           packageExport.reset()
@@ -601,6 +622,7 @@ export function mountApp(
           hugepageProcesses.pause()
           hostPreferences.pause()
           usbAcm.pause()
+          androidDisplay.pause()
           diskDefaults.pause()
           agent.pause()
           packageExport.pause()

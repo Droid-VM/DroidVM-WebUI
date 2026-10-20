@@ -1650,6 +1650,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/host/android-display": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description host.android-display.v1. Read who owns the Android panel: the Android framework, a KMS-exported VM, or a manual browser stop. GET never stops or restores Android. supported=false means this host cannot hand over its panel; watchdog.verified=false blocks stops with the stated reason. */
+        get: operations["readAndroidDisplay"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/android-display-operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Administrator/task permission, Origin, CSRF and context required. stop freezes system_server and stops SurfaceFlinger plus the display HAL (display tier only: zygote, netd and wpa_supplicant keep running, so Wi-Fi and this daemon stay reachable). A detached sentinel restores Android on request, on daemon death, after autoRestoreSeconds (default 1800) and, with restoreOnNetworkLoss (default true), once the default-route link has stayed down for 30 s. restore is refused while a VM owns the panel. Unknown admission is queried, never replayed. */
+        post: operations["submitAndroidDisplayOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/android-display-operations/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["findAndroidDisplayOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/disks/{diskId}/compression": {
         parameters: {
             query?: never;
@@ -2397,6 +2447,7 @@ export interface components {
             hugepageProcessResult?: components["schemas"]["HugepageProcessResult"];
             hostPreferenceResult?: components["schemas"]["HostPreferenceResult"];
             usbAcmResult?: components["schemas"]["UsbAcmResult"];
+            androidDisplayResult?: components["schemas"]["AndroidDisplayResult"];
             diskDefaultResult?: components["schemas"]["DiskDefaultResult"];
         } & unknown;
         TaskSnapshot: {
@@ -3524,6 +3575,93 @@ export interface components {
             uncertain: false;
         };
         UsbAcmResult: components["schemas"]["UsbAcmOperationResult"] | components["schemas"]["UsbAcmCancelledResult"];
+        AndroidDisplayExpected: {
+            revision: string;
+        };
+        /** @enum {string} */
+        AndroidDisplayState: "android" | "stopping" | "stopped" | "restoring";
+        AndroidDisplayNetwork: {
+            interface: string;
+            operstate: string | null;
+        } | null;
+        AndroidDisplayOwner: {
+            /** @enum {string} */
+            kind: "manual" | "vm";
+            vmId: string | null;
+            vmName: string | null;
+        } | null;
+        AndroidDisplayRestore: {
+            ok: boolean;
+            uncertain: boolean;
+            message: string | null;
+            atMs: string;
+        } | null;
+        AndroidDisplayObservation: {
+            context: components["schemas"]["ServerContext"];
+            /** @constant */
+            capability: "android-display-v1";
+            supported: boolean;
+            expected: components["schemas"]["AndroidDisplayExpected"];
+            state: components["schemas"]["AndroidDisplayState"];
+            owner: components["schemas"]["AndroidDisplayOwner"];
+            sinceMs: string | null;
+            autoRestoreAtMs: string | null;
+            restoreOnNetworkLoss: boolean;
+            progress: string;
+            network: components["schemas"]["AndroidDisplayNetwork"];
+            panelLit: boolean | null;
+            watchdog: {
+                verified: boolean;
+                reason: string | null;
+            };
+            services: {
+                surfaceflinger: string;
+                composer: string;
+            };
+            lastRestore: components["schemas"]["AndroidDisplayRestore"];
+        };
+        AndroidDisplayOperation: {
+            /** @constant */
+            kind: "stop";
+            autoRestoreSeconds?: number;
+            restoreOnNetworkLoss?: boolean;
+        } | {
+            /** @constant */
+            kind: "restore";
+        };
+        AndroidDisplayOperationRequest: {
+            context: components["schemas"]["ServerContext"];
+            requestId: components["schemas"]["RequestId"];
+            expected: components["schemas"]["AndroidDisplayExpected"];
+            operation: components["schemas"]["AndroidDisplayOperation"];
+        };
+        AndroidDisplayOperationResult: {
+            expected: components["schemas"]["AndroidDisplayExpected"];
+            /** @enum {string} */
+            kind: "stop" | "restore";
+            state: components["schemas"]["AndroidDisplayState"];
+            stopped: boolean;
+            restored: boolean;
+            uncertain: boolean;
+            revision: string | null;
+            network: components["schemas"]["AndroidDisplayNetwork"];
+            message: string | null;
+        };
+        AndroidDisplayCancelledResult: {
+            expected: null;
+            kind: null;
+            state: null;
+            revision: null;
+            network: null;
+            message: null;
+            /** @constant */
+            stopped: false;
+            /** @constant */
+            restored: false;
+            /** @constant */
+            uncertain: false;
+        };
+        AndroidDisplayResult: components["schemas"]["AndroidDisplayOperationResult"] | components["schemas"]["AndroidDisplayCancelledResult"];
         DiskDefaultValues: {
             /** @enum {string} */
             optimizeCompression: "ask" | "none";
@@ -6741,6 +6879,95 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Shared preference observation or task receipt. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VmOperationLookup"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+            501: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    readAndroidDisplay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Android display ownership observation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AndroidDisplayObservation"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+            501: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    submitAndroidDisplayOperation: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-DroidVM-CSRF": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AndroidDisplayOperationRequest"];
+            };
+        };
+        responses: {
+            /** @description Identity-scoped Android display task receipt. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponse"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+            501: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    findAndroidDisplayOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Android display task receipt, or null when the request is unknown. */
             200: {
                 headers: {
                     [name: string]: unknown;

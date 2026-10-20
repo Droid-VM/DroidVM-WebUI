@@ -16,6 +16,7 @@ import { useImageImport } from '../modules/images'
 import { useHugepages } from '../modules/hugepages'
 import { useHostPreferences } from '../modules/hostPreferences'
 import { useUsbAcm } from '../modules/usbAcm'
+import { useAndroidDisplay } from '../modules/androidDisplay'
 import { useDiskDefaults } from '../modules/diskDefaults'
 const { t } = useI18n(),
   session = useSession()
@@ -30,6 +31,7 @@ const imageImport = useImageImport()
 const hugepages = useHugepages()
 const hostPreferences = useHostPreferences()
 const usbAcm = useUsbAcm()
+const androidDisplay = useAndroidDisplay()
 const diskDefaults = useDiskDefaults()
 const backupLinks = computed(() => [
   {
@@ -115,6 +117,20 @@ const themeOptions = computed(() =>
           "
           :disabled="!usbAcm.supported.value"
           data-testid="usb-acm-link"
+        />
+        <ResourceRow
+          :title="t('androidDisplayTitle')"
+          to="/settings/android-display"
+          icon="activity"
+          :description="
+            t(
+              androidDisplay.supported.value
+                ? 'androidDisplayMenuHint'
+                : 'settingsCapabilityUnavailable',
+            )
+          "
+          :disabled="!androidDisplay.supported.value"
+          data-testid="android-display-link"
         />
         <ResourceRow :title="t('navVms')" to="/vms" icon="vm" :description="t('settingsVmHint')" />
         <ResourceRow
