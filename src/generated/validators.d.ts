@@ -37,6 +37,8 @@ export const AudioDevice: ValidateFunction<components['schemas']['AudioDevice']>
 export const DiskOperation: ValidateFunction<components['schemas']['DiskOperation']>
 export const DiskOperationRequest: ValidateFunction<components['schemas']['DiskOperationRequest']>
 export const DiskDetail: ValidateFunction<components['schemas']['DiskDetail']>
+export const VmLogClearRequest: ValidateFunction<components['schemas']['VmLogClearRequest']>
+export const VmUsageCounter: ValidateFunction<components['schemas']['VmUsageCounter']>
 export const DiskByteCount: ValidateFunction<components['schemas']['DiskByteCount']>
 export const DiskCatalog: ValidateFunction<components['schemas']['DiskCatalog']>
 export const NetworkCatalog: ValidateFunction<components['schemas']['NetworkCatalog']>
@@ -156,6 +158,7 @@ export const ImageUploadFinishRequest: ValidateFunction<components['schemas']['I
 export const ImageInstallRequest: ValidateFunction<components['schemas']['ImageInstallRequest']>
 export const ImageInstallResult: ValidateFunction<components['schemas']['ImageInstallResult']>
 export const VmDisplayScreen: ValidateFunction<components['schemas']['VmDisplayScreen']>
+export const VmDisplayWebrtc: ValidateFunction<components['schemas']['VmDisplayWebrtc']>
 export const VmDisplayMetadata: ValidateFunction<components['schemas']['VmDisplayMetadata']>
 export const VmDisplayOpen: ValidateFunction<components['schemas']['VmDisplayOpen']>
 export const VmDisplayReady: ValidateFunction<components['schemas']['VmDisplayReady']>

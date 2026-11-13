@@ -368,6 +368,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/vm-logs/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["clearVmLog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/vm-logs/read": {
         parameters: {
             query?: never;
@@ -1657,7 +1673,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description host.android-display.v1. Read who owns the Android panel: the Android framework, a KMS-exported VM, or a manual browser stop. GET never stops or restores Android. supported=false means this host cannot hand over its panel; watchdog.verified=false blocks stops with the stated reason. */
+        /** @description host.android-display.v1. Read who owns the Android panel: the Android framework, a KMS-exported VM, or a manual browser stop. GET never stops or restores Android. supported=false means this host cannot hand over its panel; watchdog.verified=false blocks stops with the stated reason; watchdog.kick says whether the driver has accepted DroidVM as a caller. */
         get: operations["readAndroidDisplay"];
         put?: never;
         post?: never;
@@ -1676,7 +1692,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Administrator/task permission, Origin, CSRF and context required. stop freezes system_server and stops SurfaceFlinger plus the display HAL (display tier only: zygote, netd and wpa_supplicant keep running, so Wi-Fi and this daemon stay reachable). A detached sentinel restores Android on request, on daemon death, after autoRestoreSeconds (default 1800) and, with restoreOnNetworkLoss (default true), once the default-route link has stayed down for 30 s. restore is refused while a VM owns the panel. Unknown admission is queried, never replayed. */
+        /** @description Administrator/task permission, Origin, CSRF and context required. stop freezes system_server and stops SurfaceFlinger plus the display HAL; tier=zygote also stops zygote to reclaim app-framework memory, while tier=display keeps network services reachable. A detached sentinel restores Android on request, on daemon death, after autoRestoreSeconds (default 1800) and, with restoreOnNetworkLoss (default true), once the default-route link has stayed down for 30 s. restore is refused while a VM owns the panel. Unknown admission is queried, never replayed. */
         post: operations["submitAndroidDisplayOperation"];
         delete?: never;
         options?: never;
@@ -1805,6 +1821,8 @@ export interface components {
                 name: string;
                 bridgeType: string;
                 uplinkMode: string;
+                /** @description 仅桥接（l2）网络：配置的上行接口名。 */
+                uplink?: string;
                 /** @description 可选以兼容旧服务；缺失表示能力未知，空数组表示没有配置 VLAN。来自同一次网络配置快照，不代表运行态或地址预留。 */
                 vlans?: components["schemas"]["NetworkVlanResource"][];
                 bridgeName: string;
@@ -2182,6 +2200,13 @@ export interface components {
             cpus?: number[];
             diskId: string;
         } | {
+            /** @enum {unknown} */
+            action: "snapshot-create" | "snapshot-apply" | "snapshot-delete";
+            cpus?: number[];
+            diskId: string;
+            /** @description 创建时为新快照名；回滚/删除时为快照名或 ID。 */
+            snapshot: string;
+        } | {
             /** @constant */
             action: "delete";
             cpus?: number[];
@@ -2228,8 +2253,23 @@ export interface components {
                  * @enum {unknown}
                  */
                 effectiveCompression?: "none" | "deflate" | "zstd" | null;
+                /** @description qcow2 内部快照（qemu-img info）；仅 state=ready 时出现，缺失表示旧服务或未检查。 */
+                snapshots?: {
+                    id: string;
+                    name: string;
+                    vmStateBytes: string;
+                    createdAtMs: number;
+                    vmClockMs: number;
+                }[];
             };
         };
+        VmLogClearRequest: {
+            context: components["schemas"]["ServerContext"];
+            vmId: components["schemas"]["RequestId"];
+            instanceId: string;
+            stream: string;
+        };
+        VmUsageCounter: string;
         DiskByteCount: string | null;
         DiskCatalog: {
             context: components["schemas"]["ServerContext"];
@@ -2248,6 +2288,17 @@ export interface components {
             parentId: string | null;
             backing: boolean;
             selectable: boolean;
+            /** @description 仅列表返回：按镜像头识别（qcow2/vmdk/vhdx/raw），null 表示文件不可读。 */
+            format?: string | null;
+            /** @description 仅列表返回：镜像头声明的虚拟大小；raw 为文件长度。 */
+            virtualBytes?: components["schemas"]["DiskByteCount"];
+            /** @description 仅列表返回：文件实际占用（st_blocks）。 */
+            allocatedBytes?: components["schemas"]["DiskByteCount"];
+            /** @description 仅列表返回：配置中直接挂载此路径的虚拟机（最多 16 个）。 */
+            users?: {
+                vmId: string;
+                vmName: string;
+            }[];
         };
         NetworkResource: {
             id: string;
@@ -2256,6 +2307,15 @@ export interface components {
             uplinkMode: string;
             /** @description 可选以兼容旧服务；缺失表示能力未知，空数组表示没有配置 VLAN。来自同一次网络配置快照，不代表运行态或地址预留。 */
             vlans?: components["schemas"]["NetworkVlanResource"][];
+            /**
+             * @description 仅列表返回；读取列表时的网络运行态快照，缺失表示旧服务或运行时不可用。操作前仍需读取详情取得 generation。
+             * @enum {string}
+             */
+            state?: "STOPPED" | "STARTING" | "RUNNING" | "RECOVERING" | "STOPPING" | "FAILED";
+            /** @description 仅桥接（l2）网络：配置的上行接口名；NAT 网络随默认路由，不返回。 */
+            uplink?: string;
+            /** @description 仅列表返回：配置中有网卡接入此网络的虚拟机数量；缺失表示旧服务或配置不可读。 */
+            vmCount?: number;
         };
         NetworkVlanResource: {
             id: number;
@@ -2385,7 +2445,7 @@ export interface components {
         };
         RequestId: string;
         /** @enum {string} */
-        VmAction: "start" | "stop" | "reboot" | "suspend" | "resume";
+        VmAction: "start" | "stop" | "reboot" | "suspend" | "resume" | "powerbtn" | "sleepbtn";
         VmObservation: {
             instanceId: string;
             revision: string;
@@ -2531,6 +2591,14 @@ export interface components {
             memoryMiB: number | null;
             /** @description Elapsed monotonic milliseconds since the current owned VMM process started; includes suspension. Null if no current live process is observed. Never inferred from persisted configuration. */
             uptimeMs?: string | null;
+            /** @description 仅 RUNNING 且能读取 /proc 时出现。累计计数，客户端用两次采样的差值除以 sampledAtMs 差值得到速率；CPU 时间与 IO 为进程树合计，RSS 为主进程。 */
+            usage?: {
+                cpuTimeMs: components["schemas"]["VmUsageCounter"];
+                rssBytes: components["schemas"]["VmUsageCounter"];
+                readBytes: components["schemas"]["VmUsageCounter"];
+                writeBytes: components["schemas"]["VmUsageCounter"];
+                sampledAtMs: components["schemas"]["VmUsageCounter"];
+            };
             /** @description Observed unexpired DHCP addresses matched to current runtime NIC network, MAC and VLAN. Null if observations are unavailable or stale; configured/static addresses are not inferred. */
             ipAddresses?: string[] | null;
         };
@@ -3128,8 +3196,14 @@ export interface components {
             id: "gpu-0" | "simplefb";
             available: boolean;
             /** @enum {string} */
-            reason: "" | "disabled" | "not-vnc" | "not-running" | "input-disabled" | "unsupported" | "invalid-endpoint";
+            reason: "" | "disabled" | "not-vnc" | "not-running" | "input-disabled" | "unsupported" | "invalid-endpoint" | "webrtc";
             inputEnabled: boolean;
+            webrtc?: components["schemas"]["VmDisplayWebrtc"];
+        };
+        VmDisplayWebrtc: {
+            host: string;
+            port: number;
+            token: string;
         };
         VmDisplayMetadata: {
             context: components["schemas"]["ServerContext"];
@@ -3233,6 +3307,7 @@ export interface components {
             cma?: components["schemas"]["HugepageCma"];
             advanced?: components["schemas"]["HugepageAdvancedSetting"][];
             systemReserveDefaultMb?: components["schemas"]["HugepageNullableQuantity"];
+            cmaLentPages?: components["schemas"]["HugepageNullableQuantity"];
         };
         HugepageObservation: {
             context: components["schemas"]["ServerContext"];
@@ -3264,6 +3339,7 @@ export interface components {
             cma?: components["schemas"]["HugepageCma"];
             advanced?: components["schemas"]["HugepageAdvancedSetting"][];
             systemReserveDefaultMb?: components["schemas"]["HugepageNullableQuantity"];
+            cmaLentPages?: components["schemas"]["HugepageNullableQuantity"];
         };
         HugepageOperation: {
             /** @constant */
@@ -3612,6 +3688,11 @@ export interface components {
             panelLit: boolean | null;
             watchdog: {
                 verified: boolean;
+                /**
+                 * @description not-required means hangdetect is absent and the independent sentinel runs without feeding a watchdog. Otherwise unproven becomes accepted only after the sentinel's first driver kick, before any Android mutation; rejected blocks further stops until the daemon restarts. verified describes readiness of the selected path.
+                 * @enum {unknown}
+                 */
+                kick: "unproven" | "accepted" | "rejected" | "not-required";
                 reason: string | null;
             };
             services: {
@@ -3624,6 +3705,8 @@ export interface components {
             /** @constant */
             kind: "stop";
             autoRestoreSeconds?: number;
+            /** @enum {string} */
+            tier?: "display" | "zygote";
             restoreOnNetworkLoss?: boolean;
         } | {
             /** @constant */
@@ -4426,6 +4509,41 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            501: components["responses"]["Problem"];
+        };
+    };
+    clearVmLog: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 浏览器自动设置；必须与 Host 对应的配置 origin 精确匹配。 */
+                Origin: components["parameters"]["Origin"];
+                "X-DroidVM-CSRF": components["parameters"]["Csrf"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 需要 vm.logs.clear.v1。清空指定流的内存历史与持久日志文件（与 App 清空日志相同）；之后读取返回 reset=true。 */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VmLogClearRequest"];
+            };
+        };
+        responses: {
+            /** @description 已清空 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigEmpty"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
             501: components["responses"]["Problem"];
         };
     };
