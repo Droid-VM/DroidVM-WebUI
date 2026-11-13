@@ -33,10 +33,7 @@ onBeforeUnmount(model.deactivate)
 <template>
   <div class="android-display-page" data-testid="android-display-page">
     <AppBackLink to="/more">{{ t('navMore') }}</AppBackLink>
-    <header>
-      <h1>{{ t('androidDisplayTitle') }}</h1>
-      <p>{{ t('androidDisplayScope') }}</p>
-    </header>
+    <h1>{{ t('androidDisplayTitle') }}</h1>
     <fieldset
       v-if="model.recoveryProblem.value"
       class="tracking-guard"
@@ -131,9 +128,13 @@ onBeforeUnmount(model.deactivate)
               <dt>{{ t('androidDisplayWatchdog') }}</dt>
               <dd>
                 {{
-                  model.status.value.watchdog.verified
-                    ? t('androidDisplayWatchdogVerified')
-                    : (model.status.value.watchdog.reason ?? t('androidDisplayWatchdogUnverified'))
+                  !model.status.value.watchdog.verified
+                    ? (model.status.value.watchdog.reason ?? t('androidDisplayWatchdogUnverified'))
+                    : model.status.value.watchdog.kick === 'not-required'
+                      ? t('androidDisplayWatchdogNotRequired')
+                      : model.status.value.watchdog.kick === 'accepted'
+                        ? t('androidDisplayWatchdogVerified')
+                        : t('androidDisplayWatchdogKickUnproven')
                 }}
               </dd>
             </div>
@@ -186,8 +187,22 @@ onBeforeUnmount(model.deactivate)
         >
           <div class="menu-row">
             <span class="grow"
-              ><strong>{{ t('androidDisplayAutoRestore') }}</strong
-              ><small>{{ t('androidDisplayAutoRestoreHint') }}</small></span
+              ><strong>{{ t('androidDisplayTier') }}</strong></span
+            ><AppSelect
+              v-model="model.tier.value"
+              class="row-select"
+              :aria-label="t('androidDisplayTier')"
+              data-testid="android-display-tier"
+              :disabled="!model.editable.value"
+              @change="model.cancelReview"
+            >
+              <AppOption value="display">{{ t('androidDisplayTierDisplay') }}</AppOption>
+              <AppOption value="zygote">{{ t('androidDisplayTierZygote') }}</AppOption>
+            </AppSelect>
+          </div>
+          <div class="menu-row">
+            <span class="grow"
+              ><strong>{{ t('androidDisplayAutoRestore') }}</strong></span
             ><AppSelect
               v-model.number="model.autoRestoreSeconds.value"
               class="row-select"
@@ -208,8 +223,7 @@ onBeforeUnmount(model.deactivate)
             :disabled="!model.editable.value"
             @change="model.cancelReview"
             ><span class="grow"
-              ><strong>{{ t('androidDisplayNetworkLoss') }}</strong
-              ><small>{{ t('androidDisplayNetworkLossHint') }}</small></span
+              ><strong>{{ t('androidDisplayNetworkLoss') }}</strong></span
             ></AppSwitch
           >
         </section>
@@ -231,7 +245,6 @@ onBeforeUnmount(model.deactivate)
             >{{ t('androidDisplayRestore') }}</AppButton
           >
         </div>
-        <p v-if="model.stopped.value || model.busy.value">{{ t('androidDisplayPollingHint') }}</p>
       </template>
     </template>
     <section
@@ -240,10 +253,6 @@ onBeforeUnmount(model.deactivate)
       aria-live="polite"
       data-testid="android-display-receipt"
     >
-      <div v-if="model.entry.value.restored" data-testid="android-display-tracking-restored">
-        <p>{{ t('operationTrackingHint') }}</p>
-        <p>{{ t('androidDisplayRecoveryHint') }}</p>
-      </div>
       <p v-if="model.entry.value.state === 'unknown'">{{ t('androidDisplayUnknown') }}</p>
       <p v-else-if="model.entry.value.task">
         {{ t(taskStateKeys[model.entry.value.task.state]) }}
@@ -279,6 +288,12 @@ onBeforeUnmount(model.deactivate)
       <template v-if="model.review.value">
         <template v-if="model.review.value.operation.kind === 'stop'">
           <p data-testid="android-display-review-stop">{{ t('androidDisplayStopWarning') }}</p>
+          <p
+            v-if="model.review.value.operation.tier === 'zygote'"
+            data-testid="android-display-zygote-warning"
+          >
+            {{ t('androidDisplayZygoteWarning') }}
+          </p>
           <p>
             {{
               t('androidDisplayStopSummary', {
@@ -332,8 +347,8 @@ onBeforeUnmount(model.deactivate)
   min-width: 0;
   max-width: var(--app-content-width);
 }
-header h1 {
-  margin-block: 0 var(--space-2);
+h1 {
+  margin: 0;
 }
 p,
 dd {

@@ -84,7 +84,6 @@ onBeforeUnmount(model.reset)
       >
         {{ t('graphicAddScreen') }}
       </AppButton>
-      <p v-if="model.secondary.value">{{ t('graphicParallelHint') }}</p>
     </div>
     <div class="graphics-panes" :class="{ parallel: model.secondary.value }">
       <section

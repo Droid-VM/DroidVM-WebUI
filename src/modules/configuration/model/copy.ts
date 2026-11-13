@@ -60,7 +60,7 @@ export function copyConfiguration(
   delete row.port_forwards // Legacy VM-level forwards must not be migrated into the copy.
   if (object(row.screens)) {
     for (const screen of Object.values(row.screens)) {
-      if (object(screen) && fieldText(screen.exporter).toLowerCase() === 'vnc')
+      if (object(screen) && ['vnc', 'webrtc'].includes(fieldText(screen.exporter).toLowerCase()))
         screen.enabled = false
     }
   }

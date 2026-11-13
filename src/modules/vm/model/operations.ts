@@ -11,6 +11,8 @@ export const vmActionKeys: Record<VmAction, MessageKey> = {
   reboot: 'vmReboot',
   suspend: 'vmSuspend',
   resume: 'vmResume',
+  powerbtn: 'vmPowerButton',
+  sleepbtn: 'vmSleepButton',
 }
 export function createVmActions(
   gateway: VmActionGateway | undefined,

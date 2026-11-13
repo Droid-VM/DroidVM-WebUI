@@ -5,7 +5,6 @@ import { useI18n } from 'vue-i18n'
 import { useConfigurationEditor, VmConfiguration } from '../modules/configuration'
 import { useInventory } from '../modules/vm'
 import { useVisiblePolling } from '../shared/model/visiblePolling'
-import AppButton from '../shared/ui/AppButton.vue'
 import ConfirmDialog from '../shared/ui/ConfirmDialog.vue'
 import EmptyState from '../shared/ui/EmptyState.vue'
 const route = useRoute(),
@@ -80,23 +79,10 @@ function leave() {
 </script>
 
 <template>
-  <div class="page-heading">
-    <h1 class="desktop-only">
-      {{ t(route.meta.create ? 'createVm' : route.meta.copy ? 'configCopy' : 'configEdit') }}
-    </h1>
-    <AppButton
-      @click="
-        router.push(
-          route.meta.create
-            ? '/vms'
-            : `/vms/${encodeURIComponent(!editor.newDraft.value && editor.target.value ? editor.target.value : id)}`,
-        )
-      "
-      >{{ t('close') }}</AppButton
-    >
-  </div>
+  <h1>{{ t(route.meta.create ? 'createVm' : route.meta.copy ? 'configCopy' : 'configEdit') }}</h1>
+
   <VmConfiguration v-if="available" :editable="editable" />
-  <EmptyState v-else :title="t('configUnavailable')" :description="t('errorUnsupportedHint')" />
+  <EmptyState v-else :title="t('configUnavailable')" />
   <ConfirmDialog
     :open="!!leaving"
     :title="t('configLeave')"
@@ -106,9 +92,3 @@ function leave() {
     @confirm="leave"
   />
 </template>
-
-<style scoped>
-.page-heading > .btn {
-  margin-left: auto;
-}
-</style>

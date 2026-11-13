@@ -68,7 +68,7 @@ test('configuration categories become a side list on wide screens and chips on p
 }) => {
   await openEditor(page, request)
   const categories = page.getByRole('group', { name: '配置分类' })
-  const form = page.locator('.configuration > form')
+  const form = page.locator('.configuration .edit-main > form')
   const list = (await categories.boundingBox())!
   const content = (await form.boundingBox())!
   expect(list.x + list.width).toBeLessThanOrEqual(content.x)

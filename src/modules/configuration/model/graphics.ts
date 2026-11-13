@@ -72,7 +72,8 @@ function blitBinding(row: ConfigObject) {
       object(screen) &&
       screen.enabled === true &&
       (token(screen, 'exporter') === 'native' ||
-        (token(screen, 'exporter') === 'vnc' && token(screen, 'transport_cap') !== 'cpu'))
+        (['vnc', 'webrtc'].includes(token(screen, 'exporter')) &&
+          token(screen, 'transport_cap') !== 'cpu'))
     )
   })
 }

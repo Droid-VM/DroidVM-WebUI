@@ -22,7 +22,8 @@ export function createAndroidDisplay(gateway?: AndroidDisplayGateway, newId = re
   const review = shallowRef<Omit<AndroidDisplayRequest, 'requestId'> | null>(null),
     confirmBlank = ref(false)
   const autoRestoreSeconds = ref<(typeof autoRestoreChoices)[number]>(1800),
-    restoreOnNetworkLoss = ref(true)
+    restoreOnNetworkLoss = ref(true),
+    tier = ref<'display' | 'zygote'>('display')
   let controller: AbortController | undefined, timer: ReturnType<typeof setInterval> | undefined
   let generation = 0,
     active = false,
@@ -101,6 +102,7 @@ export function createAndroidDisplay(gateway?: AndroidDisplayGateway, newId = re
         kind === 'stop'
           ? {
               kind,
+              tier: tier.value,
               autoRestoreSeconds: autoRestoreSeconds.value,
               restoreOnNetworkLoss: restoreOnNetworkLoss.value,
             }
@@ -184,6 +186,7 @@ export function createAndroidDisplay(gateway?: AndroidDisplayGateway, newId = re
     confirmBlank,
     autoRestoreSeconds,
     restoreOnNetworkLoss,
+    tier,
     supported,
     stopped,
     busy,

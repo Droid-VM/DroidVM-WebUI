@@ -34,7 +34,6 @@ const groups = computed(() => {
     <h4>{{ t('cpuTopologyPreview') }}</h4>
     <p v-if="!crosvm">{{ t('cpuTopologyCrosvmOnly') }}</p>
     <template v-else>
-      <p>{{ t('cpuTopologyHint') }}</p>
       <AppNotice v-if="source.problem.value" tone="error" :title="t(source.problem.value.titleKey)">
         <p>{{ t(source.problem.value.descriptionKey) }}</p>
       </AppNotice>

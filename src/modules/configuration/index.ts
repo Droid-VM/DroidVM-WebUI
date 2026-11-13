@@ -11,3 +11,9 @@ export {
   useConfigurationEditor,
 } from './model/editor'
 export { default as VmConfiguration } from './components/VmConfiguration.vue'
+export {
+  createVmConfigSummaries,
+  vmConfigSummariesKey,
+  useVmConfigSummaries,
+  type VmConfigSummary,
+} from './model/summary'

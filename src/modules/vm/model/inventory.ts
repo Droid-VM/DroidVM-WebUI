@@ -2,6 +2,7 @@ import { computed, inject, readonly, ref, type InjectionKey } from 'vue'
 import { describeApiError, type ApiProblem } from '../../../shared/api/errors'
 import type { MessageKey } from '../../../shared/i18n'
 import { parseSnapshot, type Vm, type VmGateway } from '../api/gateway'
+import { observeVmUsage } from './usage'
 
 export type VmFilter = 'all' | Vm['state']
 export const stateLabelKeys: Record<Vm['state'], MessageKey> = {
@@ -33,6 +34,7 @@ export function createInventory(gateway: VmGateway) {
       const snapshot = parseSnapshot(await gateway.list(current.signal))
       if (current.signal.aborted || disposed) return false
       items.value = snapshot.items
+      observeVmUsage(snapshot.items)
       status.value = 'ready'
       return true
     } catch (cause) {

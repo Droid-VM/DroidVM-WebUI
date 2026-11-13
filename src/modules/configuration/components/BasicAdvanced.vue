@@ -50,25 +50,22 @@ function seedManual() {
 const fields: {
   key: string
   label: MessageKey
-  hint?: MessageKey
   lines?: boolean
   multiline?: boolean
   manual?: boolean
 }[] = [
-  { key: 'notes', label: 'configNotes', hint: 'configNotesHint', multiline: true },
-  { key: 'cpu_affinity', label: 'configAffinity', hint: 'configAffinityHint' },
-  { key: 'cpu_capacity', label: 'configCapacity', hint: 'configCapacityHint', manual: true },
-  { key: 'cpu_clusters', label: 'configClusters', hint: 'configClustersHint', manual: true },
+  { key: 'notes', label: 'configNotes', multiline: true },
+  { key: 'cpu_affinity', label: 'configAffinity' },
+  { key: 'cpu_capacity', label: 'configCapacity', manual: true },
+  { key: 'cpu_clusters', label: 'configClusters', manual: true },
   {
     key: 'extra_options',
     label: 'configExtraOptions',
-    hint: 'configExtraOptionsHint',
     lines: true,
   },
   {
     key: 'environment_variables',
     label: 'configEnvironment',
-    hint: 'configEnvironmentHint',
     lines: true,
   },
 ]
@@ -118,14 +115,13 @@ watch(
 )
 function hint(field: (typeof fields)[number]) {
   if (!editable(field.key, field.lines)) return t('configUnsupportedShape')
-  return field.hint ? t(field.hint) : ''
+  return ''
 }
 defineExpose({ validate })
 </script>
 
 <template>
   <section ref="root" class="basic-advanced">
-    <h3>{{ t('configBasicAdvanced') }}</h3>
     <CpuAffinityEditor :document="document" :disabled="disabled" @change="emit('change', $event)" />
     <AppCheckbox
       :checked="document.cpu_topology_auto !== false"
@@ -176,6 +172,5 @@ defineExpose({ validate })
   display: grid;
   gap: var(--space-4);
   min-width: 0;
-  margin-top: var(--space-5);
 }
 </style>

@@ -51,7 +51,6 @@ function select(vcpu: number, cores: string) {
         :title="t('cpuOneToOne')"
         :disabled="disabled || source.status.value !== 'ready'"
         :selection-limit="{ minimum: 1, maximum: 64 }"
-        :hint="t('cpuOneToOneHint')"
         confirm-unchanged
         @select="propose"
       />

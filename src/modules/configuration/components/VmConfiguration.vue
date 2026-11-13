@@ -61,14 +61,17 @@ import {
 } from '../model/attachments'
 import { cloneConfiguration, fieldText, getPath, object, setPath } from '../model/document'
 import AppButton from '../../../shared/ui/AppButton.vue'
-import AppCheckbox from '../../../shared/ui/AppCheckbox.vue'
 import AppOption from '../../../shared/ui/AppOption.vue'
 import AppSelect from '../../../shared/ui/AppSelect.vue'
 import AppTextField from '../../../shared/ui/AppTextField.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
 import OperationTrackingNotice from '../../../shared/ui/OperationTrackingNotice.vue'
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog.vue'
-import FilterGroup from '../../../shared/ui/FilterGroup.vue'
+import AppIcon from '../../../shared/ui/AppIcon.vue'
+import AppMenu from '../../../shared/ui/AppMenu.vue'
+import AppSwitch from '../../../shared/ui/AppSwitch.vue'
+import { useMediaQuery } from '../../../shared/lib/mediaQuery'
+import { useRoute, useRouter } from 'vue-router'
 import { useVisiblePolling } from '../../../shared/model/visiblePolling'
 import {
   ResourcePicker,
@@ -138,6 +141,18 @@ const fieldInputs = ref<Record<string, string>>({})
 // Keep live text separate from committed/invalid numeric values. Resource
 // refreshes may rerender the form before the focused input emits change.
 const pendingInputs = ref<Record<string, string>>({})
+const stateHints = new Set<MessageKey>([
+  'configLeaseL3Required',
+  'configLeaseVlanMissing',
+  'configLeaseDhcpDisabled',
+  'configLeaseUnknown',
+  'configForwards6Gvisor',
+  'configForwardSnatDisabled',
+  'configPeripheralUnsupported',
+])
+function stateHint(key: MessageKey | undefined) {
+  return key !== undefined && stateHints.has(key)
+}
 const leaseFeedback = ref<{ path: string; message: MessageKey } | null>(null)
 watch(state, (value) => {
   if (value === 'loading' || value === 'idle') {
@@ -346,6 +361,11 @@ function captureInput(field: ConfigField, event: Event) {
 function change(field: ConfigField, event: Event) {
   commitField(field, event.target as HTMLInputElement)
 }
+// md-switch reports selected; commitField reads booleans from checked.
+function changeSwitch(field: ConfigField, event: Event) {
+  const control = event.target as HTMLInputElement & { selected: boolean }
+  commitField(field, Object.assign(control, { checked: control.selected }))
+}
 async function chooseLeaseOffset(field: ConfigField) {
   if (!draft.value || disabled.value || rawOpen.value || inactive(field)) return
   const slot = offsetSlot(field)
@@ -539,18 +559,66 @@ async function confirmed() {
   if (operation === 'reload') await editor.reload()
   else await editor.save(operation === 'delete')
 }
+// >= 1200: vertical categories and Cancel / Save under the form (the design's edit page).
+const wide = useMediaQuery('(width >= 1200px)')
+const route = useRoute(),
+  router = useRouter()
+// The VM page's Delete button opens the editor with ?delete=1.
+watch(
+  () => [state.value, route.query.delete] as const,
+  ([value, remove]) => {
+    if (value !== 'editing' || remove !== '1' || editor.newDraft.value) return
+    void router.replace({ path: route.path })
+    if (props.editable) confirm.value = 'delete'
+  },
+  { immediate: true },
+)
+const sectionTitle = (group: { label: MessageKey }, label?: MessageKey) => t(label ?? group.label)
 </script>
 
 <template>
   <section class="configuration" :aria-busy="['loading', 'staging', 'pending'].includes(state)">
+    <Teleport v-if="draft" defer to="#top-actions">
+      <button
+        v-if="!wide"
+        type="button"
+        class="btn text"
+        :disabled="disabled || !dirty || rawOpen"
+        @click="requestSave"
+      >
+        {{ t('save') }}
+      </button>
+      <AppMenu :label="t('moreActions')">
+        <button
+          type="button"
+          role="menuitem"
+          :disabled="['staging', 'pending', 'unknown'].includes(state)"
+          @click="confirm = 'reload'"
+        >
+          {{ t('configReload') }}
+        </button>
+        <button type="button" role="menuitem" @click="download">{{ t('configExport') }}</button>
+        <button type="button" role="menuitem" :disabled="disabled || rawOpen" @click="editRaw">
+          {{ t('configEditJson') }}
+        </button>
+        <button
+          v-if="!editor.newDraft.value"
+          type="button"
+          role="menuitem"
+          class="danger"
+          :disabled="disabled || rawOpen"
+          @click="confirm = 'delete'"
+        >
+          {{ t('configDelete') }}
+        </button>
+      </AppMenu>
+    </Teleport>
     <OperationTrackingNotice
       :problem="editor.recoveryProblem.value"
       @clear="editor.clearTracking"
     />
     <p v-if="editor.restored.value" role="status">{{ t('configurationRestoredReceipt') }}</p>
-    <AppNotice v-if="editor.creating.value && draft" tone="info" :title="t('createVm')">
-      <p>{{ t('configNewHint') }}</p>
-    </AppNotice>
+    <AppNotice v-if="editor.creating.value && draft" tone="info" :title="t('createVm')" />
     <AppNotice v-if="editor.copying.value && draft" tone="info" :title="t('configCopyReview')">
       <p>{{ t('configCopyIdentityHint') }}</p>
       <p>{{ t('configCopyResourcesHint') }}</p>
@@ -588,27 +656,7 @@ async function confirmed() {
       @click="editor.reload"
       >{{ t('configReload') }}</AppButton
     >
-    <div v-if="draft" class="config-toolbar">
-      <AppButton tone="primary" :disabled="disabled || !dirty || rawOpen" @click="requestSave">{{
-        t('configSave')
-      }}</AppButton>
-      <AppButton
-        :disabled="['staging', 'pending', 'unknown'].includes(state)"
-        @click="confirm = 'reload'"
-        >{{ t('configReload') }}</AppButton
-      >
-      <AppButton @click="download">{{ t('configExport') }}</AppButton>
-      <AppButton :disabled="disabled || rawOpen" @click="editRaw">{{
-        t('configEditJson')
-      }}</AppButton>
-      <AppButton
-        v-if="!editor.newDraft.value"
-        :disabled="disabled || rawOpen"
-        @click="confirm = 'delete'"
-        >{{ t('configDelete') }}</AppButton
-      >
-    </div>
-    <section v-if="draft && rawOpen" class="config-advanced">
+    <section v-if="draft && rawOpen" class="card out config-advanced">
       <label class="raw-label"
         ><span>{{ t('configAdvanced') }}</span
         ><textarea
@@ -619,394 +667,478 @@ async function confirmed() {
           @input="editor.markDirty"
         />
       </label>
-      <p class="muted">{{ t('configAdvancedHint') }}</p>
-      <AppButton :disabled="disabled" @click="applyRaw">{{ t('configApplyDraft') }}</AppButton>
-      <AppButton @click="cancelRaw">{{ t('cancel') }}</AppButton>
+      <div class="cc-actions">
+        <button type="button" class="btn text" @click="cancelRaw">{{ t('cancel') }}</button>
+        <button type="button" class="btn filled" :disabled="disabled" @click="applyRaw">
+          {{ t('configApplyDraft') }}
+        </button>
+      </div>
     </section>
-    <FilterGroup
-      v-if="draft"
-      v-model="category"
-      class="config-categories"
-      :label="t('configCategories')"
-      :options="categories"
-    />
-    <form v-if="draft" ref="form" novalidate @submit.prevent="requestSave">
-      <button type="submit" hidden :disabled="disabled || rawOpen || !dirty">
-        {{ t('configSave') }}
-      </button>
-      <fieldset
-        v-for="group in configGroups"
-        v-show="category === group.label"
-        :key="group.label"
-        :data-category="group.label"
-        :disabled="disabled || rawOpen"
-      >
-        <legend>{{ t(group.label) }}</legend>
-        <HostCapabilities
-          v-if="group.label === 'configBasic' || group.label === 'configGraphics'"
-          :document="draft"
-          :section="group.label === 'configBasic' ? 'basic' : 'graphics'"
-          :active="category === group.label"
-        />
-        <p v-if="group.label === 'configNetwork'" class="muted">
-          {{ t('configNetworkLeaseHint') }}
-        </p>
-        <AppNotice
-          v-if="group.label === 'configGraphics' && gpuCoreOverlap(draft)"
-          tone="warning"
-          :title="t('configGpuCoreOverlap')"
-        />
-        <p v-if="group.label === 'configStorage' || group.label === 'configNetwork'" class="muted">
-          {{ t('configDetachHint') }}
-        </p>
-        <p v-if="replacement && category === group.label" role="status">
-          {{ t('configReplaceTarget', { index: replacement.index + 1 }) }}
-        </p>
-        <ResourcePicker
-          v-if="group.label === 'configStorage' && category === group.label"
-          :key="`disk-${replacement?.index ?? 'add'}`"
-          kind="disk"
-          :replacing="replacement?.collection === 'disks'"
-          :disabled="disabled || rawOpen"
-          @disk="attachDisk"
-          @cancel="replacement = null"
-        />
-        <ResourcePicker
-          v-if="group.label === 'configNetwork' && category === group.label"
-          :key="`network-${replacement?.index ?? 'add'}`"
-          kind="network"
-          :replacing="replacement?.collection === 'networks'"
-          :disabled="disabled || rawOpen"
-          @network="attachNetwork"
-          @cancel="replacement = null"
-        />
-        <p v-if="group.label === 'configNetwork'" class="muted">
-          {{ t('configLeaseAllocationHint') }}
-        </p>
-        <AppButton
-          v-if="group.label === 'configStorage'"
-          :disabled="disabled || rawOpen"
-          @click="addDirectory"
-          >{{ t('configAddDirectory') }}</AppButton
+    <div v-if="draft" class="edit-wrap">
+      <div class="config-categories" role="group" :aria-label="t('configCategories')">
+        <button
+          v-for="item in categories"
+          :key="item.value"
+          type="button"
+          :class="{ on: category === item.value }"
+          :aria-pressed="category === item.value"
+          @click="category = item.value"
         >
-        <div v-if="group.label === 'configPeripheral'" class="config-fields">
-          <div>
-            <p class="muted">
-              {{
-                t(
-                  !catalog.audio.supported.value || catalog.audio.status.value === 'error'
-                    ? 'audioCatalogueUnavailable'
-                    : catalog.audio.status.value === 'loading'
-                      ? 'processing'
-                      : 'audioCatalogueHint',
-                )
-              }}
-            </p>
-            <AppButton
-              v-if="catalog.audio.supported.value"
-              :disabled="catalog.audio.status.value === 'loading'"
-              @click="catalog.audio.refresh()"
-              >{{ t('audioRefreshDevices') }}</AppButton
-            >
-          </div>
-          <div class="config-field">
-            <AppSelect
-              v-model="deviceKind"
-              :label="t('configAddDevice')"
-              :disabled="disabled || rawOpen"
-            >
-              <AppOption value="virtio_sound">{{ t('configDeviceSound') }}</AppOption>
-              <AppOption value="xhci_usb">{{ t('configDeviceXhci') }}</AppOption>
-              <AppOption value="sbsa">{{ t('configDeviceSbsa') }}</AppOption>
-              <AppOption value="virtio_console">{{ t('configDeviceVirtioConsole') }}</AppOption>
-            </AppSelect>
-            <AppButton
-              :disabled="disabled || rawOpen || !canAddDevice(draft, deviceKind)"
-              @click="mutateDevice({ type: 'add', kind: deviceKind })"
-              >{{ t('configAddDevice') }}</AppButton
-            >
-          </div>
-          <AppButton
-            v-if="hasMissingSerials(draft)"
+          {{ item.label }}
+        </button>
+      </div>
+      <div class="edit-main">
+        <form ref="form" novalidate @submit.prevent="requestSave">
+          <button type="submit" hidden :disabled="disabled || rawOpen || !dirty">
+            {{ t('configSave') }}
+          </button>
+          <fieldset
+            v-for="group in configGroups"
+            v-show="category === group.label"
+            :key="group.label"
+            class="card out"
+            :data-category="group.label"
             :disabled="disabled || rawOpen"
-            @click="mutateDevice({ type: 'serial-defaults' })"
-            >{{ t('configRestoreSerials') }}</AppButton
           >
-        </div>
-        <section
-          v-for="section in configurationSections(group, draft, catalog.networks.items.value)"
-          :key="section.key"
-          class="config-section"
-          :data-attachment="section.slot ? section.key : undefined"
-          :data-section="section.key"
-        >
-          <h3 v-if="section.label">
-            {{ t(section.label) }} <span v-if="section.identity">{{ section.identity }}</span>
-          </h3>
-          <div v-if="section.slot" class="config-toolbar">
-            <AppButton
-              v-if="section.slot.collection !== 'shared_dirs' && section.fields.length"
-              :disabled="disabled || rawOpen"
-              @click="beginReplacement(section.slot)"
-              >{{ t('configReplaceAttachment') }}</AppButton
-            >
-            <AppButton
-              v-if="section.slot.collection === 'disks'"
-              :disabled="disabled || rawOpen || section.slot.index === 0"
-              @click="mutateAttachment(section.slot, { type: 'move', to: section.slot.index - 1 })"
-              >{{ t('configMoveUp') }}</AppButton
-            >
-            <AppButton
-              v-if="section.slot.collection === 'disks'"
-              :disabled="
-                disabled ||
-                rawOpen ||
-                !Array.isArray(draft.disks) ||
-                section.slot.index === draft.disks.length - 1
-              "
-              @click="mutateAttachment(section.slot, { type: 'move', to: section.slot.index + 1 })"
-              >{{ t('configMoveDown') }}</AppButton
-            >
-            <AppButton
-              :disabled="disabled || rawOpen"
-              @click="mutateAttachment(section.slot, { type: 'remove' })"
-              >{{ t('configRemoveAttachment') }}</AppButton
-            >
-          </div>
-          <p v-if="section.hint" class="muted">{{ t(section.hint) }}</p>
-          <div
-            v-if="section.device || section.endpoint || section.soundCard !== undefined"
-            class="config-toolbar"
-          >
-            <AppButton
-              v-if="section.device"
-              :disabled="disabled || rawOpen"
-              @click="mutateDevice({ type: 'remove', slot: section.device })"
-              >{{ t('configRemoveAttachment') }}</AppButton
-            >
-            <template v-if="section.soundCard !== undefined">
-              <AppButton
-                :disabled="
-                  disabled || rawOpen || endpointCount(draft, section.soundCard, 'speaker') >= 4
-                "
-                @click="
-                  mutateDevice({ type: 'endpoint-add', card: section.soundCard, mode: 'speaker' })
-                "
-                >{{ t('configAddSpeaker') }}</AppButton
-              >
-              <AppButton
-                :disabled="
-                  disabled || rawOpen || endpointCount(draft, section.soundCard, 'microphone') >= 4
-                "
-                @click="
-                  mutateDevice({
-                    type: 'endpoint-add',
-                    card: section.soundCard,
-                    mode: 'microphone',
-                  })
-                "
-                >{{ t('configAddMicrophone') }}</AppButton
-              >
-            </template>
-            <template v-if="section.endpoint">
-              <AppButton
-                :disabled="disabled || rawOpen"
-                @click="mutateDevice({ type: 'endpoint-remove', slot: section.endpoint })"
-                >{{ t('configRemoveAttachment') }}</AppButton
-              >
-            </template>
-          </div>
-          <AudioDevicePicker
-            v-if="section.endpoint && section.raw === undefined"
-            :current="
-              audioDeviceKey(
-                getPath(draft, [
-                  'peripherals',
-                  String(section.endpoint.card),
-                  'endpoints',
-                  String(section.endpoint.index),
-                  'host_device',
-                ]),
-              )
-            "
-            :saved-label="
-              fieldText(
-                getPath(draft, [
-                  'peripherals',
-                  String(section.endpoint.card),
-                  'endpoints',
-                  String(section.endpoint.index),
-                  'host_label',
-                ]),
-              )
-            "
-            :input="
-              fieldText(
-                getPath(draft, [
-                  'peripherals',
-                  String(section.endpoint.card),
-                  'endpoints',
-                  String(section.endpoint.index),
-                  'mode',
-                ]),
-              ).toLowerCase() === 'microphone'
-            "
-            :disabled="disabled || rawOpen"
-            @select="
-              mutateDevice({ type: 'endpoint-bind', slot: section.endpoint!, device: $event })
-            "
-          />
-          <SoundPurposeEditor
-            v-if="section.endpoint && section.raw === undefined"
-            :endpoint="
-              getPath(draft, [
-                'peripherals',
-                String(section.endpoint.card),
-                'endpoints',
-                String(section.endpoint.index),
-              ])
-            "
-            :disabled="disabled || rawOpen"
-            @change="mutateDevice({ type: 'endpoint-purpose', slot: section.endpoint!, ...$event })"
-          />
-          <AppButton
-            v-if="section.lease"
-            :disabled="disabled || rawOpen"
-            @click="mutateForward(section.lease)"
-            >{{ t('configAddForward') }}</AppButton
-          >
-          <AppButton
-            v-if="section.forward"
-            :disabled="disabled || rawOpen"
-            @click="mutateForward(section.forward, section.forward.index)"
-            >{{ t('configRemoveForward') }}</AppButton
-          >
-          <template v-if="section.raw !== undefined">
-            <p class="muted">{{ t('configUnsupportedShape') }}</p>
-            <pre class="config-unsupported">{{ section.raw }}</pre>
-          </template>
-          <p v-else-if="!section.fields.length && !section.lease && !section.hint" class="muted">
-            {{ t('configNoEntries') }}
-          </p>
-          <div class="config-fields">
-            <div
-              v-for="field in section.fields"
-              v-show="
-                (field.path[2] === 'enabled' || !screenInactive(field, draft)) &&
-                !graphicsInactive(field, draft) &&
-                !peripheralInactive(field, draft) &&
-                !storageInactive(field, draft) &&
-                (field.path[3] === 'enabled' ||
-                  !networkInactive(field, draft, catalog.networks.items.value))
-              "
-              :key="field.path.join('.')"
-              class="config-field"
-            >
-              <AppCheckbox
-                v-if="field.type === 'boolean'"
-                :data-config-path="field.path.join('.')"
-                :disabled="inactive(field)"
-                :checked="read(field) === true"
-                :indeterminate="typeof read(field) !== 'boolean'"
-                :title="typeof read(field) !== 'boolean' ? t('configNativeDefault') : undefined"
-                @change="change(field, $event)"
-                >{{ t(field.label) }}</AppCheckbox
-              >
-              <AppSelect
-                v-else-if="field.type === 'boot-disk'"
-                :label="t(field.label)"
-                :value="selectedBootDisk === null ? '' : String(selectedBootDisk)"
-                :required="!!imageBoot"
-                @change="selectBoot"
-              >
-                <AppOption value="" disabled>{{ t('configNoBootDisk') }}</AppOption>
-                <AppOption v-for="disk in bootDisks" :key="disk.index" :value="String(disk.index)">
-                  {{ disk.index + 1 }} · {{ disk.path }}
-                </AppOption>
-              </AppSelect>
-              <AppSelect
-                v-else-if="field.type === 'select'"
-                :label="t(field.label)"
-                :data-config-path="field.path.join('.')"
-                :disabled="inactive(field)"
-                :value="basicSelection(field, read(field))"
-                @change="change(field, $event)"
-              >
-                <AppOption v-if="!field.options?.includes('')" value="" disabled>
-                  {{ t('configNativeDefault') }}
-                </AppOption>
-                <AppOption
-                  v-if="
-                    fieldText(read(field)) &&
-                    !basicOptions(field, draft).includes(basicSelection(field, read(field)))
-                  "
-                  :value="basicSelection(field, read(field))"
-                >
-                  {{ fieldText(read(field)) }}
-                </AppOption>
-                <AppOption
-                  v-for="option in basicOptions(field, draft)"
-                  :key="option"
-                  :value="option"
-                  :disabled="field.disabledOptions?.includes(option)"
-                >
-                  {{ field.optionLabels?.[option] ? t(field.optionLabels[option]!) : option }}
-                </AppOption>
-              </AppSelect>
-              <AppTextField
-                v-else
-                :label="t(field.label)"
-                :data-config-path="field.path.join('.')"
-                :type="field.type"
-                :value="inputText(field)"
-                :min="field.min"
-                :max="field.max"
-                :readonly="field.readonly"
-                :disabled="inactive(field)"
-                :step="field.type === 'number' ? 1 : undefined"
-                :required="field.required || field.path[0] === 'name'"
-                @input="captureInput(field, $event)"
-                @change="change(field, $event)"
+            <legend class="sr-only">{{ t(group.label) }}</legend>
+            <div v-if="group.label !== 'configBasic'" class="group-intro">
+              <HostCapabilities
+                v-if="group.label === 'configGraphics'"
+                :document="draft"
+                section="graphics"
+                :active="category === group.label"
               />
-              <small v-if="field.hint" class="muted">{{ t(field.hint) }}</small>
-              <AppButton
-                v-if="offsetSlot(field)"
-                :disabled="disabled || rawOpen || inactive(field)"
-                @click.prevent="chooseLeaseOffset(field)"
-                >{{ t('configChooseLeaseOffset') }}</AppButton
+              <AppNotice
+                v-if="group.label === 'configGraphics' && gpuCoreOverlap(draft)"
+                tone="warning"
+                :title="t('configGpuCoreOverlap')"
+              />
+              <p v-if="replacement && category === group.label" role="status">
+                {{ t('configReplaceTarget', { index: replacement.index + 1 }) }}
+              </p>
+              <ResourcePicker
+                v-if="group.label === 'configStorage' && category === group.label"
+                :key="`disk-${replacement?.index ?? 'add'}`"
+                kind="disk"
+                :replacing="replacement?.collection === 'disks'"
+                :disabled="disabled || rawOpen"
+                @disk="attachDisk"
+                @cancel="replacement = null"
+              />
+              <ResourcePicker
+                v-if="group.label === 'configNetwork' && category === group.label"
+                :key="`network-${replacement?.index ?? 'add'}`"
+                kind="network"
+                :replacing="replacement?.collection === 'networks'"
+                :disabled="disabled || rawOpen"
+                @network="attachNetwork"
+                @cancel="replacement = null"
+              />
+              <button
+                v-if="group.label === 'configStorage'"
+                type="button"
+                class="btn outlined icon-lead"
+                :disabled="disabled || rawOpen"
+                @click="addDirectory"
               >
-              <small v-if="leaseFeedback?.path === field.path.join('.')" role="status">{{
-                t(leaseFeedback.message)
-              }}</small>
-              <small v-if="basicInactive(field, draft)" class="muted">{{
-                t('configSwiotlbInactive')
-              }}</small>
+                <AppIcon name="plus" />{{ t('configAddDirectory') }}
+              </button>
+              <template v-if="group.label === 'configPeripheral'">
+                <p
+                  v-if="
+                    !catalog.audio.supported.value ||
+                    catalog.audio.status.value === 'error' ||
+                    catalog.audio.status.value === 'loading'
+                  "
+                  class="muted"
+                >
+                  {{
+                    t(
+                      !catalog.audio.supported.value || catalog.audio.status.value === 'error'
+                        ? 'audioCatalogueUnavailable'
+                        : 'processing',
+                    )
+                  }}
+                </p>
+                <AppButton
+                  v-if="catalog.audio.supported.value"
+                  :disabled="catalog.audio.status.value === 'loading'"
+                  @click="catalog.audio.refresh()"
+                  >{{ t('audioRefreshDevices') }}</AppButton
+                >
+                <div class="add-device">
+                  <AppSelect
+                    v-model="deviceKind"
+                    :label="t('configAddDevice')"
+                    :disabled="disabled || rawOpen"
+                  >
+                    <AppOption value="virtio_sound">{{ t('configDeviceSound') }}</AppOption>
+                    <AppOption value="xhci_usb">{{ t('configDeviceXhci') }}</AppOption>
+                    <AppOption value="sbsa">{{ t('configDeviceSbsa') }}</AppOption>
+                    <AppOption value="virtio_console">{{
+                      t('configDeviceVirtioConsole')
+                    }}</AppOption>
+                  </AppSelect>
+                  <button
+                    type="button"
+                    class="btn outlined icon-lead"
+                    :disabled="disabled || rawOpen || !canAddDevice(draft, deviceKind)"
+                    @click="mutateDevice({ type: 'add', kind: deviceKind })"
+                  >
+                    <AppIcon name="plus" />{{ t('configAddDevice') }}
+                  </button>
+                </div>
+                <AppButton
+                  v-if="hasMissingSerials(draft)"
+                  :disabled="disabled || rawOpen"
+                  @click="mutateDevice({ type: 'serial-defaults' })"
+                  >{{ t('configRestoreSerials') }}</AppButton
+                >
+              </template>
             </div>
-          </div>
-          <CpuCorePicker
-            v-if="section.key === 'gpu-worker' && !inactive(gpuCpuField)"
-            :current="inputText(gpuCpuField)"
-            :title="t('cpuChooseGpu')"
-            :disabled="
-              disabled ||
-              rawOpen ||
-              (draft.gpu_cgroup_cpus !== undefined && typeof draft.gpu_cgroup_cpus !== 'string')
-            "
-            @select="chooseGpuCpus"
-          />
-        </section>
-        <BasicAdvanced
-          v-if="group.label === 'configBasic'"
-          ref="basicAdvanced"
-          :document="draft"
-          :active="category === 'configBasic'"
-          :disabled="disabled || rawOpen"
-          @change="changeAdvanced"
-          @dirty="editor.markDirty"
-        />
-      </fieldset>
-    </form>
-    <p v-if="draft && category !== 'configBasic'" class="muted">{{ t('configHostPaths') }}</p>
+            <details
+              v-for="section in configurationSections(group, draft, catalog.networks.items.value)"
+              :key="section.key"
+              class="cc config-section"
+              open
+              :data-attachment="section.slot ? section.key : undefined"
+              :data-section="section.key"
+            >
+              <summary>
+                <span
+                  >{{ sectionTitle(group, section.label) }}
+                  <template v-if="section.identity">{{ section.identity }}</template></span
+                >
+              </summary>
+              <div class="cc-body">
+                <HostCapabilities
+                  v-if="group.label === 'configBasic' && !section.label"
+                  :document="draft"
+                  section="basic"
+                  :active="category === group.label"
+                />
+                <div
+                  v-if="
+                    section.slot ||
+                    section.device ||
+                    section.endpoint ||
+                    section.soundCard !== undefined
+                  "
+                  class="cc-actions"
+                >
+                  <template v-if="section.slot">
+                    <AppButton
+                      v-if="section.slot.collection !== 'shared_dirs' && section.fields.length"
+                      :disabled="disabled || rawOpen"
+                      @click="beginReplacement(section.slot)"
+                      >{{ t('configReplaceAttachment') }}</AppButton
+                    >
+                    <AppButton
+                      v-if="section.slot.collection === 'disks'"
+                      :disabled="disabled || rawOpen || section.slot.index === 0"
+                      @click="
+                        mutateAttachment(section.slot, { type: 'move', to: section.slot.index - 1 })
+                      "
+                      >{{ t('configMoveUp') }}</AppButton
+                    >
+                    <AppButton
+                      v-if="section.slot.collection === 'disks'"
+                      :disabled="
+                        disabled ||
+                        rawOpen ||
+                        !Array.isArray(draft.disks) ||
+                        section.slot.index === draft.disks.length - 1
+                      "
+                      @click="
+                        mutateAttachment(section.slot, { type: 'move', to: section.slot.index + 1 })
+                      "
+                      >{{ t('configMoveDown') }}</AppButton
+                    >
+                    <AppButton
+                      class="danger"
+                      :disabled="disabled || rawOpen"
+                      @click="mutateAttachment(section.slot, { type: 'remove' })"
+                      >{{ t('configRemoveAttachment') }}</AppButton
+                    >
+                  </template>
+                  <AppButton
+                    v-if="section.device"
+                    class="danger"
+                    :disabled="disabled || rawOpen"
+                    @click="mutateDevice({ type: 'remove', slot: section.device })"
+                    >{{ t('configRemoveAttachment') }}</AppButton
+                  >
+                  <template v-if="section.soundCard !== undefined">
+                    <AppButton
+                      :disabled="
+                        disabled ||
+                        rawOpen ||
+                        endpointCount(draft, section.soundCard, 'speaker') >= 4
+                      "
+                      @click="
+                        mutateDevice({
+                          type: 'endpoint-add',
+                          card: section.soundCard,
+                          mode: 'speaker',
+                        })
+                      "
+                      >{{ t('configAddSpeaker') }}</AppButton
+                    >
+                    <AppButton
+                      :disabled="
+                        disabled ||
+                        rawOpen ||
+                        endpointCount(draft, section.soundCard, 'microphone') >= 4
+                      "
+                      @click="
+                        mutateDevice({
+                          type: 'endpoint-add',
+                          card: section.soundCard,
+                          mode: 'microphone',
+                        })
+                      "
+                      >{{ t('configAddMicrophone') }}</AppButton
+                    >
+                  </template>
+                  <AppButton
+                    v-if="section.endpoint"
+                    class="danger"
+                    :disabled="disabled || rawOpen"
+                    @click="mutateDevice({ type: 'endpoint-remove', slot: section.endpoint })"
+                    >{{ t('configRemoveAttachment') }}</AppButton
+                  >
+                </div>
+                <p v-if="stateHint(section.hint)" class="muted">{{ t(section.hint!) }}</p>
+                <AudioDevicePicker
+                  v-if="section.endpoint && section.raw === undefined"
+                  :current="
+                    audioDeviceKey(
+                      getPath(draft, [
+                        'peripherals',
+                        String(section.endpoint.card),
+                        'endpoints',
+                        String(section.endpoint.index),
+                        'host_device',
+                      ]),
+                    )
+                  "
+                  :saved-label="
+                    fieldText(
+                      getPath(draft, [
+                        'peripherals',
+                        String(section.endpoint.card),
+                        'endpoints',
+                        String(section.endpoint.index),
+                        'host_label',
+                      ]),
+                    )
+                  "
+                  :input="
+                    fieldText(
+                      getPath(draft, [
+                        'peripherals',
+                        String(section.endpoint.card),
+                        'endpoints',
+                        String(section.endpoint.index),
+                        'mode',
+                      ]),
+                    ).toLowerCase() === 'microphone'
+                  "
+                  :disabled="disabled || rawOpen"
+                  @select="
+                    mutateDevice({ type: 'endpoint-bind', slot: section.endpoint!, device: $event })
+                  "
+                />
+                <SoundPurposeEditor
+                  v-if="section.endpoint && section.raw === undefined"
+                  :endpoint="
+                    getPath(draft, [
+                      'peripherals',
+                      String(section.endpoint.card),
+                      'endpoints',
+                      String(section.endpoint.index),
+                    ])
+                  "
+                  :disabled="disabled || rawOpen"
+                  @change="
+                    mutateDevice({ type: 'endpoint-purpose', slot: section.endpoint!, ...$event })
+                  "
+                />
+                <button
+                  v-if="section.lease"
+                  type="button"
+                  class="btn outlined icon-lead"
+                  :disabled="disabled || rawOpen"
+                  @click="mutateForward(section.lease)"
+                >
+                  <AppIcon name="plus" />{{ t('configAddForward') }}
+                </button>
+                <AppButton
+                  v-if="section.forward"
+                  class="danger"
+                  :disabled="disabled || rawOpen"
+                  @click="mutateForward(section.forward, section.forward.index)"
+                  >{{ t('configRemoveForward') }}</AppButton
+                >
+                <template v-if="section.raw !== undefined">
+                  <p class="muted">{{ t('configUnsupportedShape') }}</p>
+                  <pre class="config-unsupported">{{ section.raw }}</pre>
+                </template>
+                <p
+                  v-else-if="!section.fields.length && !section.lease && !stateHint(section.hint)"
+                  class="muted"
+                >
+                  {{ t('configNoEntries') }}
+                </p>
+                <div class="config-fields">
+                  <div
+                    v-for="field in section.fields"
+                    v-show="
+                      (field.path[2] === 'enabled' || !screenInactive(field, draft)) &&
+                      !graphicsInactive(field, draft) &&
+                      !peripheralInactive(field, draft) &&
+                      !storageInactive(field, draft) &&
+                      (field.path[3] === 'enabled' ||
+                        !networkInactive(field, draft, catalog.networks.items.value))
+                    "
+                    :key="field.path.join('.')"
+                    class="config-field"
+                    :class="{ 'switch-field': field.type === 'boolean' }"
+                  >
+                    <AppSwitch
+                      v-if="field.type === 'boolean'"
+                      class="switch-row"
+                      :data-config-path="field.path.join('.')"
+                      :disabled="inactive(field)"
+                      :selected="read(field) === true"
+                      @change="changeSwitch(field, $event)"
+                      ><span class="a">{{ t(field.label) }}</span
+                      ><span v-if="typeof read(field) !== 'boolean'" class="b">{{
+                        t('configNativeDefault')
+                      }}</span></AppSwitch
+                    >
+                    <AppSelect
+                      v-else-if="field.type === 'boot-disk'"
+                      :label="t(field.label)"
+                      :value="selectedBootDisk === null ? '' : String(selectedBootDisk)"
+                      :required="!!imageBoot"
+                      @change="selectBoot"
+                    >
+                      <AppOption value="" disabled>{{ t('configNoBootDisk') }}</AppOption>
+                      <AppOption
+                        v-for="disk in bootDisks"
+                        :key="disk.index"
+                        :value="String(disk.index)"
+                      >
+                        {{ disk.index + 1 }} · {{ disk.path }}
+                      </AppOption>
+                    </AppSelect>
+                    <AppSelect
+                      v-else-if="field.type === 'select'"
+                      :label="t(field.label)"
+                      :data-config-path="field.path.join('.')"
+                      :disabled="inactive(field)"
+                      :value="basicSelection(field, read(field))"
+                      @change="change(field, $event)"
+                    >
+                      <AppOption v-if="!field.options?.includes('')" value="" disabled>
+                        {{ t('configNativeDefault') }}
+                      </AppOption>
+                      <AppOption
+                        v-if="
+                          fieldText(read(field)) &&
+                          !basicOptions(field, draft).includes(basicSelection(field, read(field)))
+                        "
+                        :value="basicSelection(field, read(field))"
+                      >
+                        {{ fieldText(read(field)) }}
+                      </AppOption>
+                      <AppOption
+                        v-for="option in basicOptions(field, draft)"
+                        :key="option"
+                        :value="option"
+                        :disabled="field.disabledOptions?.includes(option)"
+                      >
+                        {{ field.optionLabels?.[option] ? t(field.optionLabels[option]!) : option }}
+                      </AppOption>
+                    </AppSelect>
+                    <AppTextField
+                      v-else
+                      :label="t(field.label)"
+                      :data-config-path="field.path.join('.')"
+                      :type="field.type"
+                      :value="inputText(field)"
+                      :min="field.min"
+                      :max="field.max"
+                      :readonly="field.readonly"
+                      :disabled="inactive(field)"
+                      :step="field.type === 'number' ? 1 : undefined"
+                      :required="field.required || field.path[0] === 'name'"
+                      @input="captureInput(field, $event)"
+                      @change="change(field, $event)"
+                    />
+                    <small v-if="stateHint(field.hint)" class="help">{{ t(field.hint!) }}</small>
+                    <AppButton
+                      v-if="offsetSlot(field)"
+                      :disabled="disabled || rawOpen || inactive(field)"
+                      @click.prevent="chooseLeaseOffset(field)"
+                      >{{ t('configChooseLeaseOffset') }}</AppButton
+                    >
+                    <small v-if="leaseFeedback?.path === field.path.join('.')" role="status">{{
+                      t(leaseFeedback.message)
+                    }}</small>
+                    <small v-if="basicInactive(field, draft)" class="help">{{
+                      t('configSwiotlbInactive')
+                    }}</small>
+                  </div>
+                </div>
+                <CpuCorePicker
+                  v-if="section.key === 'gpu-worker' && !inactive(gpuCpuField)"
+                  :current="inputText(gpuCpuField)"
+                  :title="t('cpuChooseGpu')"
+                  :disabled="
+                    disabled ||
+                    rawOpen ||
+                    (draft.gpu_cgroup_cpus !== undefined &&
+                      typeof draft.gpu_cgroup_cpus !== 'string')
+                  "
+                  @select="chooseGpuCpus"
+                />
+              </div>
+            </details>
+            <details v-if="group.label === 'configBasic'" class="cc" open>
+              <summary>
+                <span>{{ t('configBasicAdvanced') }}</span>
+              </summary>
+              <div class="cc-body">
+                <BasicAdvanced
+                  ref="basicAdvanced"
+                  :document="draft"
+                  :active="category === 'configBasic'"
+                  :disabled="disabled || rawOpen"
+                  @change="changeAdvanced"
+                  @dirty="editor.markDirty"
+                />
+              </div>
+            </details>
+          </fieldset>
+        </form>
+        <p v-if="category !== 'configBasic'" class="muted host-paths">
+          {{ t('configHostPaths') }}
+        </p>
+        <div v-if="wide" class="edit-actions">
+          <button type="button" class="btn text" @click="router.back()">{{ t('cancel') }}</button>
+          <button
+            type="button"
+            class="btn filled"
+            :disabled="disabled || !dirty || rawOpen"
+            @click="requestSave"
+          >
+            {{ t('save') }}
+          </button>
+        </div>
+      </div>
+    </div>
     <ConfirmDialog
       :open="!!confirm"
       :title="
@@ -1043,53 +1175,126 @@ async function confirmed() {
 </template>
 
 <style scoped>
+/* docs/webui/app-style/app.html vmEdit: tabs (vertical from 1200px), one outlined card of
+   collapsible groups, single-column fields and switch rows. */
 .configuration {
   display: grid;
-  gap: var(--space-4);
+  gap: 12px;
   min-width: 0;
 }
-.config-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+.edit-wrap {
+  display: block;
+  min-width: 0;
 }
 .config-categories {
-  min-width: 0;
-  flex-wrap: nowrap;
+  display: flex;
   overflow-x: auto;
-  padding-bottom: var(--space-2);
+  scrollbar-width: none;
+  margin: 0 -16px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--app-color-background);
+  position: sticky;
+  top: 64px;
+  z-index: 2;
 }
-.config-categories :deep(button) {
-  flex: 0 0 auto;
+.config-categories::-webkit-scrollbar {
+  display: none;
+}
+.config-categories > button {
+  position: relative;
+  flex: 1 0 auto;
+  min-width: 72px;
+  height: 48px;
+  padding: 0 16px;
+  border: 0;
+  background: none;
+  color: var(--md-sys-color-on-surface-variant);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
   white-space: nowrap;
 }
-fieldset {
-  min-width: 0;
-  padding: var(--space-4);
-  margin: 0;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: var(--md-sys-shape-corner-medium);
-  background: var(--app-color-card);
+.config-categories > button.on {
+  color: var(--md-sys-color-primary);
 }
-legend {
-  padding: 0 var(--space-2);
-  font-weight: 650;
+.config-categories > button.on::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--md-sys-color-primary);
+}
+.edit-main {
+  min-width: 0;
+}
+fieldset.card.out {
+  margin: 12px 0 0;
+  padding: 0;
+  min-width: 0;
+  border-radius: 12px;
+}
+.group-intro {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+.group-intro:empty {
+  display: none;
+}
+.add-device {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.cc-body {
+  display: grid;
+  gap: 16px;
+  padding: 8px 16px 16px;
+  min-width: 0;
+}
+.cc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .config-fields {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
 }
-.config-section + .config-section {
-  margin-top: var(--space-5);
+.config-field {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-width: 0;
 }
-.config-section .config-toolbar {
-  margin-bottom: var(--space-3);
+.config-field.switch-field {
+  margin: 0 -16px;
 }
-.config-section h3 {
-  margin: 0 0 var(--space-3);
-  font-size: var(--md-sys-typescale-title-medium-size);
-  overflow-wrap: anywhere;
+.switch-row {
+  min-height: 56px;
+  padding: 8px 16px;
+}
+.switch-row :deep(.app-switch-label) {
+  display: grid;
+}
+.switch-row .a {
+  font-size: 16px;
+  line-height: 24px;
+}
+.switch-row .b {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.help {
+  padding: 0 16px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 .config-unsupported {
   white-space: pre-wrap;
@@ -1097,77 +1302,74 @@ legend {
   max-height: 16rem;
   overflow: auto;
 }
-.config-field,
+.config-advanced {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
 .raw-label {
   display: grid;
-  gap: var(--space-2);
-  align-content: start;
+  gap: 8px;
   min-width: 0;
 }
 textarea {
   width: 100%;
   min-width: 0;
   padding: 10px 12px;
-  background: var(--app-color-card);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 4px;
+  background: transparent;
   color: var(--md-sys-color-on-surface);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: var(--md-sys-shape-corner-medium);
-  font: inherit;
-}
-textarea {
-  font-family: monospace;
+  font: 14px/20px var(--app-font-mono);
   resize: vertical;
 }
-.raw-label {
-  margin-bottom: var(--space-3);
+.host-paths {
+  margin: 12px 0 0;
 }
-/* Wide screens: the categories become a sticky section list beside the form. */
-@media (width >= 840px) {
-  .configuration {
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 0;
+}
+@media (width >= 600px) {
+  .config-categories {
+    margin: 0 -24px;
+  }
+}
+@media (width >= 1200px) {
+  .edit-wrap {
+    display: grid;
     grid-template-columns: 220px minmax(0, 1fr);
-    column-gap: var(--space-6);
+    gap: 24px;
+    max-width: 1100px;
   }
-  .configuration > * {
-    grid-column: 1 / -1;
-  }
-  .configuration > .config-categories {
-    grid-column: 1;
-    position: sticky;
-    top: var(--space-4);
-    align-self: start;
+  .config-categories {
     flex-direction: column;
-    gap: 0;
-    overflow: visible;
-    padding: 0;
-  }
-  .configuration > form {
-    grid-column: 2;
-  }
-  .config-categories :deep(button) {
-    white-space: normal;
-  }
-  .config-categories :deep(.chip) {
-    width: 100%;
-    height: auto;
-    min-height: 56px;
-    padding: var(--space-2) var(--space-4);
+    gap: 4px;
+    margin: 0;
     border: 0;
-    border-radius: var(--md-sys-shape-corner-full);
-    text-align: start;
+    position: sticky;
+    top: 72px;
+    align-self: start;
+    overflow: visible;
   }
-  .config-categories :deep(.active .chip) {
-    padding-inline-start: var(--space-4);
+  .config-categories > button {
+    flex: none;
+    height: 48px;
+    border-radius: 24px;
+    padding: 0 20px;
+    text-align: left;
   }
-  .config-categories :deep(.chip .icon) {
+  .config-categories > button.on {
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+  }
+  .config-categories > button.on::after {
     display: none;
   }
-}
-@media (width < 600px) {
-  .config-fields {
-    grid-template-columns: 1fr;
-  }
-  fieldset {
-    padding: var(--space-3);
+  fieldset.card.out {
+    margin-top: 0;
   }
 }
 </style>

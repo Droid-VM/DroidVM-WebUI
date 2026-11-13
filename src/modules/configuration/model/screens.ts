@@ -10,6 +10,10 @@ const token = (value: unknown) => fieldText(value).toLowerCase()
 export function vncHostValid(text: string): boolean {
   return !text || ipLiteral(text) !== null
 }
+// crosvm compares ?token= raw, so only URL-safe characters survive the round trip.
+export function webrtcTokenValid(text: string): boolean {
+  return text.length <= 128 && /^[A-Za-z0-9._~-]*$/.test(text)
+}
 
 export function screenInactive(field: ConfigField, row: ConfigObject): boolean {
   if (field.path[0] !== 'screens') return false
@@ -18,10 +22,15 @@ export function screenInactive(field: ConfigField, row: ConfigObject): boolean {
   if (field.path[2] === 'enabled') return false
   if (screen.enabled !== true) return true
   const exporter = token(screen.exporter)
-  if (field.path[2] === 'transport_cap') return !['native', 'vnc'].includes(exporter)
+  if (field.path[2] === 'transport_cap') return !['native', 'vnc', 'webrtc'].includes(exporter)
   if (field.path[2] === 'vnc') {
     if (exporter !== 'vnc' || (screen.vnc !== undefined && !object(screen.vnc))) return true
     return field.path[3] === 'password' && getPath(screen, ['vnc', 'password_auth']) !== true
+  }
+  if (field.path[2] === 'webrtc') {
+    if (exporter !== 'webrtc' || (screen.webrtc !== undefined && !object(screen.webrtc)))
+      return true
+    return field.path[3] === 'token' && getPath(screen, ['webrtc', 'token_auth']) === false
   }
   return false
 }
@@ -36,18 +45,34 @@ export function screenIssues(row: ConfigObject): Record<string, MessageKey> {
     const exporter = token(screen.exporter)
     if (exporter === 'native' && token(row.backend) === 'qemu')
       errors[prefix + 'exporter'] = 'configNativeCrosvmOnly'
-    if (exporter !== 'vnc' || !object(screen.vnc)) continue
-    const host = screen.vnc.host
+    if (exporter === 'webrtc' && token(row.backend) === 'qemu')
+      errors[prefix + 'exporter'] = 'configWebrtcCrosvmOnly'
+    // VNC and WebRTC listeners draw from one port space.
+    const key = exporter === 'vnc' ? 'vnc' : exporter === 'webrtc' ? 'webrtc' : ''
+    const listener = key ? screen[key] : undefined
+    if (!key || !object(listener)) continue
+    const host = listener.host
     if (typeof host === 'string' && !vncHostValid(host))
-      errors[prefix + 'vnc.host'] = 'configVncHostInvalid'
-    const port = fieldText(screen.vnc.port)
+      errors[prefix + key + '.host'] = 'configVncHostInvalid'
+    if (key === 'webrtc') {
+      if (listener.token_auth !== false && !webrtcTokenValid(fieldText(listener.token)))
+        errors[prefix + 'webrtc.token'] = 'configWebrtcTokenInvalid'
+      const bitrate = fieldText(listener.bitrate)
+      if (
+        bitrate &&
+        bitrate !== '0' &&
+        (!/^\d+$/.test(bitrate) || Number(bitrate) < 500 || Number(bitrate) > 100000)
+      )
+        errors[prefix + 'webrtc.bitrate'] = 'configWebrtcBitrateInvalid'
+    }
+    const port = fieldText(listener.port)
     if (!port || port === '-1') continue // App's unassigned port; resolved at VM start.
     if (!/^\d+$/.test(port) || Number(port) < 1024 || Number(port) > 65535) {
-      errors[prefix + 'vnc.port'] = 'configVncPortInvalid'
+      errors[prefix + key + '.port'] = 'configVncPortInvalid'
       continue
     }
     const normalized = String(Number(port))
-    if (ports.has(normalized)) errors[prefix + 'vnc.port'] = 'configVncPortConflict'
+    if (ports.has(normalized)) errors[prefix + key + '.port'] = 'configVncPortConflict'
     ports.add(normalized)
   }
   return errors
@@ -64,23 +89,26 @@ export function screenFields(id: string, row: ConfigObject): ConfigField[] {
   return [
     field('enabled', 'configScreenEnabled', 'boolean'),
     field('exporter', 'configDisplayExporter', 'select', {
-      options: ['none', 'native', 'vnc'],
+      options: ['none', 'native', 'vnc', 'webrtc'],
       hint: 'configExporterHint',
       optionLabels: {
         none: 'configExporterNone',
         native: 'configExporterNative',
         vnc: 'configExporterVnc',
+        webrtc: 'configExporterWebrtc',
       },
     }),
     field('transport_cap', 'configTransportCap', 'select', {
       options:
         exporter === 'vnc'
           ? ['cpu', 'gpu', 'gpu-hw']
-          : exporter === 'native'
-            ? id === 'gpu-0'
-              ? ['cpu', 'gpu', 'zero']
-              : ['cpu', 'gpu']
-            : [],
+          : exporter === 'webrtc'
+            ? ['cpu', 'gpu-hw']
+            : exporter === 'native'
+              ? id === 'gpu-0'
+                ? ['cpu', 'gpu', 'zero']
+                : ['cpu', 'gpu']
+              : [],
       disabledOptions: ['zero'],
       optionLabels: {
         cpu: 'configTransportCpu',
@@ -109,5 +137,25 @@ export function screenFields(id: string, row: ConfigObject): ConfigField[] {
     }),
     field('vnc.password_auth', 'configVncPasswordAuth', 'boolean'),
     field('vnc.password', 'configVncPassword', 'password'),
+    field('webrtc.host', 'configWebrtcHost', 'text', { hint: 'configVncHostHint' }),
+    field('webrtc.port', 'configWebrtcPort', 'number', {
+      min: 1024,
+      max: 65535,
+      emptyValue: -1,
+      hint: 'configVncAutoPortHint',
+    }),
+    field('webrtc.token_auth', 'configWebrtcTokenAuth', 'boolean'),
+    field('webrtc.token', 'configWebrtcToken', 'password', { hint: 'configWebrtcTokenHint' }),
+    field('webrtc.codec', 'configWebrtcCodec', 'select', {
+      options: ['auto', 'h264'],
+      optionLabels: { auto: 'configWebrtcCodecAuto', h264: 'configWebrtcCodecH264' },
+    }),
+    field('webrtc.bitrate', 'configWebrtcBitrate', 'number', {
+      min: 0,
+      max: 100000,
+      emptyValue: 0,
+      hint: 'configWebrtcBitrateHint',
+    }),
+    field('webrtc.adapt', 'configWebrtcAdapt', 'boolean'),
   ]
 }

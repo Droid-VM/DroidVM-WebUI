@@ -53,7 +53,6 @@ function change(attribute: SoundAttribute, event: Event) {
         {{ t(choice.label) }}
       </AppOption>
     </AppSelect>
-    <small class="muted">{{ t(input ? 'soundPurposeInputHint' : 'soundPurposeOutputHint') }}</small>
   </div>
 </template>
 

@@ -24,7 +24,7 @@ function snapshot(
     progress: '',
     network: { interface: 'wlan0', operstate: 'up' },
     panelLit: true,
-    watchdog: { verified: true, reason: null },
+    watchdog: { verified: true, reason: null, kick: 'unproven' },
     services: { surfaceflinger: 'running', composer: 'running' },
     lastRestore: null,
   }
@@ -95,7 +95,12 @@ it('stops only after the blank-screen confirmation and sends the chosen restore 
     {
       requestId: 'request-1',
       expected: { revision: 'r1' },
-      operation: { kind: 'stop', autoRestoreSeconds: 600, restoreOnNetworkLoss: false },
+      operation: {
+        kind: 'stop',
+        tier: 'display',
+        autoRestoreSeconds: 600,
+        restoreOnNetworkLoss: false,
+      },
     },
     expect.any(AbortSignal),
   )
@@ -113,6 +118,27 @@ it('stops only after the blank-screen confirmation and sends the chosen restore 
   model.dispose()
 })
 
+it('allows takeover without watchdog feeding while retaining automatic restoration', async () => {
+  const { model, gateway, set } = fixture()
+  const value = snapshot()
+  value.watchdog = { verified: true, reason: null, kick: 'not-required' }
+  set(value)
+  await model.refresh()
+  expect(model.canStop.value).toBe(true)
+  model.autoRestoreSeconds.value = 600
+  model.prepare('stop')
+  model.confirmBlank.value = true
+  await model.submit()
+  expect(gateway.submit).toHaveBeenCalledWith(
+    expect.objectContaining({
+      operation: expect.objectContaining({ kind: 'stop', autoRestoreSeconds: 600 }),
+    }),
+    expect.any(AbortSignal),
+  )
+  expect(model.canRestore.value).toBe(true)
+  model.dispose()
+})
+
 it('refuses to stop on a dark panel or an unverified watchdog and never restores a VM-owned panel', async () => {
   const { model, set } = fixture()
   const dark = snapshot()
@@ -121,7 +147,7 @@ it('refuses to stop on a dark panel or an unverified watchdog and never restores
   await model.refresh()
   expect(model.canStop.value).toBe(false)
   const unverified = snapshot()
-  unverified.watchdog = { verified: false, reason: 'stale hangdetect status' }
+  unverified.watchdog = { verified: false, reason: 'stale hangdetect status', kick: 'unproven' }
   set(unverified)
   await model.refresh()
   expect(model.canStop.value).toBe(false)
@@ -157,7 +183,12 @@ it('drops a review when the revision changes underneath it and keeps an unknown 
     {
       requestId: 'request-1',
       expected: { revision: 'external' },
-      operation: { kind: 'stop', autoRestoreSeconds: 1800, restoreOnNetworkLoss: true },
+      operation: {
+        kind: 'stop',
+        tier: 'display',
+        autoRestoreSeconds: 1800,
+        restoreOnNetworkLoss: true,
+      },
     },
     expect.any(AbortSignal),
   )

@@ -177,7 +177,7 @@ test('details confirm suspend in a nested dialog and uncertainty allows only sto
       },
     })
   })
-  const details = page.getByRole('region', { name: '虚拟机详情' })
+  const details = page.getByRole('region', { name: '手机虚拟机' })
   await details.getByRole('button', { name: '挂起', exact: true }).click()
   await page
     .getByRole('dialog', { name: '挂起', exact: true })
@@ -186,5 +186,6 @@ test('details confirm suspend in a nested dialog and uncertainty allows only sto
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(details).toContainText('待核实')
   await expect(details.getByRole('button', { name: '停止', exact: true })).toBeEnabled()
-  await expect(details.getByRole('button', { name: '挂起', exact: true })).toHaveCount(0)
+  // The App keeps the button in place and disables what the host no longer offers.
+  await expect(details.getByRole('button', { name: '挂起', exact: true })).toBeDisabled()
 })

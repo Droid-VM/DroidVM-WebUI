@@ -53,7 +53,6 @@ const blitMessage = computed<MessageKey>(() => {
     <AppNotice v-for="hint in hints" :key="hint" tone="warning" :title="t(hint)" />
     <details>
       <summary>{{ t('hostCapabilities') }}</summary>
-      <p>{{ t('hostDevicesHint') }}</p>
       <AppNotice v-if="source.problem.value" tone="error" :title="t(source.problem.value.titleKey)">
         <p>{{ t(source.problem.value.descriptionKey) }}</p>
       </AppNotice>
@@ -99,7 +98,6 @@ const blitMessage = computed<MessageKey>(() => {
               })
             }}
           </p>
-          <p class="muted">{{ t('hostBlitCacheHint') }}</p>
         </template>
       </template>
     </details>

@@ -35,6 +35,20 @@ const height = ref<number>(),
 const inputActive = ref(props.active)
 const inputAllowed = computed(() => model.connected.value && model.selected.value?.inputEnabled)
 const inputEnabled = computed(() => inputActive.value && inputAllowed.value)
+// WebRTC screens are served by crosvm's own viewer page; the browser reaches it directly.
+const webrtcUrl = computed(() => {
+  const rtc = model.selected.value?.webrtc
+  if (!rtc) return ''
+  const wildcard = !rtc.host || rtc.host === '0.0.0.0' || rtc.host === '::'
+  const host = wildcard ? location.hostname : rtc.host
+  const authority = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host
+  const url = new URL(`http://${authority}:${rtc.port}/`)
+  if (rtc.token) url.searchParams.set('token', rtc.token)
+  return url.href
+})
+function openWebrtc() {
+  if (webrtcUrl.value) window.open(webrtcUrl.value, '_blank', 'noopener,noreferrer')
+}
 function setInputActive(value: boolean) {
   if (!value) {
     clearModifiers()
@@ -149,12 +163,36 @@ function disconnect() {
   clearModifiers()
   model.disconnect()
 }
-function visibility() {
-  if (document.visibilityState !== 'visible') disconnect()
-}
+// Entering the console connects by itself once the screen list is known. Losing window
+// focus or visibility still drops the session (input capture must not linger), and coming
+// back resumes it; a disconnect the user asked for, or a failed attempt, stays down.
+let dropped = false
 function connect() {
   attempted.value = true
   void model.connect()
+}
+function autoConnect() {
+  if (
+    model.status.value === 'disconnected' &&
+    !model.problem.value &&
+    model.supported.value &&
+    model.selected.value?.available
+  )
+    connect()
+}
+function pause() {
+  if (!model.connected.value && !model.busy.value) return
+  dropped = true
+  disconnect()
+}
+function resume() {
+  if (!dropped || document.visibilityState !== 'visible') return
+  dropped = false
+  autoConnect()
+}
+function visibility() {
+  if (document.visibilityState !== 'visible') pause()
+  else resume()
 }
 function select(event: Event) {
   clearModifiers()
@@ -165,8 +203,15 @@ watch(
   () => {
     attempted.value = false
     keyboard.value = false
+    dropped = false
   },
   { immediate: true },
+)
+watch(
+  () => [model.status.value, model.selected.value?.available],
+  () => {
+    if (!attempted.value) autoConnect()
+  },
 )
 watch(fit, (value) => viewer?.scale(value))
 watch(model.connected, (connected) => {
@@ -215,7 +260,8 @@ onMounted(() => {
   window.visualViewport?.addEventListener('resize', layout)
   window.visualViewport?.addEventListener('scroll', layout)
   window.addEventListener('resize', layout)
-  window.addEventListener('blur', disconnect)
+  window.addEventListener('blur', pause)
+  window.addEventListener('focus', resume)
   window.addEventListener('pagehide', disconnect)
   document.addEventListener('visibilitychange', visibility)
   document.addEventListener('fullscreenchange', layout)
@@ -230,7 +276,8 @@ onUnmounted(() => {
   window.visualViewport?.removeEventListener('resize', layout)
   window.visualViewport?.removeEventListener('scroll', layout)
   window.removeEventListener('resize', layout)
-  window.removeEventListener('blur', disconnect)
+  window.removeEventListener('blur', pause)
+  window.removeEventListener('focus', resume)
   window.removeEventListener('pagehide', disconnect)
   document.removeEventListener('visibilitychange', visibility)
   document.removeEventListener('fullscreenchange', layout)
@@ -274,7 +321,14 @@ onUnmounted(() => {
           :value="screen.id"
           :disabled="screen.id === excludedScreen"
         >
-          {{ screen.id }}{{ screen.available ? '' : ` — ${t('unavailable')}` }}
+          {{ screen.id
+          }}{{
+            screen.available
+              ? ''
+              : screen.reason === 'webrtc'
+                ? ' — WebRTC'
+                : ` — ${t('unavailable')}`
+          }}
         </AppOption>
       </AppSelect>
       <AppButton
@@ -306,7 +360,10 @@ onUnmounted(() => {
       ><p>{{ t(model.problem.value.descriptionKey) }}</p></AppNotice
     >
     <p
-      v-if="!model.supported.value || (!model.busy.value && !model.selected.value?.available)"
+      v-if="
+        !webrtcUrl &&
+        (!model.supported.value || (!model.busy.value && !model.selected.value?.available))
+      "
       class="muted"
     >
       {{ t('graphicUnavailable') }}
@@ -316,6 +373,11 @@ onUnmounted(() => {
     </p>
     <p v-if="model.selected.value?.reason" class="muted">
       {{ t(`graphicReason_${model.selected.value.reason.replaceAll('-', '_')}`) }}
+    </p>
+    <p v-if="webrtcUrl" class="muted">
+      <AppButton data-testid="graphic-webrtc" tone="primary" @click="openWebrtc">{{
+        t('graphicOpenWebrtc')
+      }}</AppButton>
     </p>
     <p v-if="fullscreenFallback" class="muted">{{ t('graphicFullscreenFallback') }}</p>
     <div
@@ -367,7 +429,6 @@ onUnmounted(() => {
       @beforeinput="beforeInput"
       @paste="paste"
     />
-    <p class="graphics-hint muted">{{ t('graphicInputHint') }}</p>
   </section>
 </template>
 
@@ -426,11 +487,6 @@ onUnmounted(() => {
   outline-offset: -3px;
 }
 .graphics-status,
-.graphics-hint {
-  margin: 0;
-  font-size: var(--md-sys-typescale-body-medium-size);
-  flex-shrink: 0;
-}
 .graphics-input {
   width: 100%;
   min-height: 44px;
@@ -454,9 +510,6 @@ onUnmounted(() => {
   }
   .graphics-tools {
     gap: 6px;
-  }
-  .graphics-hint {
-    font-size: var(--md-sys-typescale-body-small-size);
   }
 }
 </style>
