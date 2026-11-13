@@ -12,6 +12,7 @@ interface LogAccess {
 }
 const listValid = compileContract<LogList>('VmLogList')
 const chunkValid = compileContract<components['schemas']['VmLogChunk']>('VmLogChunk')
+const emptyValid = compileContract<components['schemas']['ConfigEmpty']>('ConfigEmpty')
 const invalid = () => new ApiError('invalid-response', 'Invalid log response')
 export function createHttpLogGateway(
   client: HttpClient,
@@ -31,6 +32,19 @@ export function createHttpLogGateway(
   }
   return {
     supported: () => permitted(access()),
+    clearSupported: () =>
+      permitted(access()) && !!access()?.capabilities.includes('vm.logs.clear.v1'),
+    async clear(request, signal) {
+      const current = requireAccess()
+      const value = await client.postJson(
+        '/api/v1/vm-logs/clear',
+        { ...request, context: current.context },
+        signal,
+        { csrf: current.csrfToken, status: 200 },
+      )
+      if (!emptyValid(value)) throw invalid()
+      context(value.context, current.context)
+    },
     async list(vmId, signal) {
       const current = requireAccess()
       const value = await client.getJson(`/api/v1/vm-logs/${encodeURIComponent(vmId)}`, signal)

@@ -5,37 +5,38 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { useVmTerminal } from '../model/terminal'
+import { useLogViewer } from '../../logs'
 import AppButton from '../../../shared/ui/AppButton.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
-import AppOption from '../../../shared/ui/AppOption.vue'
-import AppSelect from '../../../shared/ui/AppSelect.vue'
+import AppIcon from '../../../shared/ui/AppIcon.vue'
 import EmptyState from '../../../shared/ui/EmptyState.vue'
 import { resolvedTheme } from '../../../shared/lib/theme'
 
-const props = defineProps<{ vmId: string; instanceId?: string }>()
+// `running: false` shows the saved log history read-only instead of a live session.
+const props = defineProps<{ vmId: string; instanceId?: string; running?: boolean }>()
 const model = useVmTerminal(),
+  logs = useLogViewer(),
   { t, locale } = useI18n()
 const root = ref<HTMLElement>(),
   host = ref<HTMLElement>(),
   control = ref(false)
-const availableHeight = ref<number | null>(null),
-  columns = ref(80),
-  rows = ref(24)
+const availableHeight = ref<number | null>(null)
 let terminal: Terminal | undefined, fit: FitAddon | undefined, observer: ResizeObserver | undefined
 let observedHost: HTMLElement | undefined
 let detach: (() => void) | undefined,
   resizeFrame = 0,
   mounted = false
 const pendingWrites = new Set<() => void>()
+// The App's extra-keys strip: ESC TAB CTRL ALT, arrows, then - and /.
 const keys = [
-  { label: 'Ctrl+C', value: '\u0003' },
-  { label: 'Tab', value: '\t' },
-  { label: 'Esc', value: '\u001b' },
-  { label: '←', value: '\u001b[D' },
   { label: '↑', value: '\u001b[A' },
   { label: '↓', value: '\u001b[B' },
+  { label: '←', value: '\u001b[D' },
   { label: '→', value: '\u001b[C' },
+  { label: '-', value: '-' },
+  { label: '/', value: '/' },
 ]
+const alt = ref(false)
 function disposeTerminal() {
   for (const finish of pendingWrites) finish()
   pendingWrites.clear()
@@ -44,6 +45,10 @@ function disposeTerminal() {
   fit = undefined
 }
 function send(value: string) {
+  if (alt.value && value.length === 1) {
+    alt.value = false
+    value = `\u001b${value}`
+  }
   if (
     control.value &&
     value.length === 1 &&
@@ -55,17 +60,17 @@ function send(value: string) {
   }
   model.text(value)
 }
-// xterm paints on a canvas, so read the M3 roles instead of using CSS.
+// xterm paints on a canvas: read the App's terminal colors (dark in both themes).
 function terminalTheme() {
   const style = getComputedStyle(document.documentElement)
-  const color = (role: string) => style.getPropertyValue(`--md-sys-color-${role}`).trim()
+  const value = (name: string) => style.getPropertyValue(name).trim()
   return {
-    background: color('surface-container-lowest'),
-    foreground: color('on-surface'),
-    cursor: color('primary'),
-    cursorAccent: color('surface-container-lowest'),
-    selectionBackground: color('primary-container'),
-    selectionForeground: color('on-primary-container'),
+    background: value('--app-color-term'),
+    foreground: value('--app-color-term-text'),
+    cursor: value('--app-color-term-text'),
+    cursorAccent: value('--app-color-term'),
+    selectionBackground: value('--md-sys-color-inverse-primary'),
+    selectionForeground: value('--app-color-term'),
   }
 }
 function createTerminal() {
@@ -137,8 +142,6 @@ function layout() {
       )
     if (host.value?.clientWidth && host.value.clientHeight && terminal && fit) {
       fit.fit()
-      columns.value = terminal.cols
-      rows.value = terminal.rows
     }
   })
 }
@@ -160,16 +163,49 @@ function toggleControl() {
   control.value = !control.value
   terminal?.focus()
 }
+function toggleAlt() {
+  alt.value = !alt.value
+  terminal?.focus()
+}
+const live = () => props.running !== false
+// Entering the page connects by itself, once the stream list and renderer are both ready.
+// A failed attempt leaves its problem showing and waits for the manual connect button.
+function autoConnect() {
+  if (
+    live() &&
+    model.status.value === 'disconnected' &&
+    !model.problem.value &&
+    !!model.metadata.value?.streams.length
+  )
+    void model.connect()
+}
 function visibility() {
   if (document.visibilityState !== 'visible') model.disconnect()
+  else autoConnect()
+}
+// Log text uses bare newlines; the terminal needs CR LF to start each line at column 0.
+function showHistory() {
+  if (live() || !mounted) return
+  createTerminal()
+  terminal?.write(logs.text.value.replace(/\r?\n/g, '\r\n'))
 }
 watch(
-  () => [props.vmId, props.instanceId],
-  () => {
+  () => [props.vmId, props.instanceId, props.running],
+  async () => {
     control.value = false
-    void model.open(props.vmId)
+    if (!live()) {
+      model.reset()
+      await logs.open(props.vmId)
+      showHistory()
+      return
+    }
+    if (await model.open(props.vmId)) autoConnect()
   },
   { immediate: true },
+)
+watch(
+  () => logs.text.value,
+  () => showHistory(),
 )
 watch(model.connected, (connected) => {
   if (terminal) terminal.options.disableStdin = !connected
@@ -218,6 +254,8 @@ onMounted(async () => {
   window.visualViewport?.addEventListener('scroll', layout)
   document.addEventListener('visibilitychange', visibility)
   layout()
+  autoConnect()
+  showHistory()
 })
 onUnmounted(() => {
   mounted = false
@@ -246,39 +284,63 @@ onUnmounted(() => {
     class="vm-terminal"
     :style="availableHeight ? { maxHeight: `${availableHeight}px` } : undefined"
   >
-    <div class="toolbar session-toolbar">
-      <AppSelect
-        class="stream-select"
+    <div class="console-bar">
+      <div
+        class="streams"
+        role="group"
         data-testid="terminal-stream"
-        :label="t('terminalStream')"
-        :value="model.stream.value"
-        :disabled="model.busy.value"
-        @change="model.select(($event.target as HTMLSelectElement).value)"
+        :aria-label="t('terminalStream')"
       >
-        <AppOption v-for="name in model.metadata.value?.streams" :key="name" :value="name">
-          {{ name }}
-        </AppOption>
-      </AppSelect>
-      <AppButton
-        v-if="!model.connected.value"
+        <button
+          v-for="name in model.metadata.value?.streams"
+          :key="name"
+          type="button"
+          class="chip"
+          :aria-pressed="model.stream.value === name"
+          :disabled="model.busy.value"
+          @click="model.select(name)"
+        >
+          <AppIcon v-if="model.stream.value === name" name="ok" />{{ name }}
+        </button>
+      </div>
+      <span
+        v-if="live()"
+        class="status"
+        data-testid="terminal-status"
+        :data-state="model.status.value"
+        role="status"
+        ><span class="dot" :data-on="model.connected.value" />{{
+          t(
+            model.connected.value
+              ? 'terminalConnected'
+              : model.busy.value
+                ? 'processing'
+                : 'terminalDisconnected',
+          )
+        }}</span
+      >
+      <span v-if="!live()" class="status" data-testid="terminal-history">{{
+        t('terminalHistory')
+      }}</span>
+      <button
+        v-else-if="!model.connected.value"
+        type="button"
+        class="btn filled"
         data-testid="terminal-connect"
-        tone="primary"
         :disabled="model.busy.value"
         @click="model.connect"
-        >{{ t('terminalConnect') }}</AppButton
       >
-      <AppButton v-else data-testid="terminal-disconnect" @click="model.disconnect">{{
-        t('terminalDisconnect')
-      }}</AppButton>
-      <span data-testid="terminal-status" :data-state="model.status.value" role="status">{{
-        t(
-          model.connected.value
-            ? 'terminalConnected'
-            : model.busy.value
-              ? 'processing'
-              : 'terminalDisconnected',
-        )
-      }}</span>
+        {{ t('terminalConnect') }}
+      </button>
+      <button
+        v-else
+        type="button"
+        class="btn text"
+        data-testid="terminal-disconnect"
+        @click="model.disconnect"
+      >
+        {{ t('terminalDisconnect') }}
+      </button>
     </div>
     <AppNotice v-if="model.problem.value" tone="warning" :title="t(model.problem.value.titleKey)"
       ><p>{{ t(model.problem.value.descriptionKey) }}</p></AppNotice
@@ -306,58 +368,82 @@ onUnmounted(() => {
       data-testid="terminal-output"
       :aria-label="t('terminalOutput')"
     />
-    <div class="keyboard session-toolbar" :aria-label="t('terminalKeys')">
-      <AppButton :disabled="!model.connected.value" :aria-pressed="control" @click="toggleControl"
-        >Ctrl</AppButton
+    <div class="extra-keys" role="group" :aria-label="t('terminalKeys')">
+      <button type="button" :disabled="!model.connected.value" @click="key('\u001b')">ESC</button>
+      <button type="button" :disabled="!model.connected.value" @click="key('\t')">TAB</button>
+      <button
+        type="button"
+        :class="{ act: control }"
+        :disabled="!model.connected.value"
+        :aria-pressed="control"
+        @click="toggleControl"
       >
-      <AppButton
+        CTRL
+      </button>
+      <button
+        type="button"
+        :class="{ act: alt }"
+        :disabled="!model.connected.value"
+        :aria-pressed="alt"
+        @click="toggleAlt"
+      >
+        ALT
+      </button>
+      <button
         v-for="item in keys"
         :key="item.label"
+        type="button"
         :disabled="!model.connected.value"
         @click="key(item.value)"
-        >{{ item.label }}</AppButton
       >
-      <AppButton :disabled="!model.connected.value" @click="terminal?.focus()">{{
-        t('terminalKeyboard')
-      }}</AppButton>
+        {{ item.label }}
+      </button>
     </div>
-    <details class="terminal-help">
-      <summary>{{ t('terminalHelp') }}</summary>
-      <p>{{ t('terminalResizeHint', { columns, rows }) }}</p>
-      <p>{{ t('terminalConnectionHint') }}</p>
-      <p>{{ t('terminalPasteHint') }}</p>
-    </details>
   </section>
 </template>
 <style scoped>
+/* docs/webui/app-style/app.html vmConsole: chips bar, full-bleed terminal, extra keys. */
 .vm-terminal {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-width: 0;
   min-height: 200px;
-  gap: var(--space-2);
 }
-.toolbar,
-.keyboard {
+.console-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
+  padding: 8px 16px;
   flex-shrink: 0;
 }
-.toolbar .stream-select {
-  flex: 0 1 280px;
-  width: auto;
+.streams {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.status .dot {
+  margin-right: 6px;
+}
+.status .dot[data-on='true'] {
+  background: var(--app-color-success);
 }
 .terminal-host {
   flex: 1 1 260px;
   min-width: 0;
   min-height: 120px;
   overflow: hidden;
-  background: var(--md-sys-color-surface-container-lowest);
-  border-radius: var(--md-sys-shape-corner-medium);
-  padding: 8px;
+  background: var(--app-color-term);
+  padding: 12px 14px;
 }
 .terminal-host :deep(.xterm) {
   height: 100%;
@@ -365,40 +451,49 @@ onUnmounted(() => {
 .terminal-host :deep(.xterm-helper-textarea) {
   font-size: 16px !important;
 }
-.keyboard .btn {
-  min-width: var(--touch-target);
-  padding-inline: var(--space-3);
+.extra-keys {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  flex-shrink: 0;
+  background: #222;
+}
+.extra-keys button {
+  height: 40px;
+  border: 0;
+  background: none;
+  color: #ccc;
+  font: 500 13px var(--md-ref-typeface-plain);
+}
+.extra-keys button:hover {
+  background: #3a3a3a;
+}
+.extra-keys button.act {
+  color: #4fc3f7;
+  background: #37474f;
+}
+.extra-keys button:disabled {
+  opacity: 0.5;
 }
 .terminal-notices,
-.terminal-help,
 .note {
-  font-size: var(--md-sys-typescale-body-medium-size);
+  padding: 0 16px 8px;
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
 .terminal-notices {
   max-height: 150px;
   overflow: auto;
   border-left: 3px solid var(--md-sys-color-primary);
-  padding-left: var(--space-2);
+  margin: 0 16px 8px;
+  padding-left: 8px;
 }
 p {
   margin: 0;
 }
-.terminal-help summary {
-  cursor: pointer;
-  min-height: 30px;
-}
-.terminal-help[open] {
-  max-height: 130px;
-  overflow: auto;
-}
-@media (width < 480px) {
-  .toolbar,
-  .keyboard {
-    gap: var(--space-1);
-  }
-  .keyboard .btn {
-    padding-inline: var(--space-2);
+/* A real keyboard is assumed on the drawer layout, as the design. */
+@media (width >= 1200px) {
+  .extra-keys {
+    display: none;
   }
 }
 </style>

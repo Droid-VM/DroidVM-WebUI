@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { nextTick, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLogViewer } from '../model/viewer'
 import { useVisiblePolling } from '../../../shared/model/visiblePolling'
-import AppButton from '../../../shared/ui/AppButton.vue'
+import AppIcon from '../../../shared/ui/AppIcon.vue'
 import AppNotice from '../../../shared/ui/AppNotice.vue'
-import AppOption from '../../../shared/ui/AppOption.vue'
-import AppSelect from '../../../shared/ui/AppSelect.vue'
-import AppSwitch from '../../../shared/ui/AppSwitch.vue'
 import EmptyState from '../../../shared/ui/EmptyState.vue'
-const props = defineProps<{ vmId: string; instanceId?: string }>()
+// docs/webui/app-style/app.html vmConsole: stream chips with a status line, then the
+// console text filling the page. Save / share / clear live in the top bar (VmLogActions).
+// stateText / stateTone describe the VM (running, suspended...) for the status line.
+const props = defineProps<{
+  vmId: string
+  instanceId?: string
+  stateText?: string
+  stateTone?: string
+}>()
 const { t, n } = useI18n()
 const viewer = useLogViewer()
 const {
@@ -29,7 +34,7 @@ const {
 const output = ref<HTMLElement>()
 watch(
   () => [props.vmId, props.instanceId],
-  () => void viewer.open(props.vmId),
+  () => void viewer.open(props.vmId, false),
   { immediate: true },
 )
 useVisiblePolling(
@@ -45,101 +50,126 @@ watch(text, async () => {
     output.value?.scrollTo({ top: output.value.scrollHeight })
   }
 })
-onUnmounted(viewer.reset)
-function download() {
-  const url = URL.createObjectURL(
-    new Blob([viewer.exportBytes()], { type: 'text/plain;charset=utf-8' }),
-  )
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `droidvm-${props.vmId}-${stream.value}.log`
-  link.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+// Reading back up pauses following; returning to the bottom resumes it.
+function scrolled() {
+  const element = output.value
+  if (element) follow.value = element.scrollHeight - element.scrollTop - element.clientHeight < 24
 }
+const size = computed(() =>
+  byteCount.value >= 1048576
+    ? `${n(byteCount.value / 1048576, { maximumFractionDigits: 1 })} MiB`
+    : `${n(byteCount.value / 1024, { maximumFractionDigits: 1 })} KiB`,
+)
+const statusLine = computed(() =>
+  [
+    props.stateText,
+    t('vmLogHistorySize', { size: size.value }),
+    partial.value ? '' : t('vmLogReplayed'),
+    t(follow.value ? 'vmLogFollowing' : 'vmLogPaused'),
+  ]
+    .filter(Boolean)
+    .join(' · '),
+)
+onUnmounted(viewer.reset)
 </script>
 
 <template>
-  <EmptyState
-    v-if="!supported"
-    :title="t('vmLogsUnavailable')"
-    :description="t('vmLogsUnavailableHint')"
-  />
-  <section v-else class="log-viewer" :aria-busy="busy">
-    <div class="toolbar session-toolbar">
-      <AppSelect
-        class="stream"
-        :label="t('vmLogStream')"
-        :value="stream"
-        :disabled="!target"
-        @change="viewer.select(($event.target as HTMLSelectElement).value)"
+  <EmptyState v-if="!supported" :title="t('vmLogsUnavailable')" />
+  <section v-else class="console-page" :aria-busy="busy">
+    <div class="console-bar">
+      <div class="streams" role="group" :aria-label="t('vmLogStream')">
+        <button
+          v-for="name in target?.streams"
+          :key="name"
+          type="button"
+          class="chip"
+          :aria-pressed="stream === name"
+          @click="viewer.select(name, false)"
+        >
+          <AppIcon v-if="stream === name" name="ok" />{{ name }}
+        </button>
+      </div>
+      <span class="status"
+        ><span v-if="stateText" class="dot" :data-tone="stateTone" />{{ statusLine }}</span
       >
-        <AppOption v-for="name in target?.streams" :key="name" :value="name">{{ name }}</AppOption>
-      </AppSelect>
-      <AppSwitch v-model="follow" class="follow">{{ t('vmLogFollow') }}</AppSwitch>
-      <AppButton
-        :disabled="busy"
-        @click="target && problem?.code !== 'conflict' ? viewer.refresh() : viewer.open(vmId)"
-        >{{ t('refreshList') }}</AppButton
-      >
-      <AppButton :disabled="busy || !target || !stream" @click="viewer.history">{{
-        t('vmLogHistory')
-      }}</AppButton>
-      <AppButton :disabled="!byteCount" @click="download">{{ t('vmLogDownload') }}</AppButton>
     </div>
     <AppNotice v-if="problem" tone="warning" :title="t(problem.titleKey)"
       ><p>{{ t(problem.descriptionKey) }}</p></AppNotice
     >
     <p v-if="discontinuous" class="log-note" role="status">{{ t('vmLogReset') }}</p>
     <p v-else-if="partial" class="log-note">{{ t('vmLogPartial') }}</p>
-    <p class="log-note">
-      {{ t('vmLogBytes', { count: n(byteCount) }) }} · {{ t('vmLogTextHint') }}
-    </p>
-    <p v-if="status === 'loading' && !text" role="status">{{ t('processing') }}</p>
-    <p v-else-if="!text && !problem" role="status">{{ t('vmLogEmpty') }}</p>
-    <pre ref="output" tabindex="0" :aria-label="t('vmLogs')" class="log-output">{{ text }}</pre>
-    <AppButton v-if="more" :disabled="busy" @click="viewer.refresh">{{
-      t('vmLogContinue')
-    }}</AppButton>
+    <pre
+      ref="output"
+      tabindex="0"
+      :aria-label="t('vmLogs')"
+      class="term"
+      @scroll.passive="scrolled"
+      >{{ text || (status === 'loading' ? t('processing') : t('vmLogEmpty')) }}</pre
+    >
+    <button
+      v-if="more"
+      type="button"
+      class="btn tonal more"
+      :disabled="busy"
+      @click="viewer.refresh"
+    >
+      {{ t('vmLogContinue') }}
+    </button>
   </section>
 </template>
 
 <style scoped>
-.log-viewer {
+.console-page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  margin: 0 calc(-1 * var(--console-inset, 0px));
 }
-.toolbar {
+.console-bar {
   display: flex;
-  align-items: end;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
 }
-.toolbar .stream {
-  flex: 0 1 200px;
-  width: auto;
+.streams {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.status .dot {
+  margin-right: 6px;
+  background: var(--md-sys-color-outline);
+}
+.status .dot[data-tone='success'] {
+  background: var(--app-color-success);
+}
+.status .dot[data-tone='warning'] {
+  background: var(--app-color-warning);
 }
 .log-note {
   margin: 0;
-  font-size: var(--md-sys-typescale-body-medium-size);
+  padding: 0 16px 8px;
+  font-size: 12px;
   color: var(--md-sys-color-on-surface-variant);
 }
-.log-output {
+.term {
   flex: 1;
-  min-height: 200px;
-  max-height: 65dvh;
-  overflow: auto;
-  margin: 0;
-  padding: var(--space-3);
-  border-radius: var(--md-sys-shape-corner-medium);
-  background: var(--app-color-raised);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font:
-    13px/1.6 ui-monospace,
-    monospace;
+  min-height: 240px;
+  border-radius: 0;
   tab-size: 4;
+}
+.more {
+  align-self: center;
+  margin: 8px;
 }
 </style>

@@ -154,6 +154,8 @@ export function mountHttpApp() {
     supported: logSource.supported,
     list: (id, signal) => inSession(signal, () => logSource.list(id, signal)),
     read: (request, signal) => inSession(signal, () => logSource.read(request, signal)),
+    clearSupported: logSource.clearSupported,
+    clear: (request, signal) => inSession(signal, () => logSource.clear!(request, signal)),
   }
   const events = createEventGateway(
     () => {

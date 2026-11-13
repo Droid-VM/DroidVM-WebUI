@@ -82,14 +82,15 @@ export function createLogViewer(gateway?: LogGateway) {
       }
     }
   }
-  async function select(name: string) {
+  // tail=false replays the whole retained history (the App's console page).
+  async function select(name: string, tail = true) {
     if (!target.value?.streams.includes(name)) return
     clearRead()
     stream.value = name
     status.value = 'loading'
-    await reload(true)
+    await reload(tail)
   }
-  async function open(vmId: string) {
+  async function open(vmId: string, tail = true) {
     reset()
     if (!supported.value || !gateway) return
     const controller = new AbortController(),
@@ -101,7 +102,7 @@ export function createLogViewer(gateway?: LogGateway) {
       if (disposed || epoch !== generation || controller.signal.aborted) return
       target.value = result
       const initial = result.streams.includes('stdio') ? 'stdio' : result.streams[0]
-      if (initial) await select(initial)
+      if (initial) await select(initial, tail)
       else status.value = 'ready'
     } catch (cause) {
       if (disposed || epoch !== generation || controller.signal.aborted) return
@@ -140,6 +141,23 @@ export function createLogViewer(gateway?: LogGateway) {
       clearRead()
       status.value = 'loading'
       await reload(false)
+    },
+    clearSupported: computed(() => supported.value && !!gateway?.clearSupported?.()),
+    // Drops the stream's history and persistent log on the host, then rereads it.
+    async clear() {
+      const current = target.value
+      if (!current || !stream.value || !gateway?.clear || busy.value) return
+      const selected = stream.value
+      try {
+        await gateway.clear(
+          { vmId: current.vmId, instanceId: current.instanceId, stream: selected },
+          new AbortController().signal,
+        )
+      } catch (cause) {
+        problem.value = describeApiError(cause)
+        return
+      }
+      if (stream.value === selected) await select(selected)
     },
     dispose() {
       disposed = true
