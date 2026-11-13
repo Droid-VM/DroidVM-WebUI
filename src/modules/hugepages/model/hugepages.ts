@@ -22,35 +22,30 @@ export const advancedFields = [
   {
     key: 'system_reserve_mb',
     label: 'hugepagesAdvancedSystemReserve',
-    hint: 'hugepagesAdvancedSystemReserveHint',
     minimum: 64n,
     maximum: 1048576n,
   },
   {
     key: 'cma_reservoir_floor_mb',
     label: 'hugepagesAdvancedCmaFloor',
-    hint: 'hugepagesAdvancedCmaFloorHint',
     minimum: 0n,
     maximum: 1048576n,
   },
   {
     key: 'boot_acquire',
     label: 'hugepagesAdvancedBootAcquire',
-    hint: 'hugepagesAdvancedBootAcquireHint',
     minimum: 0n,
     maximum: 3n,
   },
   {
     key: 'boot_acquire_runs',
     label: 'hugepagesAdvancedBootRuns',
-    hint: 'hugepagesAdvancedBootRunsHint',
     minimum: 1n,
     maximum: 99n,
   },
   {
     key: 'boot_acquire_wait',
     label: 'hugepagesAdvancedBootWait',
-    hint: 'hugepagesAdvancedBootWaitHint',
     minimum: 0n,
     maximum: 3600n,
   },
@@ -139,12 +134,16 @@ export function createHugepages(gateway?: HugepageGateway, newId = requestId) {
     confirmRisk.value = false
   }
   const stopDraft = watch(draft, cancelReview, { flush: 'sync' })
-  async function refresh(replaceDraft = false) {
-    if (!gateway || !supported.value || loading.value) return false
+  // `quiet` is the background poll once data exists: it must not flip `loading`, which
+  // gates `editable`, or every poll would briefly disable the whole page.
+  let reading = false
+  async function refresh(replaceDraft = false, quiet = false) {
+    if (!gateway || !supported.value || reading) return false
     const epoch = generation,
       current = new AbortController()
     controller = current
-    loading.value = true
+    reading = true
+    if (!quiet) loading.value = true
     const hadData = !!status.value
     try {
       const value = await gateway.read(current.signal)
@@ -176,7 +175,10 @@ export function createHugepages(gateway?: HugepageGateway, newId = requestId) {
       }
       return false
     } finally {
-      if (epoch === generation) loading.value = false
+      if (epoch === generation) {
+        reading = false
+        loading.value = false
+      }
     }
   }
   function validAdvanced(key: AdvancedKey, value: string) {
@@ -317,7 +319,7 @@ export function createHugepages(gateway?: HugepageGateway, newId = requestId) {
     const epoch = generation
     try {
       await operations.reconcile()
-      if (epoch === generation) await refresh()
+      if (epoch === generation) await refresh(false, !!status.value)
     } finally {
       ticking = false
     }
@@ -333,6 +335,7 @@ export function createHugepages(gateway?: HugepageGateway, newId = requestId) {
   function pause() {
     generation++
     controller?.abort()
+    reading = false
     loading.value = false
     fresh.value = false
     cancelReview()

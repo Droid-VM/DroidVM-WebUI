@@ -5,4 +5,3 @@ export {
   hugepageProcessesKey,
   useHugepageProcesses,
 } from './model/processes'
-export { default as HugepageProcessCard } from './components/HugepageProcessCard.vue'

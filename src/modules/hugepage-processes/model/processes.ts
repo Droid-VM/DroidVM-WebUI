@@ -101,13 +101,17 @@ export function createHugepageProcesses(
   function stackIdentityAllowed(row: ProcessEntry | undefined) {
     return !!row && row.canStack && row.state === 'D' && row.alive === true && row.expected !== null
   }
-  async function refresh() {
-    if (!gateway || !supported.value || loading.value) return false
+  // `quiet` is the background poll once data exists: it must not flip `loading`, which
+  // gates `editable`, or every poll would briefly disable the list's controls.
+  let reading = false
+  async function refresh(quiet = false) {
+    if (!gateway || !supported.value || reading) return false
     const epoch = generation,
       selectedSource = source.value,
       request = new AbortController()
     controller = request
-    loading.value = true
+    reading = true
+    if (!quiet) loading.value = true
     try {
       const value = await gateway.read(selectedSource, request.signal)
       if (request.signal.aborted || epoch !== generation || source.value !== selectedSource)
@@ -135,7 +139,10 @@ export function createHugepageProcesses(
       }
       return false
     } finally {
-      if (epoch === generation) loading.value = false
+      if (epoch === generation) {
+        reading = false
+        loading.value = false
+      }
     }
   }
   function canSignal(row: ProcessEntry) {
@@ -211,6 +218,7 @@ export function createHugepageProcesses(
   function pause() {
     generation++
     controller?.abort()
+    reading = false
     loading.value = false
     fresh.value = false
     cancelReview()
@@ -238,7 +246,7 @@ export function createHugepageProcesses(
     const epoch = generation
     try {
       await operations.reconcile()
-      if (epoch === generation) await refresh()
+      if (epoch === generation) await refresh(!!status.value)
     } finally {
       ticking = false
     }
@@ -296,7 +304,7 @@ export function createHugepageProcesses(
     openStack,
     closeStack,
     chooseSource,
-    refresh,
+    refresh: () => refresh(),
     reconcile: operations.reconcile,
     checking: operations.checking,
     recoveryProblem: operations.recoveryProblem,

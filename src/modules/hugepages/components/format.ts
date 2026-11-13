@@ -21,3 +21,7 @@ export function useHugepageFormatting() {
     )
   return { pageLabel, flag, leverLabel }
 }
+
+// Golden-angle hue per owner rank (ascending PID), shared by the usage bar and the process
+// list so a VM keeps one colour on both screens.
+export const ownerHue = (rank: number) => Math.round((rank * 137.508) % 360)

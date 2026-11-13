@@ -53,9 +53,12 @@ function quantities(value: components['schemas']['HugepageSnapshot']) {
     'poolAvailablePages',
     'servedPages',
     'cmaPoolPages',
-  ] as const)
-    if (value[key] !== null && BigInt(value[key]) > 18446744073709551615n)
+    'cmaLentPages',
+  ] as const) {
+    const amount = value[key]
+    if (amount != null && BigInt(amount) > 18446744073709551615n)
       throw new ApiError('invalid-response', 'Invalid hugepage quantity')
+  }
 }
 export function createHugepageGateway(
   client: HttpClient,
