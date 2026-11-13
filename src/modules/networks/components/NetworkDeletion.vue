@@ -25,9 +25,6 @@ const deletion = useNetworkDeletion(),
         :problem="deletion.recoveryProblem.value"
         @clear="deletion.clearTracking"
       />
-      <p v-if="deletion.entry.value?.restored || deletion.recoveryEntry.value?.restored">
-        {{ t('configurationRestoredReceipt') }}
-      </p>
       <p
         v-if="
           deletion.entry.value?.state === 'unknown' ||
@@ -38,7 +35,6 @@ const deletion = useNetworkDeletion(),
       </p>
       <template v-if="deletion.recoveryConfirmation.value">
         <p>{{ t('configurationRecoveryConfirm') }}</p>
-        <p>{{ t('configurationRecoveryNotDeletion') }}</p>
         <div class="buttons">
           <AppButton @click="deletion.cancelRecovery">{{ t('cancel') }}</AppButton>
           <AppButton
@@ -60,7 +56,6 @@ const deletion = useNetworkDeletion(),
           </AppNotice>
           <section data-testid="network-delete-attachments">
             <h3>{{ t('networkDeletionAttachments') }}</h3>
-            <p>{{ t('networkDeletionSnapshotHint') }}</p>
             <p v-if="!deletion.preview.value.detail.attachments.length">
               {{ t('networkDeletionNoAttachments') }}
             </p>
@@ -157,7 +152,6 @@ const deletion = useNetworkDeletion(),
           <p v-if="deletion.recoveryEntry.value.problem" class="error">
             {{ t(deletion.recoveryEntry.value.problem.titleKey) }}
           </p>
-          <p>{{ t('configurationRecoveryNotDeletion') }}</p>
           <AppButton
             data-testid="configuration-recovery-reconcile"
             :disabled="deletion.checking.value || deletion.staging.value"

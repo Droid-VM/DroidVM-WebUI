@@ -1,3 +1,4 @@
+import type { DeepReadonly } from 'vue'
 import type { components } from '../../../generated/api'
 export type ResourceKind = 'disk' | 'diskDetail' | 'network' | 'audio' | 'usb' | 'cpu' | 'host'
 export type DiskDetail = components['schemas']['DiskDetail']
@@ -19,7 +20,7 @@ export interface UsbCatalog {
   targets: UsbVmTarget[]
 }
 export type AudioDevice = components['schemas']['AudioDevice']
-export type DiskResource = components['schemas']['DiskResource']
+export type DiskResource = DeepReadonly<components['schemas']['DiskResource']>
 export type NetworkResource = Readonly<
   Omit<components['schemas']['NetworkResource'], 'vlans'> & {
     vlans?: readonly components['schemas']['NetworkVlanResource'][]

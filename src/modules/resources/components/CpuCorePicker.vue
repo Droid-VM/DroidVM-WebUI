@@ -21,7 +21,6 @@ const props = defineProps<{
   disabled: boolean
   selectionLimit?: { minimum: number; maximum: number }
   confirmUnchanged?: boolean
-  hint?: string
 }>()
 const emit = defineEmits<{ select: [value: string] }>()
 const { t, locale } = useI18n()
@@ -91,8 +90,6 @@ function tier(khz: number | null) {
     }}</AppButton>
     <small v-if="!valid">{{ t('cpuFixText') }}</small>
     <AppDialog v-if="open" :open="open" :title="title" @close="open = false">
-      <p class="cpu-hint">{{ t('cpuPickerHint') }}</p>
-      <p v-if="hint">{{ hint }}</p>
       <AppNotice v-if="source.problem.value" tone="error" :title="t(source.problem.value.titleKey)">
         <p>{{ t(source.problem.value.descriptionKey) }}</p>
       </AppNotice>
@@ -184,8 +181,7 @@ small {
   display: block;
   color: var(--md-sys-color-on-surface-variant);
 }
-.cpu-selection,
-.cpu-hint {
+.cpu-selection {
   overflow-wrap: anywhere;
 }
 .cpu-footer {

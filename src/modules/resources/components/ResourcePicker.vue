@@ -93,7 +93,6 @@ function add() {
     <AppButton v-if="replacing" :disabled="disabled" @click="emit('cancel')">{{
       t('cancel')
     }}</AppButton>
-    <p v-if="kind === 'disk'" class="muted">{{ t('resourceDiskReadonlyHint') }}</p>
   </section>
 </template>
 <style scoped>

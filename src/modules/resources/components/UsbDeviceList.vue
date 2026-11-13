@@ -63,7 +63,6 @@ useVisiblePolling(() => source.supported.value, refresh)
       icon="usb"
     />
     <template v-else>
-      <p class="muted">{{ t('usbCatalogHint') }}</p>
       <div class="list-tools">
         <SearchField
           v-model="query"

@@ -13,8 +13,12 @@ export const diskActionKeys: Record<DiskAction, MessageKey> = {
   flatten: 'diskFlatten',
   commit: 'diskMerge',
   reset: 'diskReset',
+  'snapshot-create': 'diskSnapshotCreate',
+  'snapshot-apply': 'diskSnapshotApply',
+  'snapshot-delete': 'diskSnapshotDelete',
   delete: 'diskDelete',
 }
+export const snapshotAction = (action: DiskAction) => action.startsWith('snapshot-')
 export interface DiskForm {
   folder: string
   createFolder: boolean
@@ -30,6 +34,7 @@ export interface DiskForm {
   inheritSize: boolean
   attach: 'follow' | 'readonly'
   cpus: string
+  snapshot: string
 }
 export function diskForm(
   path = '',
@@ -51,6 +56,7 @@ export function diskForm(
     inheritSize: true,
     attach: 'readonly',
     cpus: !previous && defaultCpus ? compactCpuSet(defaultCpus.map((cpu) => [cpu, cpu])) : '',
+    snapshot: '',
   }
   if (previous) {
     if ('folder' in previous && previous.folder) {
@@ -70,6 +76,7 @@ export function diskForm(
     if ('shrink' in previous) form.shrink = !!previous.shrink
     if ('deleteFiles' in previous) form.deleteFiles = !!previous.deleteFiles
     if ('attach' in previous && previous.attach) form.attach = previous.attach
+    if ('snapshot' in previous && previous.snapshot) form.snapshot = previous.snapshot
     if (previous.cpus) form.cpus = compactCpuSet(previous.cpus.map((cpu) => [cpu, cpu]))
   }
   return form
@@ -121,6 +128,7 @@ export function buildDiskOperation(
   }
   if (action === 'resize') op.shrink = form.shrink
   if (action === 'delete') op.deleteFiles = form.deleteFiles
+  if (snapshotAction(action)) op.snapshot = form.snapshot.trim()
   if (form.cpus.trim()) {
     const ranges = cpuSet(form.cpus, 1023)
     if (!ranges) return null

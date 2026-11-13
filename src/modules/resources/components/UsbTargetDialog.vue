@@ -56,7 +56,6 @@ function submit() {
         </AppOption>
       </AppSelect>
       <p v-if="!targetChoices.length" class="muted">{{ t('usbNoTargets') }}</p>
-      <p class="muted">{{ t('usbManualLockHint') }}</p>
       <div class="usb-target-actions">
         <AppButton @click="emit('close')">{{ t('cancel') }}</AppButton>
         <AppButton tone="primary" :disabled="!enabled || !target" @click="submit">{{

@@ -29,9 +29,6 @@ const { t } = useI18n(),
       :data-usb-operation="entry.request.deviceId"
     >
       <p>{{ t('usbChangeTarget') }} · {{ entry.request.deviceId }}</p>
-      <p v-if="entry.restored" data-testid="operation-tracking-restored">
-        {{ t('operationTrackingHint') }}
-      </p>
       <p v-if="entry.state === 'unknown'" role="status">{{ t('vmOperationUnknown') }}</p>
       <p v-else-if="entry.state === 'posting'" role="status">{{ t('processing') }}</p>
       <p v-if="entry.task" role="status">

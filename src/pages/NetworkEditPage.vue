@@ -62,7 +62,7 @@ function leave() {
     <AppButton @click="router.push('/resources/network')">{{ t('close') }}</AppButton>
   </div>
   <NetworkConfiguration v-if="editor.supported.value" />
-  <EmptyState v-else :title="t('networkUnavailable')" :description="t('errorUnsupportedHint')" />
+  <EmptyState v-else :title="t('networkUnavailable')" />
   <ConfirmDialog
     :open="!!leaving"
     :title="t('configLeave')"

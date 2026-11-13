@@ -36,7 +36,6 @@ function run() {
     <p v-if="recovery.pending.value !== null">
       {{ t('diskRecoveryCount', { count: recovery.pending.value }) }}
     </p>
-    <p>{{ t('diskRecoveryHint') }}</p>
     <AppNotice
       v-if="recovery.problem.value"
       tone="error"

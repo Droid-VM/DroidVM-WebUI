@@ -64,7 +64,6 @@ function download() {
     >
     <p v-if="editor.loading.value || editor.staging.value" role="status">{{ t('processing') }}</p>
     <section v-if="editor.entry.value" class="network-card" aria-live="polite">
-      <p v-if="editor.entry.value.restored">{{ t('configurationRestoredReceipt') }}</p>
       <p v-if="editor.entry.value.state === 'unknown'">{{ t('configUnknown') }}</p>
       <p v-if="editor.entry.value.state === 'unknown'">{{ t('configurationMissingReceipt') }}</p>
       <p v-if="editor.entry.value.task">
@@ -95,7 +94,6 @@ function download() {
       </section>
       <section v-if="row.uplink_mode === 'l2'" class="network-card">
         <h2>{{ t('networkL2') }}</h2>
-        <p class="muted">{{ t('networkUplinkHint') }}</p>
         <div class="fields">
           <NetworkField v-for="field in l2Fields" :key="field.key" :field="field" />
         </div>
@@ -104,7 +102,6 @@ function download() {
         <section class="network-card">
           <h2>{{ t('networkL3') }}</h2>
           <NetworkField :field="{ key: 'l3.mac_address', label: 'configMacAddress' }" />
-          <p class="muted">{{ t('networkVlanHint') }}</p>
           <div class="toolbar">
             <AppButton :disabled="!editor.editable.value || !items" @click="editor.addVlan">{{
               t('networkAddVlan')

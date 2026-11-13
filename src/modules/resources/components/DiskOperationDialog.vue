@@ -2,7 +2,13 @@
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDiskActions } from '../model/diskOperations'
-import { buildDiskOperation, diskActionKeys, diskForm, diskImpact } from '../model/diskForm'
+import {
+  buildDiskOperation,
+  diskActionKeys,
+  diskForm,
+  diskImpact,
+  snapshotAction,
+} from '../model/diskForm'
 import type { DiskOperation } from '../api/diskOperations'
 import { isOptimizationOperation } from '../model/diskOptimize'
 import type { MessageKey } from '../../../shared/i18n'
@@ -43,6 +49,9 @@ const effectKeys: Record<typeof action.value, MessageKey> = {
   flatten: 'diskFlattenEffect',
   commit: 'diskMergeEffect',
   reset: 'diskResetEffect',
+  'snapshot-create': 'diskSnapshotCreateEffect',
+  'snapshot-apply': 'diskSnapshotApplyEffect',
+  'snapshot-delete': 'diskSnapshotDeleteEffect',
   delete: 'diskDeleteEffect',
 }
 watch(
@@ -97,7 +106,11 @@ const operation = computed(() => {
     return null
   const detail = prepared.value.detail
   if (detail && !detail.disk.selectable) return null
-  if (['resize', 'convert', 'reset'].includes(action.value) && detail?.children.length) return null
+  if (
+    (['resize', 'convert', 'reset'].includes(action.value) || snapshotAction(action.value)) &&
+    detail?.children.length
+  )
+    return null
   if (['flatten', 'commit', 'reset'].includes(action.value) && !detail?.disk.parentId) return null
   if (action.value === 'commit' && prepared.value.parent?.children.length !== 1) return null
   if (
@@ -147,6 +160,7 @@ const parameterKeys: Record<string, MessageKey> = {
   deleteFiles: 'diskDeleteFiles',
   attach: 'diskAttachPolicy',
   cpus: 'diskCpuAffinity',
+  snapshot: 'diskSnapshotName',
 }
 const parameters = computed(() =>
   candidate.value ? Object.entries(candidate.value).filter(([key]) => key in parameterKeys) : [],
@@ -263,7 +277,6 @@ onBeforeUnmount(actions.close)
             <AppTextField
               v-model="form.folder"
               :label="t('diskHostFolder')"
-              :supporting-text="t('diskHostPathHint')"
               required
               autocomplete="off"
               placeholder="/storage/emulated/0/DroidVM"
@@ -312,6 +325,15 @@ onBeforeUnmount(actions.close)
             </AppSelect>
             <AppCheckbox v-model="form.preallocate">{{ t('diskPreallocate') }}</AppCheckbox>
           </template>
+          <AppTextField
+            v-if="snapshotAction(action)"
+            v-model="form.snapshot"
+            :label="t('diskSnapshotName')"
+            :readonly="action !== 'snapshot-create'"
+            required
+            autocomplete="off"
+          />
+          <p v-if="snapshotAction(action)" class="muted">{{ t('diskSnapshotCrosvmHint') }}</p>
           <AppCheckbox v-if="action === 'resize'" v-model="form.shrink">{{
             t('diskAllowShrink')
           }}</AppCheckbox>
@@ -322,7 +344,6 @@ onBeforeUnmount(actions.close)
             <AppCheckbox v-model="grow" :disabled="!growAvailable">{{
               t('diskGrowAfterResize')
             }}</AppCheckbox>
-            <small>{{ t('diskGrowEligibility') }}</small>
           </template>
           <AppCheckbox v-if="action === 'delete'" v-model="form.deleteFiles">{{
             t('diskDeleteFiles')
@@ -349,12 +370,7 @@ onBeforeUnmount(actions.close)
           </template>
           <details>
             <summary>{{ t('diskAdvanced') }}</summary>
-            <AppTextField
-              v-model="form.cpus"
-              :label="t('diskCpuAffinity')"
-              :supporting-text="t('diskCpuHint')"
-              placeholder="0-3,7"
-            />
+            <AppTextField v-model="form.cpus" :label="t('diskCpuAffinity')" placeholder="0-3,7" />
             <CpuCorePicker
               :current="form.cpus"
               :title="t('diskPickCpu')"
@@ -403,9 +419,7 @@ onBeforeUnmount(actions.close)
             {{ t('diskShrinkWarning') }}
           </p>
           <template v-if="confirmedGrow">
-            <p>{{ t('diskGrowReview') }}</p>
             <p>{{ t('agentGrowHint') }}</p>
-            <p>{{ t('agentAutomaticCleanupHint') }}</p>
           </template>
           <details open>
             <summary>{{ t('diskAffectedDisks', { count: impact?.disks.length ?? 0 }) }}</summary>
@@ -428,7 +442,6 @@ onBeforeUnmount(actions.close)
             </ul>
             <p v-if="!impact?.attachments.length">{{ t('diskNoAttachments') }}</p>
           </details>
-          <p>{{ t('diskConfirmationHint') }}</p>
           <AppCheckbox v-model="acknowledged">{{ t('diskAcknowledge') }}</AppCheckbox>
           <div class="buttons">
             <AppButton @click="candidate = null">{{ t('diskBackToForm') }}</AppButton

@@ -19,6 +19,8 @@ export const taskKindKeys: Readonly<Record<string, MessageKey>> = {
   vm_reboot: 'vmTaskReboot',
   vm_suspend: 'vmTaskSuspend',
   vm_resume: 'vmTaskResume',
+  vm_powerbtn: 'vmTaskPowerButton',
+  vm_sleepbtn: 'vmTaskSleepButton',
   disk_operation: 'taskKindDisk',
   disk_recovery: 'diskRecoveryTitle',
   agent_operation: 'agentStatusTitle',
@@ -50,4 +52,21 @@ export const taskPhaseKeys: Readonly<Record<string, MessageKey>> = {
 export const taskUnitKeys: Readonly<Record<string, MessageKey>> = {
   bytes: 'taskUnitBytes',
   basis_points: 'taskUnitBasisPoints',
+}
+// "2 minutes ago" for a task timestamp in milliseconds since the epoch.
+export function taskAge(ms: string, locale: string, now = Date.now()) {
+  const seconds = Math.round((Number(ms) - now) / 1000)
+  const format = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  const steps = [
+    [60, 'second'],
+    [60, 'minute'],
+    [24, 'hour'],
+    [Infinity, 'day'],
+  ] as const
+  let value = seconds
+  for (const [size, unit] of steps) {
+    if (Math.abs(value) < size) return format.format(value, unit)
+    value = Math.round(value / size)
+  }
+  return ''
 }

@@ -10,9 +10,9 @@ const rules = useUsbRulesEditor()
 const { t } = useI18n()
 const route = useRoute()
 const resources = [
-  { kind: 'network', name: 'navNetwork', hint: 'networkHint' },
-  { kind: 'disk', name: 'navDisk', hint: 'diskHint' },
-  { kind: 'usb', name: 'usbDevices', hint: 'usbHint' },
+  { kind: 'network', name: 'navNetwork' },
+  { kind: 'disk', name: 'navDisk' },
+  { kind: 'usb', name: 'usbDevices' },
 ]
 const current = computed(() => resources.find((item) => item.kind === route.params.kind))
 </script>
@@ -21,14 +21,12 @@ const current = computed(() => resources.find((item) => item.kind === route.para
   <div class="page-heading desktop-only">
     <h1>{{ t(current?.name || 'navResources') }}</h1>
   </div>
-  <p class="muted">{{ t(current?.hint || 'resourcesHint') }}</p>
   <nav class="menu" :class="{ chosen: current }" :aria-label="t('resourceCategories')">
     <ResourceRow
       v-for="resource in resources"
       :key="resource.kind"
       :to="`/resources/${resource.kind}`"
       :title="t(resource.name)"
-      :description="t(resource.hint)"
       :icon="resource.kind"
       :current="route.params.kind === resource.kind"
     />
@@ -40,12 +38,7 @@ const current = computed(() => resources.find((item) => item.kind === route.para
   />
   <template v-else-if="route.params.kind === 'usb'">
     <div v-if="rules.supported.value" class="menu">
-      <ResourceRow
-        to="/resources/usb/rules"
-        :title="t('usbRulesTitle')"
-        :description="t('usbRulesCategories')"
-        icon="usb"
-      />
+      <ResourceRow to="/resources/usb/rules" :title="t('usbRulesTitle')" icon="usb" />
     </div>
     <UsbDeviceList />
   </template>
@@ -56,15 +49,13 @@ const current = computed(() => resources.find((item) => item.kind === route.para
         resource: t(current?.name || 'navResources'),
       })
     "
-    :description="t('resourcesUnavailableHint')"
     :icon="String(route.params.kind)"
   />
 </template>
 <style scoped>
-/* The navigation rail already lists each category on wider screens. */
-@media (width >= 600px) {
-  .menu.chosen {
-    display: none;
-  }
+/* Disk and network are top-level destinations and USB lives in settings, so the
+   category menu only shows on the bare /resources index. */
+.menu.chosen {
+  display: none;
 }
 </style>

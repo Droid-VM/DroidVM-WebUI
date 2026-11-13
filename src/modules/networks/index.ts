@@ -13,3 +13,4 @@ export { createNetworkDeletionGateway, createConfigurationRecoveryGateway } from
 export type { NetworkDeletionGateway, ConfigurationRecoveryGateway } from './api/deletion'
 export { createNetworkDeletion, networkDeletionKey, useNetworkDeletion } from './model/deletion'
 export { default as NetworkDeletion } from './components/NetworkDeletion.vue'
+export { networkModeLine, networkPoolRange } from './model/summary'

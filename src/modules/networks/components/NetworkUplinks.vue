@@ -84,7 +84,6 @@ onMounted(() => void host.ensure())
         IPv{{ address.family }} · {{ address.address }}
       </li>
     </ul>
-    <p>{{ t('networkUplinkCustomHint') }}</p>
   </div>
 </template>
 <style scoped>

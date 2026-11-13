@@ -1,6 +1,6 @@
 export { createHttpTaskGateway, checkTask } from './api/http'
 export { recoverLookup } from './api/receipts'
-export { taskKindKeys, taskPhaseKeys, taskUnitKeys } from './model/labels'
+export { taskKindKeys, taskPhaseKeys, taskUnitKeys, taskAge } from './model/labels'
 export type { Task, TaskGateway, TaskSnapshot, OperationGateway } from './api/gateway'
 export {
   createTaskMonitor,
