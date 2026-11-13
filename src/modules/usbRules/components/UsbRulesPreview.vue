@@ -49,7 +49,6 @@ const label = (layer: RuleLayer) => t(ruleLayers.find((value) => value.key === l
     :aria-label="t('usbRulesPreviewTitle')"
   >
     <h2>{{ t('usbRulesPreviewTitle') }}</h2>
-    <p class="muted">{{ t('usbRulesPreviewHint') }}</p>
     <AppButton :disabled="!editor.canPreview.value" @click="editor.preview">{{
       t(editor.previewLoading.value ? 'processing' : 'usbRulesPreviewRead')
     }}</AppButton>

@@ -12,12 +12,9 @@ import OperationTrackingNotice from '../shared/ui/OperationTrackingNotice.vue'
 const model = useHostPreferences(),
   { t } = useI18n()
 const labels = {
-  vm_hugepage_auto_reserve: {
-    title: 'hostPreferencesHugepages',
-    hint: 'hostPreferencesHugepagesHint',
-  },
-  optimize_sdcard: { title: 'hostPreferencesSdcard', hint: 'hostPreferencesSdcardHint' },
-  vm_clear_logs_before_start: { title: 'hostPreferencesLogs', hint: 'hostPreferencesLogsHint' },
+  vm_hugepage_auto_reserve: 'hostPreferencesHugepages',
+  optimize_sdcard: 'hostPreferencesSdcard',
+  vm_clear_logs_before_start: 'hostPreferencesLogs',
 } as const
 onMounted(model.activate)
 onBeforeUnmount(model.deactivate)
@@ -25,10 +22,7 @@ onBeforeUnmount(model.deactivate)
 <template>
   <div class="host-preferences-page" data-testid="host-preferences-page">
     <AppBackLink to="/more">{{ t('navMore') }}</AppBackLink>
-    <header>
-      <h1>{{ t('hostPreferencesTitle') }}</h1>
-      <p>{{ t('hostPreferencesScope') }}</p>
-    </header>
+    <h1>{{ t('hostPreferencesTitle') }}</h1>
     <fieldset
       v-if="model.recoveryProblem.value"
       class="tracking-guard"
@@ -78,8 +72,7 @@ onBeforeUnmount(model.deactivate)
             @change="model.cancelReview"
           >
             <span class="grow"
-              ><strong>{{ t(labels[key].title) }}</strong
-              ><small>{{ t(labels[key].hint) }}</small></span
+              ><strong>{{ t(labels[key]) }}</strong></span
             >
           </AppSwitch>
         </section>
@@ -89,7 +82,6 @@ onBeforeUnmount(model.deactivate)
           :title="t('hostPreferencesConflict')"
           data-testid="host-preferences-conflict"
         >
-          <p>{{ t('hostPreferencesConflictHint') }}</p>
           <AppButton
             data-testid="host-preferences-rebase"
             :disabled="!model.editable.value"
@@ -116,7 +108,6 @@ onBeforeUnmount(model.deactivate)
         aria-live="polite"
         data-testid="host-preferences-receipt"
       >
-        <p v-if="model.entry.value.restored">{{ t('preferenceRecoveryHint') }}</p>
         <p v-if="model.entry.value.state === 'unknown'">{{ t('hostPreferencesUnknown') }}</p>
         <p v-else-if="model.entry.value.task">
           {{ t(taskStateKeys[model.entry.value.task.state]) }}
@@ -141,11 +132,10 @@ onBeforeUnmount(model.deactivate)
       :title="t('hostPreferencesReview')"
       @close="model.cancelReview"
     >
-      <p>{{ t('hostPreferencesScope') }}</p>
       <ul v-if="model.review.value">
         <template v-for="key in preferenceKeys" :key="key"
           ><li v-if="model.review.value.changes[key] !== undefined">
-            {{ t(labels[key].title) }}:
+            {{ t(labels[key]) }}:
             {{ t(model.review.value.changes[key] ? 'hostPreferencesOn' : 'hostPreferencesOff') }}
           </li></template
         >
@@ -176,8 +166,8 @@ onBeforeUnmount(model.deactivate)
   min-width: 0;
   max-width: var(--app-content-width);
 }
-header h1 {
-  margin-block: 0 var(--space-2);
+h1 {
+  margin: 0;
 }
 p {
   margin-block: var(--space-2);

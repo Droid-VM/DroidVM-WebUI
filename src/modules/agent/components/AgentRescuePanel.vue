@@ -29,8 +29,6 @@ useVisiblePolling(() => rescue.supported.value, rescue.refresh, ['tasks', 'disks
 <template>
   <section class="rescue-panel" :aria-label="t('agentRescueTitle')">
     <h2>{{ t('agentRescueTitle') }}</h2>
-    <p>{{ t('agentRescueLifetime') }}</p>
-    <p>{{ t('agentRescueLeaveHint') }}</p>
     <p v-if="!rescue.supported.value">{{ t('agentRescueUnavailable') }}</p>
     <template v-else>
       <AppButton

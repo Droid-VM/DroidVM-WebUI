@@ -83,9 +83,9 @@ test('navigation restores list scroll and moves keyboard focus to main content',
   await expect(page.locator('[data-vm]')).toHaveCount(4)
   await page.evaluate(() => window.scrollTo(0, 250))
   const before = await page.evaluate(() => window.scrollY)
-  await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '任务' }).click()
+  await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '设置' }).click()
   await expect(page.getByRole('main')).toBeFocused()
-  await expect(page).toHaveTitle('DroidVM · 任务')
+  await expect(page).toHaveTitle('DroidVM · 设置')
   await page
     .getByRole('navigation', { name: '主导航' })
     .getByRole('link', { name: '虚拟机' })

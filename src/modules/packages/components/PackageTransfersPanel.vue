@@ -81,12 +81,8 @@ onBeforeUnmount(model.pauseUpload)
     </div>
     <AppNotice v-if="!model.supported.value" tone="warning" :title="t('transferUnavailable')" />
     <template v-if="model.supported.value || model.uploadId.value || model.downloadId.value">
-      <p>{{ t('transferLifetimeHint') }}</p>
       <section>
         <h2>{{ t('transferUpload') }}</h2>
-        <p v-if="model.restored.value" data-testid="package-upload-restored">
-          {{ t('transferRecoveryHint') }}
-        </p>
         <p v-if="model.hashBusy.value" data-testid="package-upload-hashing" role="status">
           {{ t('transferHashing') }}
         </p>
@@ -120,9 +116,7 @@ onBeforeUnmount(model.pauseUpload)
             "
             @change="reselect"
           />
-          <small>{{ t('transferReselectHint') }}</small>
         </label>
-        <p>{{ t('transferFilesHint') }}</p>
         <p v-if="model.limits.value">
           {{
             t('transferQuota', {
@@ -134,7 +128,6 @@ onBeforeUnmount(model.pauseUpload)
             })
           }}
         </p>
-        <p v-else>{{ t('transferQuotaPending') }}</p>
         <label v-if="!model.uploadId.value"
           >{{ t('transferSelect')
           }}<input
@@ -148,9 +141,6 @@ onBeforeUnmount(model.pauseUpload)
             "
             @change="select"
         /></label>
-        <p v-if="!model.metadata.value && !model.uploadId.value">
-          {{ t('transferSelectionHint') }}
-        </p>
         <ul v-if="model.metadata.value && !model.upload.value">
           <li v-for="file in model.metadata.value" :key="file.name">
             {{ file.name }} · {{ bytes(file.sizeBytes) }} B
@@ -232,10 +222,6 @@ onBeforeUnmount(model.pauseUpload)
       </section>
       <section>
         <h2>{{ t('transferDownload') }}</h2>
-        <p>{{ t('transferDownloadHint') }}</p>
-        <p v-if="model.downloadRestored.value" data-testid="package-download-restored">
-          {{ t('transferDownloadRecoveryHint') }}
-        </p>
         <template v-if="model.downloadId.value">
           <p
             role="status"

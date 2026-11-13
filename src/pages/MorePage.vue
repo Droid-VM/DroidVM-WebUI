@@ -1,26 +1,26 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import LanguageSelect from '../shared/ui/LanguageSelect.vue'
-import AppButton from '../shared/ui/AppButton.vue'
-import AppSegmentedButton from '../shared/ui/AppSegmentedButton.vue'
-import ResourceRow from '../shared/ui/ResourceRow.vue'
-import { themeMode } from '../shared/lib/theme'
+import { RouterLink } from 'vue-router'
+import AppIcon from '../shared/ui/AppIcon.vue'
+import AppSwitch from '../shared/ui/AppSwitch.vue'
+import { useLanguagePreference, type MessageKey } from '../shared/i18n'
 import { useSession } from '../modules/session'
-import { HostSummary, useHostOverview } from '../modules/host'
+import { useHostMonitoring } from '../modules/host'
 import { useUsbRulesEditor } from '../modules/usbRules'
 import { usePackageImport, usePackageExport, usePackageTransfers } from '../modules/packages'
 import { useConfigurationBackup } from '../modules/backups'
 import { useWebService } from '../modules/webService'
 import { useImageImport } from '../modules/images'
 import { useHugepages } from '../modules/hugepages'
-import { useHostPreferences } from '../modules/hostPreferences'
+import { useHostPreferences, preferenceKeys } from '../modules/hostPreferences'
 import { useUsbAcm } from '../modules/usbAcm'
 import { useAndroidDisplay } from '../modules/androidDisplay'
 import { useDiskDefaults } from '../modules/diskDefaults'
 const { t } = useI18n(),
   session = useSession()
-const host = useHostOverview()
+const host = useHostMonitoring()
+const languagePreference = useLanguagePreference()
 const packageImport = usePackageImport(),
   packageExport = usePackageExport(),
   transfers = usePackageTransfers()
@@ -29,230 +29,310 @@ const backup = useConfigurationBackup(),
 const webService = useWebService()
 const imageImport = useImageImport()
 const hugepages = useHugepages()
-const hostPreferences = useHostPreferences()
+const preferences = useHostPreferences()
 const usbAcm = useUsbAcm()
 const androidDisplay = useAndroidDisplay()
 const diskDefaults = useDiskDefaults()
-const backupLinks = computed(() => [
+interface Row {
+  title: MessageKey
+  to: string
+  lead?: string
+  available: boolean
+  testId?: string
+}
+// The App's settings screen: one collapsible card per group, a row per destination.
+// Destinations the host does not offer are left out, as the App hides them.
+const general = computed<Row[]>(() => [
+  {
+    title: 'settingsWebUi',
+    to: '/settings/service',
+    lead: 'globe',
+    available: webService.supported.value,
+  },
+  {
+    title: 'hugepagesTitle',
+    to: '/hugepages',
+    lead: 'chip',
+    available: hugepages.supported.value,
+  },
+  {
+    title: 'hostOverviewTitle',
+    to: '/host',
+    lead: 'activity',
+    available: host.supported.value,
+  },
+])
+const vmLinks = computed<Row[]>(() => [
+  {
+    title: 'diskDefaultsTitle',
+    to: '/settings/disks',
+    available: diskDefaults.supported.value,
+    testId: 'disk-defaults-link',
+  },
+  {
+    title: 'usbAcmTitle',
+    to: '/settings/usb-acm',
+    available: usbAcm.supported.value,
+    testId: 'usb-acm-link',
+  },
+  {
+    title: 'usbRulesTitle',
+    to: '/resources/usb/rules',
+    available: usbRules.supported.value,
+  },
+  {
+    title: 'usbDevices',
+    to: '/resources/usb',
+    available: true,
+    testId: 'usb-devices-link',
+  },
+  {
+    title: 'androidDisplayTitle',
+    to: '/settings/android-display',
+    available: androidDisplay.supported.value,
+    testId: 'android-display-link',
+  },
+  {
+    title: 'imageImportTitle',
+    to: '/resources/disk/import',
+    available: imageImport.supported.value,
+  },
+])
+const backupLinks = computed<Row[]>(() => [
   {
     title: 'backupTitle',
-    hint: 'backupScope',
-    path: '/settings/backup',
+    to: '/settings/backup',
     available: backup.supported.value,
   },
   {
     title: 'packageImportTitle',
-    hint: 'packageImportHostHint',
-    path: '/packages/import',
+    to: '/packages/import',
     available: packageImport.supported.value,
   },
   {
     title: 'packageExportTitle',
-    hint: 'packageExportHostHint',
-    path: '/packages/export',
+    to: '/packages/export',
     available: packageExport.supported.value,
   },
   {
     title: 'transferTitle',
-    hint: 'settingsTransferHint',
-    path: '/packages/transfers',
+    to: '/packages/transfers',
     available: transfers.supported.value,
   },
 ])
-const themeOptions = computed(() =>
-  (['system', 'light', 'dark'] as const).map((value) => ({
-    value,
-    icon: value,
-    label: t({ system: 'themeSystem', light: 'themeLight', dark: 'themeDark' }[value]),
-  })),
-)
+// Same destinations as the App's About group and home cards.
+const aboutLinks = [
+  { title: 'homeHelp', href: 'https://droid-vm.github.io/' },
+  { title: 'homeFeedback', href: 'https://github.com/Droid-VM/DroidVM/issues' },
+] as const
+const languages = [
+  { value: 'auto', label: 'languageAuto' },
+  { value: 'zh-Hans', name: '简体中文' },
+  { value: 'zh-Hant', name: '繁體中文' },
+  { value: 'en', name: 'English' },
+] as const
+const languageName = computed(() => {
+  const item = languages.find((entry) => entry.value === languagePreference.value)
+  return !item ? '' : 'name' in item ? item.name : t(item.label)
+})
+const preferenceLabels = {
+  vm_hugepage_auto_reserve: 'hostPreferencesHugepages',
+  optimize_sdcard: 'hostPreferencesSdcard',
+  vm_clear_logs_before_start: 'hostPreferencesLogs',
+} as const
+// The App's switches save on toggle; a refused or failed save falls back to the host value.
+async function toggle(key: (typeof preferenceKeys)[number], value: boolean) {
+  if (!preferences.editable.value) return
+  preferences.draft[key] = value
+  preferences.prepare()
+  if (preferences.review.value) await preferences.submit()
+  if (!preferences.pending.value && preferences.dirty.value) preferences.discard()
+}
+const daemon = computed(() => {
+  const value = host.data.value?.daemon
+  return value ? t('settingsDaemonRunning', { pid: value.pid, version: value.version }) : ''
+})
+onMounted(() => {
+  if (preferences.supported.value) preferences.activate()
+})
+onBeforeUnmount(preferences.deactivate)
 </script>
 <template>
   <div class="page-heading desktop-only">
-    <h1>{{ t('navMore') }}</h1>
+    <h1>{{ t('navSettings') }}</h1>
   </div>
-  <HostSummary variant="identity" />
   <div class="settings-groups">
-    <section class="settings-group" aria-labelledby="settings-general">
-      <h2 id="settings-general">{{ t('settingsCategoryGeneral') }}</h2>
-      <div class="menu">
-        <ResourceRow
-          :title="t('hostOverviewTitle')"
-          to="/host"
-          icon="activity"
-          :description="
-            t(host.supported.value ? 'hostOverviewMenuHint' : 'settingsCapabilityUnavailable')
-          "
-        />
-        <LanguageSelect />
-        <div class="menu-row theme-row">
-          <span class="grow">{{ t('theme') }}</span
-          ><AppSegmentedButton v-model="themeMode" :label="t('theme')" :options="themeOptions" />
+    <section class="group card out" aria-labelledby="settings-general">
+      <details class="cc" open>
+        <summary>
+          <span id="settings-general">{{ t('settingsCategoryGeneral') }}</span>
+        </summary>
+        <label class="row link language-row">
+          <span class="lead"><AppIcon name="language" /></span>
+          <span class="rt"
+            ><span class="a">{{ t('language') }}</span
+            ><span class="b">{{ languageName }}</span></span
+          >
+          <span class="trail"><AppIcon name="chevron" /></span>
+          <select v-model="languagePreference" class="language-select" :aria-label="t('language')">
+            <option v-for="item in languages" :key="item.value" :value="item.value">
+              {{ 'name' in item ? item.name : t(item.label) }}
+            </option>
+          </select>
+        </label>
+        <template v-for="row in general" :key="row.to">
+          <RouterLink v-if="row.available" class="row link" :to="row.to">
+            <span class="lead"><AppIcon :name="row.lead!" /></span>
+            <span class="rt"
+              ><span class="a">{{ t(row.title) }}</span></span
+            >
+            <span class="trail"><AppIcon name="chevron" /></span>
+          </RouterLink>
+        </template>
+      </details>
+    </section>
+    <section class="group card out" aria-labelledby="settings-vm">
+      <details class="cc" open>
+        <summary>
+          <span id="settings-vm">{{ t('settingsCategoryVm') }}</span>
+        </summary>
+        <template v-if="preferences.supported.value">
+          <RouterLink class="row link" to="/settings/vm" data-testid="host-preferences-link">
+            <span class="rt"
+              ><span class="a">{{ t('hostPreferencesTitle') }}</span></span
+            >
+            <span class="trail"><AppIcon name="chevron" /></span>
+          </RouterLink>
+          <AppSwitch
+            v-for="key in preferenceKeys"
+            :key="key"
+            class="row"
+            :model-value="preferences.draft[key]"
+            :disabled="!preferences.editable.value"
+            :data-testid="`settings-preference-${key}`"
+            @update:model-value="toggle(key, $event)"
+          >
+            <span class="rt"
+              ><span class="a">{{ t(preferenceLabels[key]) }}</span></span
+            >
+          </AppSwitch>
+        </template>
+        <template v-for="row in vmLinks" :key="row.to">
+          <RouterLink v-if="row.available" class="row link" :to="row.to" :data-testid="row.testId">
+            <span class="rt"
+              ><span class="a">{{ t(row.title) }}</span></span
+            >
+            <span class="trail"><AppIcon name="chevron" /></span>
+          </RouterLink>
+        </template>
+      </details>
+    </section>
+    <section class="group card out" aria-labelledby="settings-service">
+      <details class="cc" open>
+        <summary>
+          <span id="settings-service">{{ t('settingsCategoryService') }}</span>
+        </summary>
+        <div v-if="daemon" class="row">
+          <span class="lead ok"><AppIcon name="ok" /></span>
+          <span class="rt"
+            ><span class="a">{{ t('settingsDaemonStatus') }}</span
+            ><span class="b">{{ daemon }}</span></span
+          >
         </div>
-      </div>
-    </section>
-    <section class="settings-group" aria-labelledby="settings-vm">
-      <h2 id="settings-vm">{{ t('settingsCategoryVm') }}</h2>
-      <div class="menu">
-        <ResourceRow
-          :title="t('diskDefaultsTitle')"
-          to="/settings/disks"
-          icon="disk"
-          :description="
-            t(
-              diskDefaults.supported.value
-                ? 'diskDefaultsMenuHint'
-                : 'settingsCapabilityUnavailable',
-            )
-          "
-          :disabled="!diskDefaults.supported.value"
-          data-testid="disk-defaults-link"
-        />
-        <ResourceRow
-          :title="t('usbAcmTitle')"
-          to="/settings/usb-acm"
-          icon="usb"
-          :description="
-            t(usbAcm.supported.value ? 'usbAcmMenuHint' : 'settingsCapabilityUnavailable')
-          "
-          :disabled="!usbAcm.supported.value"
-          data-testid="usb-acm-link"
-        />
-        <ResourceRow
-          :title="t('androidDisplayTitle')"
-          to="/settings/android-display"
-          icon="activity"
-          :description="
-            t(
-              androidDisplay.supported.value
-                ? 'androidDisplayMenuHint'
-                : 'settingsCapabilityUnavailable',
-            )
-          "
-          :disabled="!androidDisplay.supported.value"
-          data-testid="android-display-link"
-        />
-        <ResourceRow :title="t('navVms')" to="/vms" icon="vm" :description="t('settingsVmHint')" />
-        <ResourceRow
-          :title="t('imageImportTitle')"
-          to="/resources/disk/import"
-          icon="disk"
-          :description="
-            t(imageImport.supported.value ? 'imageImportMenuHint' : 'settingsCapabilityUnavailable')
-          "
-          :disabled="!imageImport.supported.value"
-        />
-        <ResourceRow
-          :title="t('usbRulesTitle')"
-          to="/resources/usb/rules"
-          icon="usb"
-          :description="
-            t(usbRules.supported.value ? 'settingsUsbRulesHint' : 'settingsCapabilityUnavailable')
-          "
-          :disabled="!usbRules.supported.value"
-        />
-        <ResourceRow
-          :title="t('hostPreferencesTitle')"
-          to="/settings/vm"
-          icon="settings"
-          :description="
-            t(
-              hostPreferences.supported.value
-                ? 'hostPreferencesMenuHint'
-                : 'settingsCapabilityUnavailable',
-            )
-          "
-          :disabled="!hostPreferences.supported.value"
-          data-testid="host-preferences-link"
-        />
-      </div>
-    </section>
-    <section class="settings-group" aria-labelledby="settings-kernel">
-      <h2 id="settings-kernel">{{ t('settingsCategoryKernel') }}</h2>
-      <div class="menu">
-        <ResourceRow
-          :title="t('hugepagesTitle')"
-          to="/hugepages"
-          icon="memory"
-          :description="
-            t(hugepages.supported.value ? 'hugepagesMenuHint' : 'settingsCapabilityUnavailable')
-          "
-          :disabled="!hugepages.supported.value"
-        />
-      </div>
-    </section>
-    <section class="settings-group" aria-labelledby="settings-backup">
-      <h2 id="settings-backup">{{ t('settingsCategoryBackup') }}</h2>
-      <div class="menu">
-        <ResourceRow
-          v-for="link in backupLinks"
-          :key="link.path"
-          :to="link.path"
-          :title="t(link.title)"
-          icon="resources"
-          :description="t(link.available ? link.hint : 'settingsCapabilityUnavailable')"
-          :disabled="!link.available"
-        />
-      </div>
-    </section>
-    <section class="settings-group" aria-labelledby="settings-service">
-      <h2 id="settings-service">{{ t('settingsCategoryService') }}</h2>
-      <div class="menu">
-        <ResourceRow
-          :title="t('webServiceTitle')"
-          to="/settings/service"
-          icon="network"
-          :description="
-            t(webService.supported.value ? 'webServiceMenuHint' : 'settingsCapabilityUnavailable')
-          "
-          :disabled="!webService.supported.value"
-        />
-        <div v-if="session" class="menu-row">
-          <span class="grow"
-            >{{ t('sessionConnected') }}<small>{{ t('sessionLogoutHint') }}</small></span
-          ><AppButton tone="tonal" @click="session.logout()">{{ t('sessionLogout') }}</AppButton>
+        <div v-if="session" class="row">
+          <span class="rt"
+            ><span class="a">{{ t('sessionConnected') }}</span></span
+          >
+          <button type="button" class="btn tonal" @click="session.logout()">
+            {{ t('sessionLogout') }}
+          </button>
         </div>
-      </div>
+      </details>
+    </section>
+    <section
+      v-if="backupLinks.some((row) => row.available)"
+      class="group card out"
+      aria-labelledby="settings-backup"
+    >
+      <details class="cc" open>
+        <summary>
+          <span id="settings-backup">{{ t('settingsCategoryBackup') }}</span>
+        </summary>
+        <template v-for="row in backupLinks" :key="row.to">
+          <RouterLink v-if="row.available" class="row link" :to="row.to">
+            <span class="rt"
+              ><span class="a">{{ t(row.title) }}</span></span
+            >
+            <span class="trail"><AppIcon name="chevron" /></span>
+          </RouterLink>
+        </template>
+      </details>
+    </section>
+    <section class="group card out" aria-labelledby="settings-about">
+      <details class="cc" open>
+        <summary>
+          <span id="settings-about">{{ t('settingsCategoryAbout') }}</span>
+        </summary>
+        <a
+          v-for="link in aboutLinks"
+          :key="link.href"
+          class="row link"
+          :href="link.href"
+          target="_blank"
+          rel="noopener noreferrer"
+          :aria-label="t('homeOpensExternal', { name: t(link.title) })"
+          ><span class="rt"
+            ><span class="a">{{ t(link.title) }}</span></span
+          ><span class="trail"><AppIcon name="open" /></span
+        ></a>
+      </details>
     </section>
   </div>
 </template>
 <style scoped>
-.settings-groups,
-.settings-group {
-  display: grid;
-  gap: var(--space-3);
-  min-width: 0;
-}
 .settings-groups {
-  gap: var(--space-5);
-}
-.settings-group h2 {
-  margin: 0;
-  padding-inline: var(--space-4);
-  font-size: var(--md-sys-typescale-title-medium-size);
-}
-.settings-group .menu {
-  margin: 0;
-}
-.menu-row,
-.grow {
   min-width: 0;
-  overflow-wrap: anywhere;
 }
-@media (width < 600px) {
-  .theme-row {
-    flex-wrap: wrap;
+.group {
+  margin-bottom: 12px;
+}
+/* The language row opens the native picker: the select covers the whole row. */
+.language-row {
+  position: relative;
+}
+.language-row select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.row.app-switch {
+  min-height: 56px;
+}
+.lead.ok {
+  color: var(--md-sys-color-on-surface);
+}
+.row > .btn {
+  flex-shrink: 0;
+  align-self: center;
+}
+/* Masonry like the App: two columns on medium screens, three with the drawer. */
+@media (width >= 600px) {
+  .settings-groups {
+    columns: 2;
+    column-gap: 16px;
   }
-  .theme-row .segmented {
+  .group {
+    display: inline-block;
     width: 100%;
+    margin-bottom: 16px;
+    break-inside: avoid;
   }
 }
-@media (width < 480px) {
-  .menu-row {
-    flex-wrap: wrap;
-  }
-  .menu-row .segmented {
-    max-width: 100%;
+@media (width >= 1200px) {
+  .settings-groups {
+    columns: 3;
   }
 }
 </style>

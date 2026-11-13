@@ -55,7 +55,6 @@ const bytes = (value: string | null | undefined) => formatHostBytes(value, local
         :label="t('hostMemoryOccupied')"
         :value="memoryPercent"
       />
-      <small>{{ t('hostMemoryHint') }}</small>
     </article>
     <article data-testid="host-storage">
       <h3>{{ t('hostStorageTitle') }}</h3>
@@ -69,7 +68,6 @@ const bytes = (value: string | null | undefined) => formatHostBytes(value, local
       <small>{{
         t('hostUsedBytes', { value: bytes(usedBytes(storage?.totalBytes, storage?.freeBytes)) })
       }}</small>
-      <small>{{ t('hostStorageHint') }}</small>
     </article>
   </div>
 </template>

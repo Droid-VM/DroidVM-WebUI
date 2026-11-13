@@ -22,10 +22,7 @@ onBeforeUnmount(model.deactivate)
 <template>
   <div class="disk-defaults-page" data-testid="disk-defaults-page">
     <AppBackLink to="/more">{{ t('navMore') }}</AppBackLink>
-    <header>
-      <h1>{{ t('diskDefaultsTitle') }}</h1>
-      <p>{{ t('diskDefaultsScope') }}</p>
-    </header>
+    <h1>{{ t('diskDefaultsTitle') }}</h1>
     <fieldset
       v-if="model.recoveryProblem.value"
       class="tracking-guard"
@@ -80,8 +77,7 @@ onBeforeUnmount(model.deactivate)
         <section class="menu" :aria-label="t('settingsCategoryVm')">
           <div class="menu-row">
             <span class="grow"
-              ><strong>{{ t('diskDefaultsCompression') }}</strong
-              ><small>{{ t('diskDefaultsCompressionHint') }}</small></span
+              ><strong>{{ t('diskDefaultsCompression') }}</strong></span
             ><AppSelect
               v-model="model.draft.optimizeCompression"
               class="row-select"
@@ -96,7 +92,6 @@ onBeforeUnmount(model.deactivate)
           </div>
           <div class="cpu-setting">
             <strong>{{ t('diskDefaultsCpus') }}</strong>
-            <p>{{ t('diskDefaultsCpuHint') }}</p>
             <p data-testid="disk-defaults-cpu-value">{{ cpuLabel(model.draft.qemuImgCpus) }}</p>
             <CpuCorePicker
               data-testid="disk-defaults-cpu-picker"
@@ -112,8 +107,7 @@ onBeforeUnmount(model.deactivate)
           tone="warning"
           :title="t('diskDefaultsConflict')"
           data-testid="disk-defaults-conflict"
-          ><p>{{ t('hostPreferencesConflictHint') }}</p>
-          <AppButton
+          ><AppButton
             data-testid="disk-defaults-rebase"
             :disabled="!model.editable.value"
             @click="model.rebase"
@@ -141,7 +135,6 @@ onBeforeUnmount(model.deactivate)
         aria-live="polite"
         data-testid="disk-defaults-receipt"
       >
-        <p v-if="model.entry.value.restored">{{ t('preferenceRecoveryHint') }}</p>
         <p v-if="model.entry.value.state === 'unknown'">{{ t('hostPreferencesUnknown') }}</p>
         <p v-else-if="model.entry.value.task">
           {{ t(taskStateKeys[model.entry.value.task.state]) }}
@@ -168,7 +161,6 @@ onBeforeUnmount(model.deactivate)
       data-testid="disk-defaults-remember-receipt"
     >
       <h2>{{ t('diskDefaultsCompression') }}</h2>
-      <p v-if="model.rememberEntry.value.restored">{{ t('diskRememberRecoveryHint') }}</p>
       <p
         v-if="
           model.rememberEntry.value.state === 'unknown' || model.rememberReceipt.value?.uncertain
@@ -199,7 +191,6 @@ onBeforeUnmount(model.deactivate)
       :title="t('hostPreferencesReview')"
       @close="model.cancelReview"
     >
-      <p>{{ t('diskDefaultsScope') }}</p>
       <ul v-if="model.review.value">
         <li v-if="model.review.value.changes.optimizeCompression !== undefined">
           {{ t('diskDefaultsCompression') }}:
@@ -241,8 +232,8 @@ onBeforeUnmount(model.deactivate)
   min-width: 0;
   max-width: var(--app-content-width);
 }
-header h1 {
-  margin-block: 0 var(--space-2);
+h1 {
+  margin: 0;
 }
 p,
 li {

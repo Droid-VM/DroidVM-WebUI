@@ -108,9 +108,6 @@ onUnmounted(() => {
             <AppCheckbox v-if="session.options.value.rememberSupported" v-model="remember">{{
               t('sessionRemember')
             }}</AppCheckbox>
-            <small v-if="session.options.value.rememberSupported" class="muted">{{
-              t('sessionRememberHint')
-            }}</small>
             <AppButton type="submit" tone="primary">{{ t('sessionLogin') }}</AppButton>
           </form>
           <AppButton

@@ -87,11 +87,9 @@ function bytes(value: string) {
 <template>
   <div class="import-form">
     <h1>{{ t('packageImportTitle') }}</h1>
-    <p>{{ t('packageImportHostHint') }}</p>
     <AppLinkButton v-if="transfers.supported.value" tone="tonal" to="/packages/transfers">{{
       t('transferUpload')
     }}</AppLinkButton>
-    <p>{{ t('packageExportLeaveHint') }}</p>
     <section v-if="model.previewRecoveryProblem.value">
       <h2>{{ t('packageImportPreviewTask') }}</h2>
       <OperationTrackingNotice
@@ -119,7 +117,6 @@ function bytes(value: string) {
       <AppTextField
         v-model="model.draft.source"
         :label="t('packageImportSource')"
-        :supporting-text="t('packageImportSourceHint')"
         data-testid="package-import-source"
         autocomplete="off"
         placeholder="/storage/emulated/0/DroidVM/export.vmpkg"
@@ -201,7 +198,6 @@ function bytes(value: string) {
           <AppTextField
             v-model="model.draft.targetDirectory"
             :label="t('packageImportTarget')"
-            :supporting-text="t('packageImportTargetHint')"
             autocomplete="off"
             placeholder="/storage/emulated/0/DroidVM/imported-vm"
             required
@@ -294,15 +290,6 @@ function bytes(value: string) {
           :data-testid="`package-${status.key}-receipt`"
         >
           <h2>{{ t(status.title) }}</h2>
-          <p v-if="status.entry.restored">
-            {{
-              t(
-                status.key === 'preview'
-                  ? 'packagePreviewRecoveryHint'
-                  : 'packageImportRecoveryHintRestored',
-              )
-            }}
-          </p>
           <p>{{ status.description }}</p>
           <p v-if="status.entry.state === 'posting'">{{ t('processing') }}</p>
           <p v-if="status.entry.state === 'unknown'">{{ t('packageImportUnknown') }}</p>

@@ -50,6 +50,8 @@ import { ApiError } from '../shared/api/errors'
 import {
   createConfigurationEditor,
   configurationEditorKey,
+  createVmConfigSummaries,
+  vmConfigSummariesKey,
   type ConfigurationGateway,
 } from '../modules/configuration'
 import {
@@ -111,8 +113,10 @@ import '../shared/styles/base.css'
 
 // Pages load on demand so no single bundle outgrows the native per-asset limit; the
 // landing page stays in the entry bundle for the first paint.
+const HomePage = () => import('../pages/HomePage.vue')
 const HostPage = () => import('../pages/HostPage.vue')
 const HugepagesPage = () => import('../pages/HugepagesPage.vue')
+const HugepagesAdvancedPage = () => import('../pages/HugepagesAdvancedPage.vue')
 const HugepageProcessesPage = () => import('../pages/HugepageProcessesPage.vue')
 const HostPreferencesPage = () => import('../pages/HostPreferencesPage.vue')
 const UsbAcmPage = () => import('../pages/UsbAcmPage.vue')
@@ -190,6 +194,7 @@ export function mountApp(
   const vmActions = createVmActions(vmActionGateway, inventory.refresh)
   const logs = createLogViewer(logGateway)
   const configuration = createConfigurationEditor(configurationGateway)
+  const vmConfigs = createVmConfigSummaries(configurationGateway)
   const resources = createResourceCatalog(resourceGateway)
   const imageImport = createImageImport(
     imageImportGateway,
@@ -274,8 +279,13 @@ export function mountApp(
   const router = createRouter({
     history: createWebHashHistory(),
     routes: [
-      { path: '/', redirect: '/vms' },
-      { path: '/vms/new', component: VmEditPage, meta: { title: 'createVm', create: true } },
+      { path: '/', redirect: '/home' },
+      { path: '/home', component: HomePage, meta: { title: 'navHome' } },
+      {
+        path: '/vms/new',
+        component: VmEditPage,
+        meta: { title: 'createVm', create: true, parent: '/vms' },
+      },
       { path: '/vms/:id/edit', component: VmEditPage, meta: { title: 'configEdit' } },
       { path: '/vms/:id/copy', component: VmEditPage, meta: { title: 'configCopy', copy: true } },
       {
@@ -292,68 +302,89 @@ export function mountApp(
       {
         path: '/resources/disk/import',
         component: ImageImportPage,
-        meta: { title: 'imageImportTitle' },
+        meta: { title: 'imageImportTitle', parent: '/resources/disk' },
       },
-      { path: '/settings/service', component: WebServicePage, meta: { title: 'webServiceTitle' } },
+      {
+        path: '/settings/service',
+        component: WebServicePage,
+        meta: { title: 'webServiceTitle', parent: '/more' },
+      },
       {
         path: '/settings/vm',
         component: HostPreferencesPage,
-        meta: { title: 'hostPreferencesTitle' },
+        meta: { title: 'hostPreferencesTitle', parent: '/more' },
       },
       {
         path: '/settings/backup',
         component: ConfigurationBackupPage,
-        meta: { title: 'backupTitle' },
+        meta: { title: 'backupTitle', parent: '/more' },
       },
       {
         path: '/packages/transfers',
         component: PackageTransfersPage,
-        meta: { title: 'transferTitle' },
+        meta: { title: 'transferTitle', parent: '/more' },
       },
       {
         path: '/packages/import',
         component: PackageImportPage,
-        meta: { title: 'packageImportTitle' },
+        meta: { title: 'packageImportTitle', parent: '/more' },
       },
       {
         path: '/packages/export/:id?',
         component: PackageExportPage,
-        meta: { title: 'packageExportTitle' },
+        meta: { title: 'packageExportTitle', parent: '/more' },
       },
       {
         path: '/agent/rescue/:id?',
         component: AgentRescuePage,
-        meta: { title: 'agentRescueTitle' },
+        meta: { title: 'agentRescueTitle', parent: '/resources/disk' },
       },
       {
         path: '/resources/network/new',
         component: NetworkEditPage,
-        meta: { title: 'networkCreate', create: true },
+        meta: { title: 'networkCreate', create: true, parent: '/resources/network' },
       },
       {
         path: '/resources/network/:id/edit',
         component: NetworkEditPage,
-        meta: { title: 'networkEdit' },
+        meta: { title: 'networkEdit', parent: '/resources/network' },
       },
-      { path: '/resources/usb/rules', component: UsbRulesPage, meta: { title: 'usbRulesTitle' } },
-      { path: '/more', component: MorePage, meta: { title: 'navMore' } },
-      { path: '/settings/usb-acm', component: UsbAcmPage, meta: { title: 'usbAcmTitle' } },
+      {
+        path: '/resources/usb/rules',
+        component: UsbRulesPage,
+        meta: { title: 'usbRulesTitle', parent: '/resources/usb' },
+      },
+      { path: '/more', component: MorePage, meta: { title: 'navSettings' } },
+      {
+        path: '/settings/usb-acm',
+        component: UsbAcmPage,
+        meta: { title: 'usbAcmTitle', parent: '/more' },
+      },
       {
         path: '/settings/android-display',
         component: AndroidDisplayPage,
-        meta: { title: 'androidDisplayTitle' },
+        meta: { title: 'androidDisplayTitle', parent: '/more' },
       },
       {
         path: '/settings/disks',
         component: DiskDefaultsPage,
-        meta: { title: 'diskDefaultsTitle' },
+        meta: { title: 'diskDefaultsTitle', parent: '/more' },
       },
-      { path: '/host', component: HostPage, meta: { title: 'hostOverviewTitle' } },
-      { path: '/hugepages', component: HugepagesPage, meta: { title: 'hugepagesTitle' } },
+      { path: '/host', component: HostPage, meta: { title: 'hostOverviewTitle', parent: '/more' } },
+      {
+        path: '/hugepages',
+        component: HugepagesPage,
+        meta: { title: 'hugepagesTitle', parent: '/more' },
+      },
+      {
+        path: '/hugepages/advanced',
+        component: HugepagesAdvancedPage,
+        meta: { title: 'hugepagesAdvancedTitle', parent: '/hugepages' },
+      },
       {
         path: '/hugepages/processes',
         component: HugepageProcessesPage,
-        meta: { title: 'hpProcessTitle' },
+        meta: { title: 'hpProcessTitle', parent: '/hugepages' },
       },
       ...extraRoutes,
       { path: '/:pathMatch(.*)*', component: NotFoundPage, meta: { title: 'notFound' } },
@@ -428,6 +459,7 @@ export function mountApp(
   app.provide(vmActionsKey, vmActions)
   app.provide(logViewerKey, logs)
   app.provide(configurationEditorKey, configuration)
+  app.provide(vmConfigSummariesKey, vmConfigs)
   app.provide(resourceCatalogKey, resources)
   app.provide(usbActionsKey, usbActions)
   app.provide(diskActionsKey, diskActions)

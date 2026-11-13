@@ -45,7 +45,7 @@ function leave() {
     <AppButton @click="router.push('/resources/usb')">{{ t('close') }}</AppButton>
   </div>
   <UsbRulesEditor v-if="editor.supported.value" />
-  <EmptyState v-else :title="t('usbRulesUnavailable')" :description="t('errorUnsupportedHint')" />
+  <EmptyState v-else :title="t('usbRulesUnavailable')" />
   <ConfirmDialog
     :open="!!leaving"
     :title="t('configLeave')"

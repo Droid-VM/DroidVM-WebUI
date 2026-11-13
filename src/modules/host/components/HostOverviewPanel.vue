@@ -13,7 +13,6 @@ const count = (value: number | null | undefined) => (value == null ? '—' : n(v
   <section class="host-overview" data-testid="host-overview" :aria-label="t('hostOverviewTitle')">
     <header>
       <h1>{{ t('hostOverviewTitle') }}</h1>
-      <p class="muted">{{ t('hostOverviewHint') }}</p>
     </header>
     <HostObservationState />
     <section class="host-section" :aria-label="t('hostDeviceService')">
@@ -90,7 +89,6 @@ const count = (value: number | null | undefined) => (value == null ? '—' : n(v
           <dd>{{ formatHostBytes(host.data.value?.inventory.diskVirtualBytes, locale) }}</dd>
         </div>
       </dl>
-      <p class="muted">{{ t('hostInventoryHint') }}</p>
       <p v-if="host.data.value?.inventory.diskVirtualBytes == null" class="muted">
         {{ t('hostDiskVirtualUnknown') }}
       </p>

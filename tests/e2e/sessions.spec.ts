@@ -66,8 +66,8 @@ async function openSession(page: Page, request: APIRequestContext, path: string)
 }
 
 for (const [theme, background] of [
-  ['light', 'rgb(255, 255, 255)'],
-  ['dark', 'rgb(13, 14, 19)'],
+  ['light', 'rgb(18, 20, 27)'],
+  ['dark', 'rgb(11, 13, 18)'],
 ]) {
   test(`the terminal fills the viewport and follows the ${theme} theme`, async ({
     page,
@@ -85,7 +85,7 @@ for (const [theme, background] of [
       'background-color',
       background!,
     )
-    await expect(dialog.getByRole('combobox', { name: '串口' })).toBeVisible()
+    await expect(dialog.getByRole('group', { name: '串口' })).toBeVisible()
     await page.screenshot({ path: `test-results/session-terminal-${theme}.png` })
   })
 }

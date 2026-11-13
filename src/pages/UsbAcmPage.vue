@@ -36,7 +36,6 @@ onBeforeUnmount(model.deactivate)
     <AppBackLink to="/more">{{ t('navMore') }}</AppBackLink>
     <header>
       <h1>{{ t('usbAcmTitle') }}</h1>
-      <p>{{ t('usbAcmScope') }}</p>
     </header>
     <fieldset
       v-if="model.recoveryProblem.value"
@@ -133,14 +132,12 @@ onBeforeUnmount(model.deactivate)
             :disabled="!model.editable.value"
             @change="model.cancelReview"
             ><span class="grow"
-              ><strong>{{ t('usbAcmEnable') }}</strong
-              ><small>{{ t('usbAcmEnableHint') }}</small></span
+              ><strong>{{ t('usbAcmEnable') }}</strong></span
             ></AppSwitch
           >
           <div class="menu-row">
             <span class="grow"
-              ><strong>{{ t('usbAcmPorts') }}</strong
-              ><small>{{ t('usbAcmPortsHint') }}</small></span
+              ><strong>{{ t('usbAcmPorts') }}</strong></span
             ><AppSelect
               v-model.number="model.draft.ports"
               class="row-select"
@@ -197,10 +194,6 @@ onBeforeUnmount(model.deactivate)
       aria-live="polite"
       data-testid="usb-acm-receipt"
     >
-      <div v-if="model.entry.value.restored" data-testid="usb-acm-tracking-restored">
-        <p>{{ t('operationTrackingHint') }}</p>
-        <p>{{ t('usbAcmRecoveryHint') }}</p>
-      </div>
       <p v-if="model.entry.value.state === 'unknown'">{{ t('usbAcmUnknown') }}</p>
       <p v-else-if="model.entry.value.task">
         {{ t(taskStateKeys[model.entry.value.task.state]) }}
@@ -244,7 +237,6 @@ onBeforeUnmount(model.deactivate)
           {{ t(model.review.value.operation.enabled ? 'usbAcmEnabled' : 'usbAcmDisabled') }} ·
           {{ t('usbAcmPortCount', { count: model.review.value.operation.ports }) }}
         </p>
-        <p v-else>{{ t('usbAcmApplySavedHint') }}</p>
         <p>{{ t('usbAcmDisconnectHint') }}</p>
         <AppCheckbox
           v-model="model.confirmDisconnect.value"

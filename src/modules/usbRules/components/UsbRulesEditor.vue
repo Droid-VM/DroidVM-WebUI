@@ -104,13 +104,7 @@ function download() {
       :problem="editor.recoveryProblem.value"
       @clear="editor.clearTracking"
     />
-    <p v-if="editor.entry.value?.restored" role="status">{{ t('configurationRestoredReceipt') }}</p>
     <p v-if="editor.entry.value?.state === 'unknown'">{{ t('configurationMissingReceipt') }}</p>
-    <details class="rules-help">
-      <summary>{{ t('usbRulesHelp') }}</summary>
-      <p>{{ t('usbRulesIntro') }}</p>
-      <p>{{ t('usbRulesEnableHint') }}</p>
-    </details>
     <div class="toolbar">
       <AppButton :disabled="editor.busy.value" @click="confirmation = 'reload'">{{
         t('configReload')
@@ -128,8 +122,7 @@ function download() {
       ><p>{{ t(problem.descriptionKey) }}</p></AppNotice
     >
     <AppNotice v-if="editor.targetProblem.value" tone="warning" :title="t('usbRulesTargetsFailed')"
-      ><p>{{ t(editor.targetProblem.value.descriptionKey) }}</p>
-      <p>{{ t('usbRulesTargetsKept') }}</p></AppNotice
+      ><p>{{ t(editor.targetProblem.value.descriptionKey) }}</p></AppNotice
     >
     <AppNotice v-if="editor.blocked.value" tone="warning" :title="t('configBlocked')"
       ><p>{{ t('usbRulesBlockedHint') }}</p></AppNotice
@@ -179,7 +172,6 @@ function download() {
       />
       <section :aria-label="t(current.label)" class="layer-content">
         <h2>{{ t(current.label) }}</h2>
-        <p class="muted">{{ t(current.hint) }}</p>
         <AppButton :disabled="!editor.editable.value" @click="add">{{
           t('usbRulesAdd')
         }}</AppButton>
@@ -263,14 +255,6 @@ function download() {
 .layers {
   flex-wrap: nowrap;
   overflow-x: auto;
-}
-.rules-help summary {
-  padding: var(--space-3) 0;
-  cursor: pointer;
-}
-.rules-help p {
-  margin: var(--space-2) 0;
-  color: var(--md-sys-color-on-surface-variant);
 }
 .layer-content > .btn {
   justify-self: start;

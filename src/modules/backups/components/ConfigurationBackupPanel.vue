@@ -35,12 +35,10 @@ onBeforeUnmount(model.leave)
   <div class="backup-panel">
     <OperationTrackingNotice :problem="model.recoveryProblem.value" @clear="model.clearTracking" />
     <h1>{{ t('backupTitle') }}</h1>
-    <p>{{ t('backupScope') }}</p>
     <AppNotice v-if="!model.supported.value" tone="warning" :title="t('backupUnavailable')" />
     <template v-else>
       <section>
         <h2>{{ t('backupExportTitle') }}</h2>
-        <p>{{ t('backupExportHint') }}</p>
         <AppLinkButton
           tone="tonal"
           class="download"
@@ -53,9 +51,7 @@ onBeforeUnmount(model.leave)
       </section>
       <section>
         <h2>{{ t('backupImportTitle') }}</h2>
-        <p>{{ t('backupMergeHint') }}</p>
         <p>{{ t('backupSizeHint', { bytes: bytes(backupMaximumBytes) }) }}</p>
-        <p>{{ t('backupReloadHint') }}</p>
         <label class="file"
           >{{ t('backupSelect')
           }}<input
@@ -77,7 +73,6 @@ onBeforeUnmount(model.leave)
         }}</AppButton>
         <div v-if="model.preview.value" class="preview">
           <h3>{{ t('backupPreviewTitle') }}</h3>
-          <p>{{ t('backupPreviewHint') }}</p>
           <div class="categories">
             <section v-for="category in backupCategories" :key="category" class="category">
               <h4>{{ t(categoryKeys[category]) }}</h4>

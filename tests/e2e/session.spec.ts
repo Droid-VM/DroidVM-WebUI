@@ -30,7 +30,7 @@ test('an unsupported protocol blocks resource reads after pairing without replay
     if (body.server) body.server.apiMajor = 2
     await route.fulfill({ response, json: body })
   })
-  await page.goto('/')
+  await page.goto('/#/vms')
   await page.getByLabel('配对码', { exact: true }).fill(await pairing(request))
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('WebUI 版本不兼容')
@@ -80,7 +80,7 @@ test('authentication gates data, restores a deep link and keeps credentials out 
   const token = await pairing(request)
   await page.getByLabel('配对码', { exact: true }).fill(token)
   await page.getByRole('button', { name: '登录', exact: true }).click()
-  await expect(page.getByRole('region', { name: '虚拟机详情' })).toContainText('HTTP contract VM')
+  await expect(page.getByRole('region', { name: 'HTTP contract VM' })).toBeVisible()
   expect(methods).toEqual(['GET', 'POST'])
   expect(page.url()).toContain('#/vms/http-contract-vm')
   expect(page.url()).not.toContain(token)
@@ -94,7 +94,7 @@ test('authentication gates data, restores a deep link and keeps credentials out 
   expect(storage).not.toContain(cookie.value)
   expect(storage).not.toContain('csrfToken')
   await page.reload()
-  await expect(page.getByRole('region', { name: '虚拟机详情' })).toContainText('HTTP contract VM')
+  await expect(page.getByRole('region', { name: 'HTTP contract VM' })).toBeVisible()
   expect(methods.filter((method) => method === 'POST')).toHaveLength(1)
 })
 
@@ -102,7 +102,7 @@ test('pairing rejection clears the input, exposes no backend details and allows 
   page,
   request,
 }) => {
-  await page.goto('/')
+  await page.goto('/#/vms')
   await page.getByLabel('配对码', { exact: true }).fill('0'.repeat(64))
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('配对码无效、已过期或已使用')
@@ -184,7 +184,7 @@ test('an unreadable pairing response reconciles through GET instead of repeating
     const result = await route.fetch()
     await route.fulfill({ response: result, body: '{"incompatible":true}' })
   })
-  await page.goto('/')
+  await page.goto('/#/vms')
   await page.getByLabel('配对码', { exact: true }).fill(await pairing(request))
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.getByRole('heading', { name: '登录结果尚未确认' })).toBeVisible()
@@ -199,12 +199,12 @@ test('resuming a cached page rechecks the session instead of exposing cached res
   request,
 }) => {
   await login(page, request, '/#/vms/http-contract-vm')
-  await expect(page.getByRole('region', { name: '虚拟机详情' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'HTTP contract VM' })).toBeVisible()
   await page.evaluate(() =>
     window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })),
   )
   await expect(page.locator('.app-shell')).toHaveCount(0)
-  await expect(page.getByRole('region', { name: '虚拟机详情' })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'HTTP contract VM' })).toHaveCount(0)
   expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden')
   await page.context().clearCookies({ name: 'droidvm-session' })
   await page.evaluate(() =>
@@ -278,6 +278,6 @@ test('the create button sits in the rail on wide screens and floats on phones', 
   const nav = (await page.getByRole('navigation', { name: '主导航' }).boundingBox())!
   expect(fab.y + fab.height).toBeLessThanOrEqual(nav.y)
   await page.screenshot({ path: 'test-results/fab-compact.png' })
-  await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '任务' }).click()
+  await page.getByRole('navigation', { name: '主导航' }).getByRole('link', { name: '设置' }).click()
   await expect(floating).toHaveCount(0)
 })

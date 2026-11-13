@@ -77,10 +77,8 @@ onBeforeUnmount(clear)
           agent.preparation.value.detail.disk.name || agent.preparation.value.detail.disk.id
         }}</strong>
         <p class="path">{{ agent.preparation.value.detail.disk.path }}</p>
-        <p>{{ t('agentTargetHint') }}</p>
         <AppNotice v-if="!agent.writable.value" tone="warning" :title="t('agentDiskUnavailable')" />
         <template v-if="isPassword">
-          <p>{{ t('agentPasswordHint') }}</p>
           <AppTextField
             v-model="password"
             :label="t('agentPasswordNew')"
@@ -112,8 +110,6 @@ onBeforeUnmount(clear)
             t('agentNormalUsers')
           }}</AppCheckbox>
         </template>
-        <p v-else>{{ t('agentGrowHint') }}</p>
-        <p>{{ t('agentAutomaticCleanupHint') }}</p>
         <AppCheckbox
           v-if="allowRescue && agent.rescueSupported.value"
           v-model="rescue"

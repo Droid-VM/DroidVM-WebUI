@@ -1,14 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 
-// Material selects ignore a click while their menu is still animating closed.
+// The settings language row opens the native picker.
 async function choose(page: Page, label: string, option: string) {
-  const item = page.getByRole('option', { name: option, exact: true })
-  await expect(async () => {
-    await page.getByRole('combobox', { name: label, exact: true }).click()
-    await expect(item).toBeVisible({ timeout: 1000 })
-  }).toPass()
-  await item.click()
-  await expect(page.getByRole('listbox')).toBeHidden()
+  await page.getByRole('combobox', { name: label, exact: true }).selectOption({ label: option })
 }
 
 for (const [browserLocale, language, title, running] of [
@@ -31,7 +25,7 @@ for (const [browserLocale, language, title, running] of [
       await expect(page.locator('html')).toHaveAttribute('lang', language!)
       await expect(page).toHaveTitle(`DroidVM · ${title}`)
       await expect(page.locator('[data-vm]').first().locator('.badge')).toHaveText(running!)
-      await expect(page.locator('.overview summary')).not.toContainText('{count}')
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(title!)
       expect(errors).toEqual([])
     })
   })
@@ -55,8 +49,8 @@ test('manual selection survives reload and switching back restores browser prefe
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/dev.html#/more')
   await choose(page, '语言', 'English')
-  await expect(page).toHaveTitle('DroidVM · More')
-  await expect(page.getByRole('heading', { name: 'More', exact: true })).toBeVisible()
+  await expect(page).toHaveTitle('DroidVM · Settings')
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await page.reload()
   await expect(page.locator('.language-select')).toHaveJSProperty('value', 'en')
@@ -66,11 +60,11 @@ test('manual selection survives reload and switching back restores browser prefe
     .click()
   await expect(page.locator('[data-vm]').first().locator('.badge')).toHaveText('Running')
   await page.locator('[data-vm]').first().locator('.vm-specs').click()
-  await expect(page.getByRole('dialog', { name: 'VM details' })).toContainText('4,096 MiB')
+  await expect(page.getByRole('dialog', { name: 'Debian 13' })).toContainText('4 GiB')
   await page.getByRole('button', { name: 'Close', exact: true }).click()
   await page
     .getByRole('navigation', { name: 'Main navigation' })
-    .getByRole('link', { name: 'More', exact: true })
+    .getByRole('link', { name: 'Settings', exact: true })
     .click()
   await choose(page, 'Language', '繁體中文')
   await expect(page.locator('.language-select')).toHaveJSProperty('value', 'zh-Hant')
@@ -96,7 +90,7 @@ test('languagechange updates the current error and title without changing its re
   ).toHaveCount(0)
   await page
     .getByRole('navigation', { name: 'Main navigation' })
-    .getByRole('link', { name: 'More', exact: true })
+    .getByRole('link', { name: 'Settings', exact: true })
     .click()
   await choose(page, 'Language', '繁體中文')
   await page.evaluate(() => window.dispatchEvent(new Event('languagechange')))
@@ -113,7 +107,7 @@ test('blocked browser storage still allows language changes', async ({ page }) =
   })
   await page.goto('/dev.html#/more')
   await choose(page, '语言', 'English')
-  await expect(page).toHaveTitle('DroidVM · More')
+  await expect(page).toHaveTitle('DroidVM · Settings')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
 })
 
@@ -145,7 +139,7 @@ for (const locale of ['en-US', 'zh-TW']) {
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
           true,
         )
-        await page.locator('[data-vm]').first().locator('footer a').last().click()
+        await page.locator('[data-vm]').first().locator('.vm-specs').click()
         expect(
           await page
             .getByRole('dialog')

@@ -30,7 +30,6 @@ onBeforeUnmount(model.leave)
 <template>
   <div class="service-panel">
     <h1>{{ t('webServiceTitle') }}</h1>
-    <p>{{ t('webServiceIntro') }}</p>
     <AppNotice v-if="!model.supported.value" tone="warning" :title="t('webServiceUnavailable')" />
     <template v-else>
       <section>
@@ -44,8 +43,7 @@ onBeforeUnmount(model.leave)
         </div>
         <p v-if="model.loading.value" role="status">{{ t('loading') }}</p>
         <AppNotice v-if="model.problem.value" tone="error" :title="t(model.problem.value.titleKey)"
-          ><p>{{ t(model.problem.value.descriptionKey) }}</p>
-          <p>{{ t('webServiceReconnectHint') }}</p></AppNotice
+          ><p>{{ t(model.problem.value.descriptionKey) }}</p></AppNotice
         >
         <template v-if="model.status.value">
           <p v-if="!model.fresh.value">{{ t('webServiceStale') }}</p>
@@ -63,7 +61,6 @@ onBeforeUnmount(model.leave)
             </li>
           </ul>
           <p v-else>{{ t('webServiceNoAddresses') }}</p>
-          <p>{{ t('webServiceAddressHint') }}</p>
         </template>
       </section>
       <form v-if="model.baseline.value" @submit.prevent="model.reviewAction('configure')">
@@ -81,11 +78,7 @@ onBeforeUnmount(model.leave)
         </fieldset>
         <fieldset :disabled="!model.editable.value">
           <legend>{{ t('webServiceAccess') }}</legend>
-          <AppSelect
-            v-model="model.draft.scope"
-            :label="t('webServiceScope')"
-            :supporting-text="t('webServiceScopeHint')"
-          >
+          <AppSelect v-model="model.draft.scope" :label="t('webServiceScope')">
             <AppOption value="lan">{{ t('webServiceLan') }}</AppOption>
             <AppOption value="all">{{ t('webServiceAll') }}</AppOption>
           </AppSelect>
@@ -133,7 +126,6 @@ onBeforeUnmount(model.leave)
             )
           }}
         </h2>
-        <p v-if="model.review.value.action === 'restart'">{{ t('webServiceRestartSavedHint') }}</p>
         <dl>
           <dt>{{ t('webServiceEnabled') }}</dt>
           <dd>{{ t(model.review.value.settings.enabled ? 'webServiceOn' : 'webServiceOff') }}</dd>
@@ -178,7 +170,6 @@ onBeforeUnmount(model.leave)
       </section>
       <section v-if="model.entry.value" class="status" aria-live="polite">
         <h2>{{ t('webServiceOperationStatus') }}</h2>
-        <p>{{ t('webServiceTaskHint') }}</p>
         <p v-if="model.entry.value.state === 'posting'">{{ t('processing') }}</p>
         <p v-if="model.entry.value.state === 'unknown'">{{ t('webServiceUnknown') }}</p>
         <p v-if="model.entry.value.task">{{ t(taskStateKeys[model.entry.value.task.state]) }}</p>
@@ -200,8 +191,7 @@ onBeforeUnmount(model.leave)
           v-if="model.entry.value.problem"
           tone="error"
           :title="t(model.entry.value.problem.titleKey)"
-          ><p>{{ t(model.entry.value.problem.descriptionKey) }}</p>
-          <p>{{ t('webServiceReconnectHint') }}</p></AppNotice
+          ><p>{{ t(model.entry.value.problem.descriptionKey) }}</p></AppNotice
         >
         <div class="buttons">
           <AppButton
@@ -228,10 +218,6 @@ onBeforeUnmount(model.leave)
             t('webServiceRestartWorkflow')
           }}</AppButton>
         </div>
-      </section>
-      <section>
-        <h2>{{ t('webServicePairing') }}</h2>
-        <p>{{ t('webServicePairingHint') }}</p>
       </section>
     </template>
   </div>

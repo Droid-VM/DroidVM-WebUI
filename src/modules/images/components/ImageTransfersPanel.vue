@@ -47,7 +47,6 @@ onBeforeUnmount(model.leave)
 <template>
   <section class="image-transfers">
     <h2>{{ t('imageUploadTitle') }}</h2>
-    <p>{{ t('imageUploadIntro') }}</p>
     <fieldset
       v-if="upload.recoveryProblem.value || model.recoveryProblem.value"
       class="tracking-guard"
@@ -66,10 +65,6 @@ onBeforeUnmount(model.leave)
     </fieldset>
     <AppNotice v-if="!model.supported.value" tone="warning" :title="t('imageUploadUnavailable')" />
     <template v-if="model.supported.value || upload.uploadId.value || model.entry.value">
-      <p>{{ t('imageUploadLifetime') }}</p>
-      <p v-if="upload.restored.value" data-testid="image-upload-restored">
-        {{ t('transferRecoveryHint') }}
-      </p>
       <p v-if="upload.hashBusy.value" data-testid="image-upload-hashing" role="status">
         {{ t('transferHashing') }}
       </p>
@@ -102,7 +97,6 @@ onBeforeUnmount(model.leave)
           "
           @change="reselect"
         />
-        <small>{{ t('transferReselectHint') }}</small>
       </label>
       <label v-if="!upload.uploadId.value && !model.entry.value" class="file"
         >{{ t('imageUploadFile')
@@ -112,7 +106,6 @@ onBeforeUnmount(model.leave)
           :disabled="!model.editable.value || !!upload.uploadId.value"
           @change="select"
       /></label>
-      <p v-if="!upload.metadata.value && !upload.uploadId.value">{{ t('imageUploadFileHint') }}</p>
       <ul v-if="upload.metadata.value" data-testid="image-upload-files">
         <li v-for="file in upload.metadata.value" :key="file.name">
           {{ file.name }} · {{ bytes(file.sizeBytes) }} B
@@ -188,8 +181,6 @@ onBeforeUnmount(model.leave)
         @submit.prevent="model.install"
       >
         <h3>{{ t('imageUploadInstallTitle') }}</h3>
-        <p>{{ t('imageUploadInstallHint') }}</p>
-        <p>{{ t('imageUploadDirectoryHint') }}</p>
         <AppTextField
           v-model="model.draft.folder"
           :label="t('diskHostFolder')"
@@ -224,7 +215,6 @@ onBeforeUnmount(model.leave)
       <section v-if="model.entry.value" data-testid="image-upload-result" aria-live="polite">
         <h3>{{ t('imageUploadResult') }}</h3>
         <div v-if="model.entry.value.restored" data-testid="image-install-restored">
-          <p>{{ t('imageInstallRecoveryHint') }}</p>
           <code>{{
             `${model.entry.value.request.folder === '/' ? '' : model.entry.value.request.folder}/${model.entry.value.request.name}`
           }}</code>

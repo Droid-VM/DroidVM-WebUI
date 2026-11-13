@@ -44,8 +44,6 @@ function select(event: Event) {
 <template>
   <div class="export-form">
     <h1>{{ t('packageExportTitle') }}</h1>
-    <p>{{ t('packageExportHostHint') }}</p>
-    <p>{{ t('packageExportLeaveHint') }}</p>
     <OperationTrackingNotice :problem="model.recoveryProblem.value" @clear="model.clearTracking" />
     <AppNotice
       v-if="!model.supported.value"
@@ -87,7 +85,6 @@ function select(event: Event) {
         <AppTextField
           v-model="model.draft.destination"
           :label="t('packageExportDestination')"
-          :supporting-text="t('packageExportPathHint')"
           required
           autocomplete="off"
           placeholder="/storage/emulated/0/DroidVM/export.vmpkg"
@@ -111,7 +108,6 @@ function select(event: Event) {
         />
         <fieldset>
           <legend>{{ t('packageExportDisks') }}</legend>
-          <p>{{ t('packageExportDisksHint') }}</p>
           <AppCheckbox
             v-for="disk in model.plan.value.disks"
             :key="disk.index"
@@ -162,7 +158,6 @@ function select(event: Event) {
           </dd>
         </dl>
         <p>{{ t('packageExportOverwriteWarning') }}</p>
-        <p>{{ t('packageExportHostHint') }}</p>
         <AppCheckbox v-model="model.acknowledged.value">{{
           t('packageExportOverwriteConfirm')
         }}</AppCheckbox>
@@ -182,7 +177,6 @@ function select(event: Event) {
         aria-live="polite"
         data-testid="package-export-receipt"
       >
-        <p v-if="model.entry.value.restored">{{ t('packageExportRecoveryHint') }}</p>
         <h2>{{ t('packageExportStatus') }}</h2>
         <p>{{ model.entry.value.request.operation.destination }}</p>
         <p v-if="model.entry.value.state === 'posting'">{{ t('processing') }}</p>
@@ -214,7 +208,6 @@ function select(event: Event) {
                   })
             }}
           </p>
-          <p>{{ t('packageExportResultHint') }}</p>
           <AppButton
             v-if="transfers.supported.value && !transfers.downloadId.value"
             :disabled="!transfers.canPrepareDownload.value"

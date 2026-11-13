@@ -30,7 +30,6 @@ function run() {
       :problem="agent.recovery.recoveryProblem.value"
       @clear="agent.recovery.clearTracking"
     />
-    <p>{{ t('agentRecoveryHint') }}</p>
     <p v-if="agent.pendingRecords.value !== null">
       {{ t('agentRecoveryCount', { count: agent.pendingRecords.value }) }}
     </p>

@@ -20,7 +20,6 @@ onBeforeUnmount(model.leave)
 <template>
   <div class="image-import">
     <h1>{{ t('imageImportTitle') }}</h1>
-    <p>{{ t('imageImportIntro') }}</p>
     <AppNotice v-if="!model.supported.value" tone="warning" :title="t('imageImportUnavailable')" />
     <template v-else>
       <OperationTrackingNotice
@@ -35,7 +34,6 @@ onBeforeUnmount(model.leave)
         <AppTextField
           v-model="model.source.value"
           :label="t('imageImportSource')"
-          :supporting-text="t('imageImportSourceHint')"
           data-testid="image-import-source"
           :disabled="model.pending.value || !!model.entry.value"
           placeholder="/storage/emulated/0/DroidVM/linux.qcow2"
@@ -52,7 +50,6 @@ onBeforeUnmount(model.leave)
       </form>
       <section v-if="model.plan.value" aria-labelledby="image-import-plan">
         <h2 id="image-import-plan">{{ t('imageImportPlanTitle') }}</h2>
-        <p>{{ t('imageImportPlanHint') }}</p>
         <p>{{ model.plan.value.source }}</p>
         <ol class="chain">
           <li v-for="(member, index) in model.plan.value.members" :key="member.id">
@@ -155,9 +152,7 @@ onBeforeUnmount(model.leave)
         >
         <template v-if="model.succeeded.value">
           <p>{{ t('imageImportSuccess') }}</p>
-          <p>{{ t('imageImportCreateHint') }}</p>
           <template v-if="model.optimizeAvailable.value">
-            <p>{{ t('imageImportOptimizeHint') }}</p>
             <AppButton
               data-testid="image-import-optimize"
               :disabled="!model.canOptimize.value"
@@ -184,7 +179,6 @@ onBeforeUnmount(model.leave)
           </div>
         </template>
         <template v-if="model.entry.value.state === 'done'">
-          <p>{{ t('imageImportRestartHint') }}</p>
           <AppLinkButton tone="tonal" to="/resources/disk">{{ t('navDisk') }}</AppLinkButton>
           <AppCheckbox v-model="model.outcomeAcknowledged.value">{{
             t('imageImportOutcomeConfirm')

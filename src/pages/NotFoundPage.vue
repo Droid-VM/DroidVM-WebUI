@@ -6,7 +6,7 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <EmptyState :title="t('notFound')" :description="t('notFoundHint')"
+  <EmptyState :title="t('notFound')"
     ><AppLinkButton to="/vms" tone="tonal">{{ t('backVms') }}</AppLinkButton></EmptyState
   >
 </template>

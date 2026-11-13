@@ -10,6 +10,7 @@ const viewports = [
 ]
 const routes = [
   'components',
+  'home',
   'vms',
   'vms/demo-debian',
   'vms/new',
