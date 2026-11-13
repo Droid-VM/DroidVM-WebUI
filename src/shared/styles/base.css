@@ -16,6 +16,9 @@ body {
   margin: 0;
   background: var(--app-color-background);
   color: var(--md-sys-color-on-surface);
+  font-size: 14px;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
 }
 button,
 input,
@@ -58,24 +61,28 @@ h1 {
   line-height: 1.3;
   margin-bottom: var(--space-2);
 }
-/* CJK system fonts have no 500 weight, so titles use 600 to stay distinct from body text. */
+/* M3 title-medium / title-small, as the App's TextAppearance. */
 h2 {
   font-size: var(--md-sys-typescale-title-medium-size);
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: 0.15px;
 }
 h3 {
   font-size: var(--md-sys-typescale-title-small-size);
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
 }
 p {
-  line-height: 1.6;
+  line-height: 20px;
 }
 small {
   font-size: var(--md-sys-typescale-body-small-size);
 }
 .icon {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   fill: currentColor;
   flex-shrink: 0;
 }
@@ -157,6 +164,13 @@ a.btn.tonal {
   --md-text-button-hover-state-layer-color: var(--md-sys-color-error);
   --md-text-button-pressed-state-layer-color: var(--md-sys-color-error);
 }
+.btn.tonal.danger {
+  --md-filled-tonal-button-container-color: var(--md-sys-color-error-container);
+  --md-filled-tonal-button-label-text-color: var(--md-sys-color-on-error-container);
+  --md-filled-tonal-button-hover-label-text-color: var(--md-sys-color-on-error-container);
+  --md-filled-tonal-button-focus-label-text-color: var(--md-sys-color-on-error-container);
+  --md-filled-tonal-button-pressed-label-text-color: var(--md-sys-color-on-error-container);
+}
 /* Buttons keep their natural width inside grid and flex column layouts. */
 .btn {
   justify-self: start;
@@ -184,7 +198,8 @@ a.btn.tonal {
 }
 .tabs > [role='tab'] {
   position: relative;
-  flex: 0 0 auto;
+  flex: 1 0 auto;
+  min-width: 72px;
   min-height: 48px;
   padding: 0 var(--space-4);
   border: 0;
@@ -204,8 +219,9 @@ a.btn.tonal {
 .tabs > [role='tab'][aria-selected='true']::after {
   content: '';
   position: absolute;
-  inset: auto 0 0;
-  height: 2px;
+  inset: auto 16px 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
   background: var(--md-sys-color-primary);
 }
 .tabs > [role='tab']:focus-visible {
@@ -302,6 +318,394 @@ details[open]:not(.overview) > summary::before {
   background: var(--md-sys-color-surface-container-low);
   box-shadow: var(--md-sys-elevation-level1);
 }
+/* ===== Design primitives (docs/webui/app-style/app.html), shared by every page ===== */
+.card.out {
+  padding: 0;
+  overflow: hidden;
+  background: var(--app-color-card);
+}
+/* The App's list item card: icon, two supporting lines, trailing action. */
+.card.out.item,
+.card.filled.item {
+  padding: 8px 8px 8px 16px;
+}
+.card.filled {
+  padding: 0;
+  border: 0;
+  background: var(--app-color-filled);
+}
+.card.click {
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.card.click:hover {
+  filter: brightness(0.97);
+}
+:root[data-color='dark'] .card.click:hover {
+  filter: brightness(1.12);
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* Native buttons drawn as M3 buttons: filled, tonal, outlined, text and the two error forms. */
+:is(button, a).btn.filled,
+:is(button, a).btn.tonal,
+:is(button, a).btn.outlined,
+:is(button, a).btn.text,
+:is(button, a).btn.danger,
+:is(button, a).btn.filled-danger {
+  position: relative;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    filter 0.15s,
+    background-color 0.15s;
+}
+:is(button, a).btn > .icon {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+:is(button, a).btn.icon-lead {
+  padding-left: 16px;
+}
+:is(button, a).btn.filled {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+:is(button, a).btn.tonal {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+:is(button, a).btn.outlined {
+  border: 1px solid var(--md-sys-color-outline);
+  color: var(--md-sys-color-primary);
+}
+:is(button, a).btn.text {
+  padding: 0 12px;
+  color: var(--md-sys-color-primary);
+}
+:is(button, a).btn.danger {
+  border: 1px solid var(--md-sys-color-outline);
+  color: var(--md-sys-color-error);
+}
+:is(button, a).btn.filled-danger {
+  background: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+}
+:is(button, a).btn:hover {
+  filter: brightness(0.95);
+}
+:root[data-color='dark'] :is(button, a).btn:hover {
+  filter: brightness(1.1);
+}
+button.btn:disabled {
+  opacity: 0.38;
+  pointer-events: none;
+}
+.btn-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+.btn-grid > .btn,
+.btn-grid > * > .btn {
+  width: 100%;
+  justify-self: stretch;
+}
+.btn-grid:empty {
+  display: none;
+}
+/* Detail header: filled card, 48px state mark, state title and supporting line. */
+.state-card {
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: var(--app-color-filled);
+  min-width: 0;
+}
+.state-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  min-width: 0;
+}
+.state-head strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+.state-head small {
+  display: block;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--md-sys-color-on-surface-variant);
+  overflow-wrap: anywhere;
+}
+.state-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--md-sys-color-surface-container-lowest);
+  color: var(--md-sys-color-on-surface-variant);
+}
+.state-icon > .icon {
+  width: 28px;
+  height: 28px;
+}
+.state-icon[data-tone='success'] {
+  color: var(--app-color-success);
+}
+.state-icon[data-tone='warning'] {
+  color: var(--app-color-warning);
+}
+.state-icon[data-tone='error'] {
+  color: var(--md-sys-color-error);
+}
+.state-icon[data-tone='primary'] {
+  color: var(--md-sys-color-primary);
+}
+/* CollapsibleContainer: divider, primary 48px header with a chevron, then the body. */
+.cc + .cc,
+.cc.divided {
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+.cc > summary {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 48px;
+  min-height: 48px;
+  padding: 0 4px 0 16px;
+  color: var(--md-sys-color-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.cc > summary::before {
+  display: none;
+}
+.cc > summary > span {
+  flex: 1;
+  min-width: 0;
+}
+.cc > summary::after {
+  content: '';
+  width: 48px;
+  height: 24px;
+  background: var(--md-sys-color-on-surface-variant);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z'/%3E%3C/svg%3E")
+    center / 24px no-repeat;
+  transform: rotate(-90deg);
+  transition: transform 0.2s;
+}
+.cc[open] > summary::after {
+  transform: none;
+}
+.cc-pad {
+  padding: 0 16px 16px;
+}
+/* TextRowWidget / SwitchRowWidget. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 56px;
+  padding: 8px 16px;
+  color: var(--md-sys-color-on-surface);
+  text-decoration: none;
+}
+a.row,
+button.row,
+.row.link {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+a.row:hover,
+button.row:hover,
+.row.link:hover {
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 6%, transparent);
+}
+.row .rt {
+  flex: 1;
+  min-width: 0;
+}
+.row .rt > .a {
+  display: block;
+  font-size: 16px;
+  line-height: 24px;
+}
+.row .rt > .b {
+  display: block;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--md-sys-color-on-surface-variant);
+  word-break: break-all;
+}
+.row > .lead,
+.row > .trail {
+  display: grid;
+  place-items: center;
+  color: var(--md-sys-color-on-surface-variant);
+}
+/* Chips, tags, key-value lists, progress and terminal text. */
+.chip {
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+}
+.chip[aria-pressed='true'],
+.chip.on {
+  background: var(--md-sys-color-secondary-container);
+  border-color: transparent;
+  color: var(--md-sys-color-on-secondary-container);
+}
+.chip > .icon {
+  width: 18px;
+  height: 18px;
+}
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  vertical-align: 1px;
+}
+.tag.p {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+.tag.t {
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+.kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 16px;
+}
+.kv dt {
+  color: var(--md-sys-color-on-surface-variant);
+}
+.kv dd {
+  margin: 0;
+  word-break: break-all;
+}
+.bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--md-sys-color-secondary-container);
+  overflow: hidden;
+}
+.bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--md-sys-color-primary);
+}
+.term {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--app-color-term);
+  color: var(--app-color-term-text);
+  font: 13px/20px var(--app-font-mono);
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow: auto;
+}
+.card-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 8px 4px 16px;
+}
+.card-h > h2,
+.card-h > h3 {
+  margin: 0;
+}
+/* Kept for older callers: the App's primary group title. */
+.group-title {
+  margin: 0;
+  color: var(--md-sys-color-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 8px;
+}
+.button-grid > .btn {
+  justify-self: stretch;
+}
+.button-grid:empty {
+  display: none;
+}
+@media (width < 600px) {
+  .button-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (width >= 600px) {
+  .btn-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (width >= 1200px) {
+  .btn-grid {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .btn-grid > .btn,
+  .btn-grid > * > .btn {
+    width: auto;
+  }
+}
 .empty-state {
   text-align: center;
   padding: 44px var(--space-5);
@@ -324,7 +728,8 @@ details[open]:not(.overview) > summary::before {
   max-width: 480px;
   margin: 0 auto var(--space-4);
 }
-/* App shell: M3 navigation rail (>= 600px) or navigation bar (compact) plus a top app bar. */
+/* App shell (docs/webui/app-style/app.html): navigation bar < 600, rail 600-1199,
+   drawer >= 1200, and a medium top app bar whose large title scrolls away. */
 .app-shell {
   display: grid;
   grid-template-columns: 80px minmax(0, 1fr);
@@ -334,34 +739,34 @@ details[open]:not(.overview) > summary::before {
   position: sticky;
   top: 0;
   height: 100dvh;
-  padding: var(--space-3) 0 var(--space-4);
+  padding: 12px 0;
   display: flex;
   align-items: center;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: 4px;
+  background: var(--md-sys-color-surface);
 }
-.logo {
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--md-sys-shape-corner-large);
-  background: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-on-primary-container);
+.rail > md-fab {
+  flex-shrink: 0;
+  margin: 4px 0 28px;
 }
 .rail nav {
-  display: grid;
-  gap: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   width: 100%;
+  align-items: center;
 }
 .rail nav a {
   display: flex;
   align-items: center;
   flex-direction: column;
-  gap: var(--space-1);
-  min-height: 56px;
-  font-size: var(--md-sys-typescale-body-small-size);
+  gap: 4px;
+  width: 80px;
+  padding: 4px 0 8px;
+  font-size: 12px;
   font-weight: 500;
+  line-height: 16px;
   letter-spacing: 0.5px;
   text-decoration: none;
   color: var(--md-sys-color-on-surface-variant);
@@ -373,17 +778,11 @@ details[open]:not(.overview) > summary::before {
   place-items: center;
   width: 56px;
   height: 32px;
-  border-radius: var(--md-sys-shape-corner-full);
-  transition: background-color var(--md-sys-motion-duration-short)
-    var(--md-sys-motion-easing-standard);
-}
-.nav-icon > .icon {
-  width: 24px;
-  height: 24px;
+  border-radius: 16px;
+  transition: background-color 0.2s;
 }
 .rail nav a.active {
   color: var(--md-sys-color-on-surface);
-  font-weight: 700;
 }
 .rail nav a.active .nav-icon {
   background: var(--md-sys-color-secondary-container);
@@ -393,67 +792,103 @@ details[open]:not(.overview) > summary::before {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
-.rail md-fab {
-  flex-shrink: 0;
-}
 md-fab > .icon {
   width: 24px;
   height: 24px;
 }
 .fab-compact {
   position: fixed;
-  right: var(--space-4);
-  bottom: calc(var(--bottom-nav-height) + var(--space-4) + env(safe-area-inset-bottom));
+  right: 16px;
+  bottom: calc(var(--bottom-nav-height) + 16px + env(safe-area-inset-bottom));
   z-index: 6;
 }
-.rail-note {
+.rail-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-top: auto;
-  font-size: var(--md-sys-typescale-label-small-size);
+  min-height: 48px;
   color: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
+  line-height: 16px;
+}
+.rail-foot .connection {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .app-body {
   min-width: 0;
 }
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--md-sys-color-surface);
+  transition: background-color 0.2s;
+}
+.topbar.lifted {
+  background: var(--md-sys-color-surface-container);
+}
+.tb-row {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-2) var(--space-6);
-  min-height: 64px;
+  gap: 4px;
+  height: 64px;
+  padding: env(safe-area-inset-top) 4px 0;
 }
-.wordmark {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  font-size: var(--md-sys-typescale-title-large-size);
-  font-weight: 500;
-}
-.wordmark small {
-  border-left: 1px solid var(--md-sys-color-outline-variant);
-  padding-left: var(--space-4);
-  font-size: var(--md-sys-typescale-body-medium-size);
-  font-weight: 400;
-  color: var(--md-sys-color-on-surface-variant);
-}
-.wordmark h1 {
-  font-size: inherit;
-  font-weight: 400;
+/* The row title: hidden under the large title until it scrolls away. */
+.tb-title {
+  flex: 1;
+  min-width: 0;
   margin: 0;
+  padding-left: 12px;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 28px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 0.15s;
 }
-.connection {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--md-sys-typescale-body-small-size);
-  font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
-  margin-left: auto;
+.tb-title.shown,
+.topbar.small .tb-title {
+  opacity: 1;
+}
+.topbar.small .tb-title {
+  padding-left: 4px;
+}
+.tb-head {
+  margin: 0;
+  padding: 0 16px 20px;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 32px;
+}
+.tb-actions {
+  display: contents;
+}
+.tb-search {
+  width: 360px;
+  margin-right: 8px;
+  flex-shrink: 1;
+}
+.app-body > main h1,
+.app-body > main .eyebrow,
+.app-body > main a.back-link,
+.app-body > main .page-heading:not(:has(> :not(h1, a.back-link))) {
+  display: none;
 }
 .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--md-sys-color-outline);
+  flex-shrink: 0;
 }
 .dot[data-state='snapshotLoaded'] {
   background: var(--app-color-success);
@@ -464,6 +899,58 @@ md-fab > .icon {
 .dot[data-state='errorAuthTitle'] {
   background: var(--md-sys-color-error);
 }
+/* Top app bar action: tasks, with the number of unfinished tasks as a badge. */
+.top-action {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--md-sys-color-on-surface-variant);
+  text-decoration: none;
+  outline: none;
+}
+.top-action[aria-current='page'] {
+  color: var(--md-sys-color-primary);
+}
+.top-action:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -3px;
+}
+.top-action .badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  text-align: center;
+}
+.tb-row .btn,
+.dialog-header > .btn {
+  align-self: center;
+}
+.tb-row .btn.icon-button,
+.dialog-header > .btn.icon-button {
+  align-self: center;
+  --md-icon-button-icon-color: var(--md-sys-color-on-surface-variant);
+  --md-icon-button-state-layer-height: 48px;
+  --md-icon-button-state-layer-width: 48px;
+  width: 48px;
+  height: 48px;
+}
+.brand,
+.nav-divider {
+  display: none;
+}
 .preview-banner {
   color: var(--app-color-warning);
   background: var(--app-color-warning-container);
@@ -473,9 +960,7 @@ md-fab > .icon {
   text-align: center;
 }
 .app-body > main {
-  max-width: 1500px;
-  margin: auto;
-  padding: var(--space-2) var(--space-6) var(--space-8);
+  padding: 0 24px 32px;
 }
 .app-body > main:focus {
   outline: none;
@@ -512,18 +997,16 @@ md-fab > .icon {
   border-radius: var(--md-sys-shape-corner-large);
   overflow: hidden;
 }
+/* App TextRowWidget: plain leading icon, body-large title, body-medium supporting text. */
 .menu-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 13px;
-  min-height: 70px;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  padding: var(--space-4);
+  gap: var(--space-4);
+  min-height: 64px;
+  padding: var(--space-2) var(--space-4);
   text-decoration: none;
   color: var(--md-sys-color-on-surface);
-}
-.menu-row:last-child {
-  border: 0;
 }
 .menu-row[aria-current='page'] {
   background: var(--md-sys-color-secondary-container);
@@ -542,24 +1025,31 @@ a.menu-row:focus-visible {
 }
 .menu-row strong {
   display: block;
-  font-size: var(--md-sys-typescale-title-medium-size);
-  font-weight: 550;
+  font-size: var(--md-sys-typescale-body-large-size);
+  font-weight: 400;
+  line-height: 24px;
 }
 .menu-row small {
   display: block;
   color: var(--md-sys-color-on-surface-variant);
-  margin-top: var(--space-1);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: 20px;
   overflow-wrap: anywhere;
+}
+.menu-row > .icon:last-child {
+  color: var(--md-sys-color-on-surface-variant);
 }
 .menu-icon {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-primary);
-  border-radius: 14px;
+  width: 24px;
+  height: 24px;
+  color: var(--md-sys-color-on-surface-variant);
   flex-shrink: 0;
+}
+.menu-icon > .icon {
+  width: 24px;
+  height: 24px;
 }
 .host-panel {
   display: flex;
@@ -668,6 +1158,42 @@ dialog::backdrop {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
 }
+/* Details below the list-detail width: a full page with the App's small top app bar
+   (back arrow, title, trailing actions) and the page padding of the design. */
+.page-dialog,
+.page-dialog > .dialog-header {
+  background: var(--app-color-background);
+}
+.page-dialog > .dialog-header {
+  justify-content: flex-start;
+  gap: 4px;
+  height: 64px;
+  min-height: 64px;
+  padding: env(safe-area-inset-top) 4px 0;
+  border-bottom: 0;
+}
+.page-dialog > .dialog-header h2 {
+  flex: 1;
+  padding-left: 4px;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 28px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page-dialog:not(.session) > .dialog-body {
+  padding: 8px 16px 32px;
+}
+/* The console page is full bleed like the App's VMConsoleActivity. */
+.session > .dialog-body:has(> .console-page, > .vm-terminal) {
+  padding: 0;
+}
+@media (width >= 600px) {
+  .page-dialog:not(.session) > .dialog-body {
+    padding: 8px 24px 32px;
+  }
+}
 /* M3 toolbar surface shared by the session controls. */
 .session-toolbar {
   padding: var(--space-1) var(--space-2);
@@ -701,11 +1227,114 @@ dialog::backdrop {
   justify-content: center;
   flex-direction: column;
 }
-@media (width < 840px) {
-  .wordmark small {
-    display: none;
+@media (width < 1200px) {
+  .drawer-only {
+    display: none !important;
   }
 }
+/* Expanded: a 264px navigation drawer with the brand, an extended FAB and labelled items. */
+@media (width >= 1200px) {
+  .rail-only {
+    display: none !important;
+  }
+  .app-shell {
+    grid-template-columns: 264px minmax(0, 1fr);
+  }
+  .rail {
+    align-items: stretch;
+    padding: 12px;
+    border-right: 1px solid var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-surface-container-low);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px 16px;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    text-decoration: none;
+  }
+  .brand-mark {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+  }
+  .brand-mark > .icon {
+    width: 18px;
+    height: 18px;
+  }
+  .rail > md-fab {
+    align-self: flex-start;
+    margin: 0 4px 20px;
+  }
+  .rail nav {
+    align-items: stretch;
+  }
+  .rail nav a {
+    position: relative;
+    flex-direction: row;
+    gap: 12px;
+    width: auto;
+    height: 56px;
+    padding: 0 16px;
+    border-radius: 28px;
+    font-size: 14px;
+    letter-spacing: 0.1px;
+  }
+  .rail nav a .nav-icon {
+    position: static;
+    width: auto;
+    height: auto;
+    background: none !important;
+  }
+  .rail nav a.active {
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+  }
+  .rail nav a:not(.active):hover {
+    background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+  }
+  .rail nav a:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: -3px;
+  }
+  .rail nav a:focus-visible .nav-icon {
+    outline: none;
+  }
+  .nav-divider {
+    display: block;
+    height: 1px;
+    margin: 12px 16px;
+    background: var(--md-sys-color-outline-variant);
+  }
+  .rail-foot {
+    padding: 0 16px;
+    border-radius: 28px;
+  }
+  .rail-foot .connection {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+  }
+  .topbar .tb-row .tb-title {
+    padding-left: 20px;
+  }
+  .topbar .tb-row .btn + .tb-title {
+    padding-left: 4px;
+  }
+  .app-body > main {
+    max-width: 1440px;
+    padding: 8px 32px 40px;
+  }
+}
+/* Compact: the rail becomes the navigation bar; sub-screens hide it. */
 @media (width < 600px) {
   .desktop-only {
     display: none !important;
@@ -717,43 +1346,47 @@ dialog::backdrop {
     display: block;
     padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
   }
-  /* The rail becomes the M3 navigation bar. */
   .rail {
     position: fixed;
     inset: auto 0 0;
-    z-index: 5;
-    height: auto;
-    min-height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
-    padding: var(--space-3) var(--space-2) calc(var(--space-4) + env(safe-area-inset-bottom));
+    z-index: 6;
+    height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
+    padding: 0 0 env(safe-area-inset-bottom);
+    flex-direction: row;
     background: var(--md-sys-color-surface-container);
   }
-  .rail > .logo,
-  .rail-note {
+  .rail-foot {
     display: none;
   }
   .rail nav {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    flex-direction: row;
+    height: 100%;
     gap: 0;
   }
   .rail nav a {
-    min-height: 52px;
+    flex: 1;
+    width: auto;
+    height: 100%;
+    justify-content: center;
+    padding: 0;
   }
   .nav-icon {
     width: 64px;
   }
-  .topbar {
-    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
-    padding-top: calc(var(--space-2) + env(safe-area-inset-top));
+  .rail nav a:not(.active):hover .nav-icon {
+    background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+  }
+  .app-shell.sub-page {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .app-shell.sub-page > .rail {
+    display: none;
   }
   .app-body > main {
-    padding: var(--space-2) var(--space-4) var(--space-4);
+    padding: 0 16px 32px;
   }
   .empty-state {
     padding: var(--space-8) var(--space-4);
-  }
-  .menu-row {
-    padding: 14px;
-    min-height: 64px;
   }
   dialog {
     width: 100%;

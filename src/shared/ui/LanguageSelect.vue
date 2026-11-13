@@ -9,9 +9,7 @@ const languagePreference = useLanguagePreference()
 
 <template>
   <div class="menu-row language-row">
-    <span class="grow"
-      >{{ t('language') }}<small>{{ t('languageHint') }}</small></span
-    >
+    <span class="grow">{{ t('language') }}</span>
     <AppSelect v-model="languagePreference" class="language-select" :aria-label="t('language')">
       <AppOption value="auto">{{ t('languageAuto') }}</AppOption>
       <AppOption value="zh-Hans" lang="zh-Hans">简体中文</AppOption>

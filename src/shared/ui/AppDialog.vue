@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { onBeforeUnmount, ref, useId, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, useId, watch } from 'vue'
+import { useMediaQuery } from '../lib/mediaQuery'
 import AppButton from './AppButton.vue'
 import AppIcon from './AppIcon.vue'
 import { lockBodyScroll } from '../lib/scrollLock'
@@ -15,9 +16,13 @@ const props = withDefaults(
     guestKeyboard?: boolean
     // Render as an in-page pane (list-detail on wide screens) instead of a modal.
     inline?: boolean
+    // Below the list-detail width open as a full page with a back arrow, like an App sub-screen.
+    page?: boolean
   }>(),
   { dismissible: true },
 )
+const compact = useMediaQuery('(width < 1200px)')
+const asPage = computed(() => props.page && !props.inline && compact.value)
 const emit = defineEmits<{ close: [] }>()
 const dialog = ref<HTMLElement>()
 const titleId = useId()
@@ -110,13 +115,29 @@ onBeforeUnmount(() => {
     ref="dialog"
     tabindex="-1"
     :aria-labelledby="titleId"
-    :class="inline ? 'dialog-pane' : { fullscreen }"
+    :class="
+      inline
+        ? 'dialog-pane'
+        : { fullscreen: fullscreen || asPage, 'page-dialog': asPage, session: fullscreen }
+    "
     @cancel.prevent="cancel"
     @keydown="trapTab"
   >
     <header class="dialog-header">
-      <h2 :id="titleId" :title="title">{{ title }}</h2>
       <AppButton
+        v-if="asPage"
+        tone="icon"
+        :aria-label="t('close')"
+        :title="t('navBack')"
+        autofocus
+        :disabled="!dismissible"
+        @click="emit('close')"
+        ><AppIcon name="back"
+      /></AppButton>
+      <h2 :id="titleId" :title="title">{{ title }}</h2>
+      <slot name="actions" />
+      <AppButton
+        v-if="!asPage"
         tone="icon"
         :aria-label="t('close')"
         :autofocus="!inline"

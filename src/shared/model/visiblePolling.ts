@@ -1,5 +1,11 @@
-import { inject, onMounted, onUnmounted, watch } from 'vue'
+import { inject, onMounted, onUnmounted, ref, watch } from 'vue'
 import { liveUpdatesKey, type LiveResource } from './liveUpdates'
+
+// The top bar refresh button: every visible poller reads again at once.
+const refreshSignal = ref(0)
+export function requestRefresh() {
+  refreshSignal.value++
+}
 
 // One visible page owns its timer. Errors back off to the server capacity window.
 export function useVisiblePolling(
@@ -54,6 +60,10 @@ export function useVisiblePolling(
       nextRead = 0
     })
   }
+  watch(refreshSignal, () => {
+    nextRead = errorUntil = 0
+    void refresh()
+  })
   watch(
     enabled,
     (value) => {

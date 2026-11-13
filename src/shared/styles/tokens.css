@@ -1,7 +1,9 @@
 /* Material 3 tokens. Color roles live in the generated colors.css (seed #0b57d0). */
 :root {
   --md-ref-typeface-brand:
-    Roboto, 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', system-ui, sans-serif;
+    Roboto, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui,
+    sans-serif;
+  --app-font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, 'Noto Sans Mono CJK SC', monospace;
   --md-ref-typeface-plain: var(--md-ref-typeface-brand);
   font-family: var(--md-ref-typeface-plain);
 
@@ -53,16 +55,26 @@
   color-scheme: dark;
 }
 
-/* App surface tiers: cards stay brighter than the page in both themes, so the M3 roles differ. */
+/* App surfaces (docs/webui/app-style/app.html): the page is `surface`, outlined cards are
+   `surface` with an outline, filled cards `surface-container-highest`. */
 :root {
-  --app-color-background: var(--md-sys-color-surface-container-low);
-  --app-color-card: var(--md-sys-color-surface-container-lowest);
+  --app-color-background: var(--md-sys-color-surface);
+  --app-color-card: var(--md-sys-color-surface);
   --app-color-raised: var(--md-sys-color-surface-container);
+  --app-color-filled: var(--md-sys-color-surface-container-highest);
+  /* Daemon status card tints, as the App's home screen. */
+  --app-color-daemon-running: #dffae4;
+  --app-color-daemon-checking: #fff9e0;
+  --app-color-daemon-stopped: #fadfe0;
   /* Behind a guest framebuffer; stays dark in both themes like a monitor bezel. */
   --app-color-screen: #0b0d12;
+  --app-color-term: #12141b;
+  --app-color-term-text: #d5dae6;
+  --app-color-term-dim: #7d8597;
 }
 :root[data-color='dark'] {
-  --app-color-background: var(--md-sys-color-surface);
-  --app-color-card: var(--md-sys-color-surface-container);
-  --app-color-raised: var(--md-sys-color-surface-container-high);
+  --app-color-daemon-running: #1a3825;
+  --app-color-daemon-checking: #382d1a;
+  --app-color-daemon-stopped: #3a1b1b;
+  --app-color-term: #0b0d12;
 }

@@ -35,7 +35,6 @@ function clear() {
       <p>
         {{ t(problem === 'invalid' ? 'operationTrackingInvalid' : 'operationTrackingUnavailable') }}
       </p>
-      <p>{{ t('operationTrackingHint') }}</p>
       <AppLinkButton tone="tonal" to="/tasks">{{ t('diskTaskLink') }}</AppLinkButton>
       <AppCheckbox v-model="confirmed" data-testid="operation-tracking-confirm">{{
         t('operationTrackingConfirm')
