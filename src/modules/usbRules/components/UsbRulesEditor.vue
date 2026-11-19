@@ -29,7 +29,7 @@ const layerOptions = computed(() =>
     label: editor.issues.value.some((issue) => issue.layer === item.key)
       ? `${t(item.label)} · ${t('configInvalid')}`
       : t(item.label),
-    count: editor.draft.value?.[item.key].length ?? 0,
+    count: editor.draft.value?.[item.key]?.length ?? 0,
   })),
 )
 const rules = computed(() => editor.draft.value?.[layer.value] ?? [])

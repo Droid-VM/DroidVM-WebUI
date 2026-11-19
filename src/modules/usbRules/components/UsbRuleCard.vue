@@ -33,7 +33,7 @@ const fieldId = (field: string) => `usb-rule-${props.layer}-${props.index}-${fie
 function value(event: Event) {
   return (event.target as HTMLInputElement | HTMLSelectElement).value
 }
-function update(field: 'id' | 'port' | 'controller', text: string) {
+function update(field: 'id' | 'port' | 'class' | 'controller', text: string) {
   const next = { ...props.rule }
   if (field === 'controller' && !text) delete next.controller
   else next[field] = text
@@ -125,6 +125,17 @@ function pick(event: Event) {
         autocomplete="off"
         :aria-invalid="issues.some((issue) => issue.field === 'port')"
         @input="update('port', value($event))"
+      />
+      <AppTextField
+        v-if="definition.cls"
+        :id="fieldId('class')"
+        :label="t('usbRulesClassCode')"
+        :supporting-text="t('usbRulesClassCodeHint')"
+        :value="rule.class"
+        spellcheck="false"
+        autocomplete="off"
+        :aria-invalid="issues.some((issue) => issue.field === 'class')"
+        @input="update('class', value($event))"
       />
       <AppSelect
         :id="fieldId('target')"

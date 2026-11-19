@@ -95,7 +95,7 @@ export function createUsbRulesEditor(gateway?: UsbRulesGateway, newId = requestI
       // implementing VM availability, priority or failed-target matching here.
       for (const { device, match } of result.items) {
         if (!match?.layer) continue
-        const rule = current.rules[match.layer][match.index],
+        const rule = current.rules[match.layer]?.[match.index],
           subject = deviceSubject(device)
         if (
           !rule ||
@@ -300,28 +300,30 @@ export function createUsbRulesEditor(gateway?: UsbRulesGateway, newId = requestI
     },
     add(layer: RuleLayer) {
       change((rules) => {
-        rules[layer].push({
+        ;(rules[layer] ??= []).push({
           target: layer === 'any' ? 'sink' : 'host',
           ...(layer === 'exact' || layer === 'device' ? { id: '' } : {}),
           ...(layer === 'exact' || layer === 'port' ? { port: '' } : {}),
+          ...(layer === 'class' ? { class: '' } : {}),
         })
       })
     },
     update(layer: RuleLayer, index: number, value: UsbRule) {
       change((rules) => {
-        if (rules[layer][index]) rules[layer][index] = { ...value }
+        const list = rules[layer]
+        if (list?.[index]) list[index] = { ...value }
       })
     },
     remove(layer: RuleLayer, index: number) {
       change((rules) => {
-        rules[layer].splice(index, 1)
+        rules[layer]?.splice(index, 1)
       })
     },
     move(layer: RuleLayer, index: number, direction: -1 | 1) {
       change((rules) => {
         const list = rules[layer],
           other = index + direction
-        if (!list[index] || !list[other]) return
+        if (!list?.[index] || !list[other]) return
         ;[list[index], list[other]] = [list[other], list[index]]
       })
     },
