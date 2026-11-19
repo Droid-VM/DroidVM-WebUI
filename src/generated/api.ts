@@ -1947,7 +1947,7 @@ export interface components {
             requestId: components["schemas"]["RequestId"];
         };
         UsbRuleMatch: {
-            layer: ("exact" | "port" | "device" | "any") | null;
+            layer: ("exact" | "port" | "device" | "class" | "any") | null;
             index: number;
             /** @enum {string} */
             target: "host" | "vm" | "sink";
@@ -2010,6 +2010,7 @@ export interface components {
         UsbRule: {
             id?: string;
             port?: string;
+            class?: string;
             /** @enum {unknown} */
             target: "host" | "vm" | "sink";
             vm?: string;
@@ -2022,6 +2023,7 @@ export interface components {
             exact: components["schemas"]["UsbRule"][];
             port: components["schemas"]["UsbRule"][];
             device: components["schemas"]["UsbRule"][];
+            class?: components["schemas"]["UsbRule"][];
             any: components["schemas"]["UsbRule"][];
         };
         UsbCatalog: {
